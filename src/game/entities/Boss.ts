@@ -2,6 +2,15 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../constants';
 import { Shield, ShieldType } from './Shield';
 
+export interface BossConfig {
+  radius: number;
+  speed: number;
+  fireRate: number;
+  bulletSpeed: number;
+  shieldCooldown: number;
+  color: number;
+}
+
 export class Boss {
   private scene: Phaser.Scene;
   public sprite: Phaser.GameObjects.Container;
@@ -25,20 +34,30 @@ export class Boss {
   private lastShieldTime: number = 0;
   private aimAngle: number = 0;
   private nextShieldType: ShieldType = 'narrow';
+  private config: BossConfig;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, config: Partial<BossConfig> = {}) {
     this.scene = scene;
+    this.config = {
+      radius: GAME_CONFIG.BOSS_RADIUS,
+      speed: GAME_CONFIG.BOSS_SPEED,
+      fireRate: GAME_CONFIG.BOSS_FIRE_RATE,
+      bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED,
+      shieldCooldown: GAME_CONFIG.BOSS_SHIELD_COOLDOWN,
+      color: GAME_CONFIG.BOSS_COLOR,
+      ...config,
+    };
     this.x = x;
     this.y = y;
     this.targetX = x;
     this.targetY = y;
     
     // Create boss visual (larger circle with inner ring)
-    this.body = scene.add.circle(0, 0, GAME_CONFIG.BOSS_RADIUS, GAME_CONFIG.BOSS_COLOR);
+    this.body = scene.add.circle(0, 0, this.config.radius, this.config.color);
     this.body.setStrokeStyle(3, 0xffffff, 0.3);
     
-    this.innerRing = scene.add.circle(0, 0, GAME_CONFIG.BOSS_RADIUS * 0.6, 0x000000, 0);
-    this.innerRing.setStrokeStyle(2, GAME_CONFIG.BOSS_COLOR, 0.5);
+    this.innerRing = scene.add.circle(0, 0, this.config.radius * 0.6, 0x000000, 0);
+    this.innerRing.setStrokeStyle(2, this.config.color, 0.5);
     
     // Container for boss graphics
     this.sprite = scene.add.container(x, y, [this.body, this.innerRing]);
@@ -53,7 +72,7 @@ export class Boss {
     }
     
     // Move towards target
-    const speed = GAME_CONFIG.BOSS_SPEED * (delta / 1000);
+    const speed = this.config.speed * (delta / 1000);
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -64,7 +83,7 @@ export class Boss {
     }
     
     // Clamp to screen bounds (upper portion)
-    const padding = GAME_CONFIG.BOSS_RADIUS;
+    const padding = this.config.radius;
     this.x = Phaser.Math.Clamp(this.x, padding + 100, GAME_CONFIG.WIDTH - padding - 100);
     this.y = Phaser.Math.Clamp(this.y, padding + 100, GAME_CONFIG.HEIGHT * 0.5);
     
@@ -72,14 +91,14 @@ export class Boss {
     this.sprite.setPosition(this.x, this.y);
     
     // Check if can fire
-    const fireInterval = 1000 / GAME_CONFIG.BOSS_FIRE_RATE;
+    const fireInterval = 1000 / this.config.fireRate;
     this.canFire = currentTime - this.lastFireTime > fireInterval;
     
     // Update shield angle to face player
     this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
     
     // Shield logic
-    if (!this.shieldActive && currentTime - this.lastShieldTime > GAME_CONFIG.BOSS_SHIELD_COOLDOWN) {
+    if (!this.shieldActive && currentTime - this.lastShieldTime > this.config.shieldCooldown) {
       this.activateShield(currentTime);
     }
     
@@ -123,7 +142,7 @@ export class Boss {
     const shieldType = this.nextShieldType;
     this.nextShieldType = shieldType === 'narrow' ? 'wide' : 'narrow';
 
-    this.shield = new Shield(this.scene, this.x, this.y, this.aimAngle, shieldType, GAME_CONFIG.BOSS_RADIUS);
+    this.shield = new Shield(this.scene, this.x, this.y, this.aimAngle, shieldType, this.config.radius);
   }
 
   deactivateShield() {
@@ -132,6 +151,14 @@ export class Boss {
       this.shield = null;
     }
     this.shieldActive = false;
+  }
+
+  getBulletSpeed() {
+    return this.config.bulletSpeed;
+  }
+
+  getRadius() {
+    return this.config.radius;
   }
 
   getShieldBounds(): Phaser.Geom.Rectangle | Phaser.Geom.Circle | null {
