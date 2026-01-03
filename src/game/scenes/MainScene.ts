@@ -38,7 +38,10 @@ export class MainScene extends Phaser.Scene {
   private gameStartTime: number = 0;
   private spawnedShieldedEnemy = false;
   private spawnedRapidEnemy = false;
-  private difficulty: Difficulty = 'middle';
+  private difficulty: Difficulty = 'easy';
+  private gameStarted = false;
+  private battleStartTime = 0;
+  private readonly fireDelayMs = 2000;
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -103,18 +106,18 @@ export class MainScene extends Phaser.Scene {
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
     this.input.keyboard?.on('keydown-F', () => {
-      if (this.gameState.isGameOver) return;
+      if (this.gameState.isGameOver || !this.gameStarted) return;
       this.releaseDividedAsteroids();
     });
 
     this.input.keyboard?.on('keydown-G', () => {
-      if (this.gameState.isGameOver) return;
+      if (this.gameState.isGameOver || !this.gameStarted) return;
       this.releaseDividedAsteroids();
     });
     
     // Mouse input for shooting
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.gameState.isGameOver) return;
+      if (this.gameState.isGameOver || !this.gameStarted) return;
       
       if (pointer.rightButtonDown()) {
         this.gameState.currentBulletType = 'meteora';
@@ -143,7 +146,8 @@ export class MainScene extends Phaser.Scene {
     
     // Reset game state
     this.resetGameState();
-    this.gameStartTime = this.time.now;
+    this.gameStarted = false;
+    this.battleStartTime = 0;
   }
 
   private createBackgroundGrid() {
@@ -279,7 +283,8 @@ export class MainScene extends Phaser.Scene {
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2,
-
+      GAME_CONFIG.WIDTH,
+      GAME_CONFIG.HEIGHT,
       0x0a0a12,
       0.95
     );
@@ -313,7 +318,7 @@ export class MainScene extends Phaser.Scene {
       }
     );
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 80, 'DIFFICULTY', {
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 80, 'SELECT DIFFICULTY', {
       fontSize: '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -326,10 +331,38 @@ export class MainScene extends Phaser.Scene {
       fontFamily: 'monospace',
     });
 
-    const middleText = this.add.text(GAME_CONFIG.WIDTH / 2 + 20, GAME_CONFIG.HEIGHT / 2 + 110, 'MIDDLE', {
+    const hardText = this.add.text(GAME_CONFIG.WIDTH / 2 + 20, GAME_CONFIG.HEIGHT / 2 + 110, 'HARD', {
       fontSize: '20px',
-      color: this.difficulty === 'middle' ? '#00ffd5' : '#666666',
+      color: this.difficulty === 'hard' ? '#00ffd5' : '#666666',
       fontFamily: 'monospace',
+    });
+
+    const promptText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      GAME_CONFIG.HEIGHT / 2 + 150,
+      'CLICK EASY OR HARD TO START',
+      {
+        fontSize: '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      }
+    );
+    promptText.setOrigin(0.5);
+
+    const updateDifficultySelection = (difficulty: Difficulty) => {
+      this.difficulty = difficulty;
+      easyText.setColor(difficulty === 'easy' ? '#00ffd5' : '#666666');
+      hardText.setColor(difficulty === 'hard' ? '#00ffd5' : '#666666');
+    };
+
+    easyText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      updateDifficultySelection('easy');
+      this.startBattle();
+    });
+
+    hardText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      updateDifficultySelection('hard');
+      this.startBattle();
     });
 
     
@@ -340,9 +373,23 @@ export class MainScene extends Phaser.Scene {
       rightText,
       difficultyLabel,
       easyText,
-      middleText,
+      hardText,
+      promptText,
     ]);
     this.instructionsOverlay.setDepth(100);
+  }
+
+  private startBattle() {
+    if (this.gameStarted) return;
+    this.gameStarted = true;
+    this.gameStartTime = this.time.now;
+    this.battleStartTime = this.time.now;
+    this.instructionsOverlay.destroy(true);
+  }
+
+  private canFire(time: number = this.time.now) {
+    if (!this.gameStarted) return false;
+    return time - this.battleStartTime >= this.fireDelayMs;
   }
 
   private resetGameState() {
@@ -367,6 +414,10 @@ export class MainScene extends Phaser.Scene {
       if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
         this.scene.restart();
       }
+      return;
+    }
+
+    if (!this.gameStarted) {
       return;
     }
     
@@ -460,6 +511,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private tryFireBullet() {
+    if (!this.canFire()) return;
     const now = this.time.now;
     const fireInterval = 1000 / GAME_CONFIG.FIRE_RATE;
     
@@ -712,6 +764,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private fireEnemy(enemy: EnemyEntry, time: number) {
+    if (!this.canFire(time)) return;
     const fireData = enemy.boss.fire(time);
     if (!fireData) return;
 
