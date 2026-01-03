@@ -68,7 +68,12 @@ export class MainScene extends Phaser.Scene {
       if (pointer.rightButtonDown()) {
         this.gameState.currentBulletType = 'meteora';
       }
-      this.tryFireBullet();
+      // Viper fires on click (single shot guided)
+      if (this.gameState.currentBulletType === 'viper') {
+        this.tryFireBullet();
+      } else {
+        this.tryFireBullet();
+      }
     });
     
     // Create UI
@@ -189,13 +194,14 @@ export class MainScene extends Phaser.Scene {
     const instructions = `
 WASD - Move
 Mouse - Aim
-Left Click - Fire Asteroid
+Left Click - Fire
 Right Click - Fire Meteora
 Space - Deploy Shield
 Q - Toggle Divide Mode
-E - Switch Bullet Type
+E - Switch Weapon (Asteroid/Meteora/Viper)
 R - Restart
 
+Viper: Guide bullets with mouse!
 Reduce Boss Trion to 0 to win!
     `.trim();
     
@@ -303,10 +309,11 @@ Reduce Boss Trion to 0 to win!
       this.gameState.divideEnabled = !this.gameState.divideEnabled;
     }
     
-    // Switch bullet type
+    // Switch bullet type (cycle through 3 types)
     if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
-      this.gameState.currentBulletType = 
-        this.gameState.currentBulletType === 'asteroid' ? 'meteora' : 'asteroid';
+      const types: Array<'asteroid' | 'meteora' | 'viper'> = ['asteroid', 'meteora', 'viper'];
+      const currentIndex = types.indexOf(this.gameState.currentBulletType);
+      this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
     }
     
     // Deploy shield
@@ -314,9 +321,11 @@ Reduce Boss Trion to 0 to win!
       this.tryDeployShield();
     }
     
-    // Continuous fire while holding
+    // Continuous fire while holding (except for viper which fires on click)
     if (this.input.activePointer.isDown && !this.input.activePointer.rightButtonDown()) {
-      this.tryFireBullet();
+      if (this.gameState.currentBulletType !== 'viper') {
+        this.tryFireBullet();
+      }
     }
   }
 
@@ -327,11 +336,17 @@ Reduce Boss Trion to 0 to win!
     if (now - this.lastFireTime < fireInterval) return;
     
     const bulletType = this.gameState.currentBulletType;
-    let cost = bulletType === 'asteroid' ? GAME_CONFIG.ASTEROID_COST : GAME_CONFIG.METEORA_COST;
+    let cost: number;
     
-    // Add divide cost for asteroid
-    if (bulletType === 'asteroid' && this.gameState.divideEnabled) {
-      cost += GAME_CONFIG.ASTEROID_DIVIDE_EXTRA_COST;
+    if (bulletType === 'asteroid') {
+      cost = GAME_CONFIG.ASTEROID_COST;
+      if (this.gameState.divideEnabled) {
+        cost += GAME_CONFIG.ASTEROID_DIVIDE_EXTRA_COST;
+      }
+    } else if (bulletType === 'meteora') {
+      cost = GAME_CONFIG.METEORA_COST;
+    } else {
+      cost = GAME_CONFIG.VIPER_COST;
     }
     
     // Check if enough Trion
@@ -375,8 +390,7 @@ Reduce Boss Trion to 0 to win!
         );
         this.playerBullets.push(bullet);
       }
-    } else {
-      // Meteora
+    } else if (bulletType === 'meteora') {
       const bullet = new Bullet(
         this,
         this.player.x + aim.x * 20,
@@ -385,6 +399,18 @@ Reduce Boss Trion to 0 to win!
         'meteora',
         true,
         GAME_CONFIG.METEORA_DAMAGE
+      );
+      this.playerBullets.push(bullet);
+    } else {
+      // Viper - guided bullet
+      const bullet = new Bullet(
+        this,
+        this.player.x + aim.x * 20,
+        this.player.y + aim.y * 20,
+        baseAngle,
+        'viper',
+        true,
+        GAME_CONFIG.VIPER_DAMAGE
       );
       this.playerBullets.push(bullet);
     }
@@ -422,13 +448,16 @@ Reduce Boss Trion to 0 to win!
   }
 
   private updateBullets(delta: number) {
+    const mouseX = this.input.activePointer.worldX;
+    const mouseY = this.input.activePointer.worldY;
+    
     // Update and clean up player bullets
     this.playerBullets = this.playerBullets.filter(bullet => {
-      bullet.update(delta);
+      bullet.update(delta, mouseX, mouseY);
       return bullet.active;
     });
     
-    // Update and clean up boss bullets
+    // Update and clean up boss bullets (no mouse guidance)
     this.bossBullets = this.bossBullets.filter(bullet => {
       bullet.update(delta);
       return bullet.active;
