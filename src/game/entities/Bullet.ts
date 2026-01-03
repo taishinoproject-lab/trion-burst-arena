@@ -28,6 +28,7 @@ export class Bullet {
   private startX: number;
   private startY: number;
   private onDivide?: (bullets: Bullet[]) => void;
+  public isHeld: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -80,9 +81,28 @@ export class Bullet {
     this.onDivide = callback;
   }
 
+  hold() {
+    this.isHeld = true;
+    this.velocityX = 0;
+    this.velocityY = 0;
+  }
+
+  releaseTowards(targetX: number, targetY: number) {
+    if (!this.active) return;
+    this.isHeld = false;
+    this.angle = Math.atan2(targetY - this.y, targetX - this.x);
+    this.velocityX = Math.cos(this.angle) * this.speed;
+    this.velocityY = Math.sin(this.angle) * this.speed;
+  }
+
   update(delta: number, mouseX?: number, mouseY?: number) {
     if (!this.active) return;
     
+    if (this.isHeld) {
+      this.sprite.setPosition(this.x, this.y);
+      return;
+    }
+
     const dt = delta / 1000;
     
     // Check for divide trigger (after traveling certain distance)
@@ -172,6 +192,7 @@ export class Bullet {
       );
       // Make divided bullets slightly smaller
       bullet.sprite.setRadius(GAME_CONFIG.BULLET_RADIUS * 0.75);
+      bullet.hold();
       newBullets.push(bullet);
     }
     
