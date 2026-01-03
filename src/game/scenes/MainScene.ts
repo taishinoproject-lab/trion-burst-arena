@@ -221,7 +221,7 @@ Space - Deploy Narrow Shield
 Shift + Space - Deploy Wide Shield
 Q - Toggle Divide Mode
 E - Switch Weapon (Asteroid/Meteora/Viper)
-F/G - Release Divided Asteroids (Aim Direction)
+F/G - Release Divided Asteroids (Auto-Lock)
 Middle Click - Release Divided Asteroids
 R - Restart
 
@@ -465,33 +465,84 @@ Reduce Boss Trion to 0 to win!
   }
 
   private releaseDividedAsteroids() {
-    const aim = this.player.getAimDirection();
-    const releaseAngle = Math.atan2(aim.y, aim.x);
+    const targetX = this.boss.x;
+    const targetY = this.boss.y;
     for (const bullet of this.playerBullets) {
       if (!bullet.active || bullet.type !== 'asteroid' || !bullet.isHeld) continue;
-      bullet.releaseWithAngle(releaseAngle);
+      bullet.releaseTowards(targetX, targetY);
     }
   }
 
   private bossFire(time: number) {
     const fireData = this.boss.fire(time);
     if (!fireData) return;
-    
+
+    const roll = Phaser.Math.FloatBetween(0, 1);
+    const bulletType: BulletType = roll < 0.45 ? 'asteroid' : roll < 0.75 ? 'meteora' : 'viper';
+
+    if (bulletType === 'asteroid') {
+      const shouldDivide = Phaser.Math.FloatBetween(0, 1) < 0.6;
+      if (shouldDivide) {
+        const bullet = new Bullet(
+          this,
+          fireData.x,
+          fireData.y,
+          fireData.angle,
+          'asteroid',
+          false,
+          GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE,
+          GAME_CONFIG.BOSS_BULLET_SPEED,
+          true,
+          GAME_CONFIG.ASTEROID_DIVIDE_COUNT
+        );
+        bullet.setOnDivide((newBullets) => {
+          for (const newBullet of newBullets) {
+            newBullet.releaseTowards(this.player.x, this.player.y);
+          }
+          this.bossBullets.push(...newBullets);
+        });
+        this.bossBullets.push(bullet);
+        return;
+      }
+
+      const bullet = new Bullet(
+        this,
+        fireData.x,
+        fireData.y,
+        fireData.angle,
+        'asteroid',
+        false,
+        GAME_CONFIG.ASTEROID_DAMAGE,
+        GAME_CONFIG.BOSS_BULLET_SPEED
+      );
+      this.bossBullets.push(bullet);
+      return;
+    }
+
+    if (bulletType === 'meteora') {
+      const bullet = new Bullet(
+        this,
+        fireData.x,
+        fireData.y,
+        fireData.angle,
+        'meteora',
+        false,
+        GAME_CONFIG.METEORA_DAMAGE,
+        GAME_CONFIG.BOSS_BULLET_SPEED
+      );
+      this.bossBullets.push(bullet);
+      return;
+    }
+
     const bullet = new Bullet(
       this,
       fireData.x,
       fireData.y,
       fireData.angle,
-      'asteroid',
+      'viper',
       false,
-      GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE,
-      GAME_CONFIG.BOSS_BULLET_SPEED,
-      true,
-      GAME_CONFIG.ASTEROID_DIVIDE_COUNT
+      GAME_CONFIG.VIPER_DAMAGE
     );
-    bullet.setOnDivide((newBullets) => {
-      this.bossBullets.push(...newBullets);
-    });
     this.bossBullets.push(bullet);
   }
 
@@ -505,9 +556,9 @@ Reduce Boss Trion to 0 to win!
       return bullet.active;
     });
     
-    // Update and clean up boss bullets (no mouse guidance)
+    // Update and clean up boss bullets (track player for viper guidance)
     this.bossBullets = this.bossBullets.filter(bullet => {
-      bullet.update(delta);
+      bullet.update(delta, this.player.x, this.player.y);
       return bullet.active;
     });
   }
@@ -516,25 +567,8 @@ Reduce Boss Trion to 0 to win!
     const hasHeld = bulletA.isHeld || bulletB.isHeld;
     if (!hasHeld) return false;
 
-    if (bulletA.type === 'meteora' || bulletB.type === 'meteora') {
-      if (bulletA.type === 'meteora') {
-        bulletA.explode();
-      } else {
-        bulletA.destroy();
-      }
-
-      if (bulletB.type === 'meteora') {
-        bulletB.explode();
-      } else {
-        bulletB.destroy();
-      }
-
-      return true;
-    }
-
-    const angle = Math.atan2(bulletB.y - bulletA.y, bulletB.x - bulletA.x);
-    bulletA.releaseWithAngle(angle + Math.PI);
-    bulletB.releaseWithAngle(angle);
+    bulletA.destroy();
+    bulletB.destroy();
     return true;
   }
 
