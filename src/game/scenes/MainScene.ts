@@ -292,15 +292,43 @@ export class MainScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
     
-
+    const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, GAME_CONFIG.HEIGHT / 2 - 70, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE VIPER', {
+      fontSize: '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
       align: 'left',
       lineSpacing: 6,
     });
 
+    const rightText = this.add.text(
+      GAME_CONFIG.WIDTH / 2 + 30,
+      GAME_CONFIG.HEIGHT / 2 - 70,
+      'E: CYCLE WEAPON\nQ: DELAY ASTEROID\nC: TOGGLE DIVIDE\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+      {
+        fontSize: '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'left',
+        lineSpacing: 6,
+      }
+    );
+
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 80, 'DIFFICULTY', {
+      fontSize: '18px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+    });
+    difficultyLabel.setOrigin(0.5);
+
+    const easyText = this.add.text(GAME_CONFIG.WIDTH / 2 - 70, GAME_CONFIG.HEIGHT / 2 + 110, 'EASY', {
       fontSize: '20px',
-      color: '#ffffff',
+      color: this.difficulty === 'easy' ? '#00ffd5' : '#666666',
+      fontFamily: 'monospace',
+    });
+
+    const middleText = this.add.text(GAME_CONFIG.WIDTH / 2 + 20, GAME_CONFIG.HEIGHT / 2 + 110, 'MIDDLE', {
+      fontSize: '20px',
+      color: this.difficulty === 'middle' ? '#00ffd5' : '#666666',
       fontFamily: 'monospace',
     });
 
