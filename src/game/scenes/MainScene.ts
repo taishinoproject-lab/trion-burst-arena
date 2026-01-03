@@ -279,8 +279,7 @@ export class MainScene extends Phaser.Scene {
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2,
-      700,
-      420,
+
       0x0a0a12,
       0.95
     );
@@ -314,54 +313,17 @@ Viper: Guide bullets with mouse!
 Reduce Boss Trion to 0 to win!
     `.trim();
 
-    const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 190, GAME_CONFIG.HEIGHT / 2 - 20, leftInstructions, {
-      fontSize: '15px',
       color: '#ffffff',
       fontFamily: 'monospace',
       align: 'left',
       lineSpacing: 6,
     });
-    leftText.setOrigin(0.5);
 
-    const rightText = this.add.text(GAME_CONFIG.WIDTH / 2 + 190, GAME_CONFIG.HEIGHT / 2 - 20, rightInstructions, {
-      fontSize: '15px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      align: 'left',
-      lineSpacing: 6,
-    });
-    rightText.setOrigin(0.5);
-
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 140, 'Difficulty (select to start)', {
-      fontSize: '16px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    difficultyLabel.setOrigin(0.5);
-
-    const easyText = this.add.text(GAME_CONFIG.WIDTH / 2 - 70, GAME_CONFIG.HEIGHT / 2 + 175, 'Easy', {
       fontSize: '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
-    easyText.setOrigin(0.5);
-    easyText.setInteractive({ useHandCursor: true });
 
-    const middleText = this.add.text(GAME_CONFIG.WIDTH / 2 + 70, GAME_CONFIG.HEIGHT / 2 + 175, 'Middle', {
-      fontSize: '20px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    middleText.setOrigin(0.5);
-    middleText.setInteractive({ useHandCursor: true });
-
-    const updateDifficultyUI = () => {
-      easyText.setColor(this.difficulty === 'easy' ? '#00ffd5' : '#ffffff');
-      middleText.setColor(this.difficulty === 'middle' ? '#00ffd5' : '#ffffff');
-    };
-    updateDifficultyUI();
-
-    const startGame = () => {
       this.tweens.add({
         targets: this.instructionsOverlay,
         alpha: 0,
