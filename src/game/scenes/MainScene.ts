@@ -462,9 +462,14 @@ Reduce Boss Trion to 0 to win!
       fireData.angle,
       'asteroid',
       false,
-      GAME_CONFIG.BOSS_BULLET_DAMAGE,
-      GAME_CONFIG.BOSS_BULLET_SPEED
+      GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE,
+      GAME_CONFIG.BOSS_BULLET_SPEED,
+      true,
+      GAME_CONFIG.ASTEROID_DIVIDE_COUNT
     );
+    bullet.setOnDivide((newBullets) => {
+      this.bossBullets.push(...newBullets);
+    });
     this.bossBullets.push(bullet);
   }
 
@@ -501,10 +506,51 @@ Reduce Boss Trion to 0 to win!
             playerBullet.destroy();
           }
           bossBullet.destroy();
+          this.createBulletClashEffect(playerBullet.x, playerBullet.y);
+          this.playBulletClashSound();
           break;
         }
       }
     }
+  }
+
+  private createBulletClashEffect(x: number, y: number) {
+    const core = this.add.circle(x, y, 8, 0xffffff, 0.9);
+    core.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const ring = this.add.circle(x, y, 14, GAME_CONFIG.BOSS_BULLET_COLOR, 0.4);
+
+    this.tweens.add({
+      targets: [core, ring],
+      alpha: 0,
+      scale: 2.2,
+      duration: 200,
+      ease: 'Power2',
+      onComplete: () => {
+        core.destroy();
+        ring.destroy();
+      },
+    });
+  }
+
+  private playBulletClashSound() {
+    const context = this.sound?.context;
+    if (!context) return;
+    if (context.state === 'suspended') {
+      context.resume().catch(() => undefined);
+    }
+
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(720, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(260, context.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.12, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.14);
+
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.15);
   }
 
   private bulletHitsShield(bullet: Bullet, shield: Shield): boolean {
