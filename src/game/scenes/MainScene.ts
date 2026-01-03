@@ -17,6 +17,7 @@ export class MainScene extends Phaser.Scene {
     bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
     currentBulletType: 'asteroid',
     divideEnabled: false,
+    delayedAsteroidEnabled: false,
     isGameOver: false,
     playerWon: false,
   };
@@ -27,6 +28,7 @@ export class MainScene extends Phaser.Scene {
   private qKey!: Phaser.Input.Keyboard.Key;
   private eKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
+  private cKey!: Phaser.Input.Keyboard.Key;
   private fKey!: Phaser.Input.Keyboard.Key;
   private gKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
@@ -37,6 +39,7 @@ export class MainScene extends Phaser.Scene {
   private playerTrionText!: Phaser.GameObjects.Text;
   private bossTrionText!: Phaser.GameObjects.Text;
   private bulletTypeText!: Phaser.GameObjects.Text;
+  private delayedAsteroidText!: Phaser.GameObjects.Text;
   private divideText!: Phaser.GameObjects.Text;
   private gameOverText!: Phaser.GameObjects.Text;
   private instructionsOverlay!: Phaser.GameObjects.Container;
@@ -63,6 +66,7 @@ export class MainScene extends Phaser.Scene {
     this.qKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.cKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.C);
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.gKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.G);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
@@ -167,7 +171,7 @@ export class MainScene extends Phaser.Scene {
     const panel = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       bottomY,
-      400,
+      480,
       50,
       GAME_CONFIG.UI_BG_COLOR,
       0.8
@@ -180,7 +184,13 @@ export class MainScene extends Phaser.Scene {
       fontFamily: 'monospace',
     });
     
-    this.divideText = this.add.text(GAME_CONFIG.WIDTH / 2 + 40, bottomY - 10, '', {
+    this.delayedAsteroidText = this.add.text(GAME_CONFIG.WIDTH / 2 - 10, bottomY - 10, '', {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    
+    this.divideText = this.add.text(GAME_CONFIG.WIDTH / 2 + 120, bottomY - 10, '', {
       fontSize: '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -222,7 +232,8 @@ Left Click - Fire
 Right Click - Fire Meteora
 Space - Deploy Narrow Shield
 Shift + Space - Deploy Wide Shield
-Q - Toggle Divide Mode
+Q - Toggle Asteroid Delay Mode
+C - Toggle Divide Mode
 E - Switch Weapon (Asteroid/Meteora/Viper)
 F/G - Release Divided Asteroids (Auto-Lock)
 Middle Click - Release Divided Asteroids
@@ -279,6 +290,7 @@ Reduce Boss Trion to 0 to win!
       bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
       currentBulletType: 'asteroid',
       divideEnabled: false,
+      delayedAsteroidEnabled: false,
       isGameOver: false,
       playerWon: false,
     };
@@ -331,8 +343,13 @@ Reduce Boss Trion to 0 to win!
   }
 
   private handleInput() {
-    // Toggle divide mode
+    // Toggle asteroid delay mode
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
+      this.gameState.delayedAsteroidEnabled = !this.gameState.delayedAsteroidEnabled;
+    }
+
+    // Toggle divide mode
+    if (Phaser.Input.Keyboard.JustDown(this.cKey)) {
       this.gameState.divideEnabled = !this.gameState.divideEnabled;
     }
     
@@ -449,7 +466,9 @@ Reduce Boss Trion to 0 to win!
       );
     }
     this.playerBullets.push(bullet);
-    this.holdAndScheduleRelease(bullet, 3000);
+    if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled && !this.gameState.divideEnabled) {
+      this.scheduleDelayedRelease(bullet, () => ({ x: this.boss.x, y: this.boss.y }), 3000);
+    }
   }
 
   private tryDeployShield() {
@@ -470,13 +489,18 @@ Reduce Boss Trion to 0 to win!
     this.scheduleHeldBulletRelease(this.playerBullets, () => ({ x: this.boss.x, y: this.boss.y }), 3000);
   }
 
-  private holdAndScheduleRelease(bullet: Bullet, delayMs: number) {
+  private scheduleDelayedRelease(
+    bullet: Bullet,
+    getTarget: () => { x: number; y: number },
+    delayMs: number
+  ) {
     if (!bullet.active || bullet.releaseScheduled) return;
     bullet.hold();
     bullet.releaseScheduled = true;
     this.time.delayedCall(delayMs, () => {
       if (!bullet.active || !bullet.isHeld) return;
-      bullet.releaseTowards(this.boss.x, this.boss.y);
+      const target = getTarget();
+      bullet.releaseTowards(target.x, target.y);
     });
   }
 
@@ -502,6 +526,7 @@ Reduce Boss Trion to 0 to win!
 
     const roll = Phaser.Math.FloatBetween(0, 1);
     const bulletType: BulletType = roll < 0.45 ? 'asteroid' : roll < 0.75 ? 'meteora' : 'viper';
+    const useDelayedShot = Phaser.Math.FloatBetween(0, 1) < 0.3;
 
     if (bulletType === 'asteroid') {
       const shouldDivide = Phaser.Math.FloatBetween(0, 1) < 0.6;
@@ -537,6 +562,9 @@ Reduce Boss Trion to 0 to win!
         GAME_CONFIG.BOSS_BULLET_SPEED
       );
       this.bossBullets.push(bullet);
+      if (useDelayedShot) {
+        this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
+      }
       return;
     }
 
@@ -552,6 +580,9 @@ Reduce Boss Trion to 0 to win!
         GAME_CONFIG.BOSS_BULLET_SPEED
       );
       this.bossBullets.push(bullet);
+      if (useDelayedShot) {
+        this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
+      }
       return;
     }
 
@@ -565,6 +596,9 @@ Reduce Boss Trion to 0 to win!
       GAME_CONFIG.VIPER_DAMAGE
     );
     this.bossBullets.push(bullet);
+    if (useDelayedShot) {
+      this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
+    }
   }
 
   private updateBullets(delta: number) {
@@ -822,6 +856,10 @@ Reduce Boss Trion to 0 to win!
     // Bullet type display
     const bulletName = this.gameState.currentBulletType.toUpperCase();
     this.bulletTypeText.setText(`WEAPON: ${bulletName}`);
+
+    const delayStatus = this.gameState.delayedAsteroidEnabled ? 'ON' : 'OFF';
+    this.delayedAsteroidText.setText(`DELAY: ${delayStatus}`);
+    this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
     
     // Divide status
     const divideStatus = this.gameState.divideEnabled ? 'ON' : 'OFF';
