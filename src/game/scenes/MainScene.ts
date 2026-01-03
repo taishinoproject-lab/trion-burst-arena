@@ -89,6 +89,9 @@ export class MainScene extends Phaser.Scene {
         this.releaseDividedAsteroids();
         return;
       }
+      if (pointer.leftButtonDown()) {
+        this.releaseDividedAsteroids();
+      }
       // Viper fires on click (single shot guided)
       if (this.gameState.currentBulletType === 'viper') {
         this.tryFireBullet();
@@ -410,7 +413,6 @@ Reduce Boss Trion to 0 to win!
         // Register callback to add divided bullets to scene
         bullet.setOnDivide((newBullets) => {
           this.playerBullets.push(...newBullets);
-          this.scheduleHeldBulletRelease(newBullets, () => ({ x: this.boss.x, y: this.boss.y }));
         });
         this.playerBullets.push(bullet);
       } else {
@@ -466,20 +468,18 @@ Reduce Boss Trion to 0 to win!
   }
 
   private releaseDividedAsteroids() {
-    const targetX = this.boss.x;
-    const targetY = this.boss.y;
-    for (const bullet of this.playerBullets) {
-      if (!bullet.active || bullet.type !== 'asteroid' || !bullet.isHeld) continue;
-      bullet.releaseTowards(targetX, targetY);
-    }
+    this.scheduleHeldBulletRelease(this.playerBullets, () => ({ x: this.boss.x, y: this.boss.y }), 3000);
   }
 
   private scheduleHeldBulletRelease(
     bullets: Bullet[],
-    getTarget: () => { x: number; y: number }
+    getTarget: () => { x: number; y: number },
+    delayMs: number = 3000
   ) {
     for (const bullet of bullets) {
-      this.time.delayedCall(3000, () => {
+      if (!bullet.active || !bullet.isHeld || bullet.releaseScheduled) continue;
+      bullet.releaseScheduled = true;
+      this.time.delayedCall(delayMs, () => {
         if (!bullet.active || !bullet.isHeld) return;
         const target = getTarget();
         bullet.releaseTowards(target.x, target.y);

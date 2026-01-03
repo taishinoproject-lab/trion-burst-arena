@@ -29,6 +29,7 @@ export class Bullet {
   private startY: number;
   private onDivide?: (bullets: Bullet[]) => void;
   public isHeld: boolean = false;
+  public releaseScheduled: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -83,6 +84,7 @@ export class Bullet {
 
   hold() {
     this.isHeld = true;
+    this.releaseScheduled = false;
     this.velocityX = 0;
     this.velocityY = 0;
   }
@@ -90,6 +92,7 @@ export class Bullet {
   releaseTowards(targetX: number, targetY: number) {
     if (!this.active) return;
     this.isHeld = false;
+    this.releaseScheduled = false;
     this.angle = Math.atan2(targetY - this.y, targetX - this.x);
     this.velocityX = Math.cos(this.angle) * this.speed;
     this.velocityY = Math.sin(this.angle) * this.speed;
@@ -98,6 +101,7 @@ export class Bullet {
   releaseWithAngle(angle: number) {
     if (!this.active) return;
     this.isHeld = false;
+    this.releaseScheduled = false;
     this.angle = angle;
     this.velocityX = Math.cos(this.angle) * this.speed;
     this.velocityY = Math.sin(this.angle) * this.speed;
