@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_CONFIG, BulletType, GameState } from '../constants';
+import { DIFFICULTY_DAMAGE_MULTIPLIER, Difficulty, GAME_CONFIG, BulletType, GameState } from '../constants';
 import { Player } from '../entities/Player';
 import { Boss, BossConfig } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
@@ -38,6 +38,7 @@ export class MainScene extends Phaser.Scene {
   private gameStartTime: number = 0;
   private spawnedShieldedEnemy = false;
   private spawnedRapidEnemy = false;
+  private difficulty: Difficulty = 'middle';
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -278,8 +279,8 @@ export class MainScene extends Phaser.Scene {
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2,
-      500,
-      350,
+      700,
+      420,
       0x0a0a12,
       0.95
     );
@@ -292,54 +293,75 @@ export class MainScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
     
-    const instructions = `
-WASD - Move
-Mouse - Aim
-Left Click - Fire
-Right Click - Fire Meteora
-Space - Deploy Narrow Shield
-Shift + Space - Deploy Wide Shield
-Q - Toggle Asteroid Delay Mode
-C - Toggle Divide Mode
-E - Switch Weapon (Asteroid/Meteora/Viper)
-F/G - Release Divided Asteroids (Auto-Lock)
-Middle Click - Release Divided Asteroids
-R - Restart
+    const leftInstructions = [
+      'WASD - Move',
+      'Mouse - Aim',
+      'Left Click - Fire',
+      'Right Click - Fire Meteora',
+      'Space - Deploy Narrow Shield',
+      'Shift + Space - Deploy Wide Shield',
+      'Q - Toggle Asteroid Delay Mode',
+      'C - Toggle Divide Mode',
+    ].join('\n');
 
-Viper: Guide bullets with mouse!
-Reduce Boss Trion to 0 to win!
-    `.trim();
-    
-    const text = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 20, instructions, {
+    const rightInstructions = [
+      'E - Switch Weapon',
+      'F/G - Release Divided Asteroids',
+      'Middle Click - Release Divided Asteroids',
+      'R - Restart',
+      '',
+      'Viper: Guide bullets with mouse!',
+      'Reduce Boss Trion to 0 to win!',
+    ].join('\n');
+
+    const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 190, GAME_CONFIG.HEIGHT / 2 - 20, leftInstructions, {
+      fontSize: '15px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      align: 'left',
+      lineSpacing: 6,
+    });
+    leftText.setOrigin(0.5);
+
+    const rightText = this.add.text(GAME_CONFIG.WIDTH / 2 + 190, GAME_CONFIG.HEIGHT / 2 - 20, rightInstructions, {
+      fontSize: '15px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      align: 'left',
+      lineSpacing: 6,
+    });
+    rightText.setOrigin(0.5);
+
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 140, 'Difficulty (select to start)', {
       fontSize: '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
-      align: 'center',
-      lineSpacing: 6,
     });
-    text.setOrigin(0.5);
-    
-    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 150, 'Click to Start', {
+    difficultyLabel.setOrigin(0.5);
+
+    const easyText = this.add.text(GAME_CONFIG.WIDTH / 2 - 70, GAME_CONFIG.HEIGHT / 2 + 175, 'Easy', {
       fontSize: '20px',
-      color: '#00ffd5',
+      color: '#ffffff',
       fontFamily: 'monospace',
     });
-    startText.setOrigin(0.5);
-    
-    // Blink effect
-    this.tweens.add({
-      targets: startText,
-      alpha: 0.3,
-      yoyo: true,
-      repeat: -1,
-      duration: 500,
+    easyText.setOrigin(0.5);
+    easyText.setInteractive({ useHandCursor: true });
+
+    const middleText = this.add.text(GAME_CONFIG.WIDTH / 2 + 70, GAME_CONFIG.HEIGHT / 2 + 175, 'Middle', {
+      fontSize: '20px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
     });
-    
-    this.instructionsOverlay = this.add.container(0, 0, [bg, title, text, startText]);
-    this.instructionsOverlay.setDepth(100);
-    
-    // Hide on click
-    this.input.once('pointerdown', () => {
+    middleText.setOrigin(0.5);
+    middleText.setInteractive({ useHandCursor: true });
+
+    const updateDifficultyUI = () => {
+      easyText.setColor(this.difficulty === 'easy' ? '#00ffd5' : '#ffffff');
+      middleText.setColor(this.difficulty === 'middle' ? '#00ffd5' : '#ffffff');
+    };
+    updateDifficultyUI();
+
+    const startGame = () => {
       this.tweens.add({
         targets: this.instructionsOverlay,
         alpha: 0,
@@ -348,7 +370,39 @@ Reduce Boss Trion to 0 to win!
           this.instructionsOverlay.destroy();
         },
       });
+    };
+
+    easyText.on('pointerdown', () => {
+      this.difficulty = 'easy';
+      updateDifficultyUI();
+      startGame();
     });
+
+    middleText.on('pointerdown', () => {
+      this.difficulty = 'middle';
+      updateDifficultyUI();
+      startGame();
+    });
+    
+    // Blink effect
+    this.tweens.add({
+      targets: [easyText, middleText],
+      alpha: 0.3,
+      yoyo: true,
+      repeat: -1,
+      duration: 500,
+    });
+    
+    this.instructionsOverlay = this.add.container(0, 0, [
+      bg,
+      title,
+      leftText,
+      rightText,
+      difficultyLabel,
+      easyText,
+      middleText,
+    ]);
+    this.instructionsOverlay.setDepth(100);
   }
 
   private resetGameState() {
@@ -495,6 +549,7 @@ Reduce Boss Trion to 0 to win!
     const aim = this.player.getAimDirection();
     const baseAngle = Math.atan2(aim.y, aim.x);
     
+    const damageScale = this.getDamageScale();
     let bullet: Bullet;
     if (bulletType === 'asteroid') {
       if (this.gameState.divideEnabled) {
@@ -506,8 +561,8 @@ Reduce Boss Trion to 0 to win!
           baseAngle,
           'asteroid',
           true,
-          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE,
-          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE,
+          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE * damageScale,
+          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE * damageScale,
           GAME_CONFIG.BULLET_SPEED,
           true, // isDividing
           GAME_CONFIG.ASTEROID_DIVIDE_COUNT
@@ -524,8 +579,8 @@ Reduce Boss Trion to 0 to win!
           baseAngle,
           'asteroid',
           true,
-          GAME_CONFIG.ASTEROID_TRION_DAMAGE,
-          GAME_CONFIG.ASTEROID_SHIELD_DAMAGE
+          GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+          GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale
         );
       }
     } else if (bulletType === 'meteora') {
@@ -536,8 +591,8 @@ Reduce Boss Trion to 0 to win!
         baseAngle,
         'meteora',
         true,
-        GAME_CONFIG.METEORA_TRION_DAMAGE,
-        GAME_CONFIG.METEORA_SHIELD_DAMAGE
+        GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale
       );
     } else {
       // Viper - guided bullet
@@ -548,8 +603,8 @@ Reduce Boss Trion to 0 to win!
         baseAngle,
         'viper',
         true,
-        GAME_CONFIG.VIPER_TRION_DAMAGE,
-        GAME_CONFIG.VIPER_SHIELD_DAMAGE
+        GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale
       );
     }
     this.playerBullets.push(bullet);
@@ -722,6 +777,7 @@ Reduce Boss Trion to 0 to win!
 
     const behavior = enemy.behavior;
     const bulletSpeed = enemy.boss.getBulletSpeed();
+    const damageScale = this.getDamageScale();
     let bulletType: BulletType = 'asteroid';
     let useDelayedShot = Phaser.Math.FloatBetween(0, 1) < behavior.delayedShotChance;
 
@@ -751,8 +807,8 @@ Reduce Boss Trion to 0 to win!
           fireData.angle,
           'asteroid',
           false,
-          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE,
-          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE,
+          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE * damageScale,
+          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE * damageScale,
           bulletSpeed,
           true,
           GAME_CONFIG.ASTEROID_DIVIDE_COUNT
@@ -772,8 +828,8 @@ Reduce Boss Trion to 0 to win!
         fireData.angle,
         'asteroid',
         false,
-        GAME_CONFIG.ASTEROID_TRION_DAMAGE,
-        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE,
+        GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
         bulletSpeed
       );
       this.bossBullets.push(bullet);
@@ -791,8 +847,8 @@ Reduce Boss Trion to 0 to win!
         fireData.angle,
         'meteora',
         false,
-        GAME_CONFIG.METEORA_TRION_DAMAGE,
-        GAME_CONFIG.METEORA_SHIELD_DAMAGE,
+        GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale,
         bulletSpeed
       );
       this.bossBullets.push(bullet);
@@ -809,8 +865,8 @@ Reduce Boss Trion to 0 to win!
       fireData.angle,
       'viper',
       false,
-      GAME_CONFIG.VIPER_TRION_DAMAGE,
-      GAME_CONFIG.VIPER_SHIELD_DAMAGE
+      GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
+      GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale
     );
     this.bossBullets.push(bullet);
     if (useDelayedShot) {
@@ -978,6 +1034,7 @@ Reduce Boss Trion to 0 to win!
 
   private applyMeteoraExplosion(initialArea: Phaser.Geom.Circle) {
     const pendingExplosions: Phaser.Geom.Circle[] = [initialArea];
+    const damageScale = this.getDamageScale();
 
     while (pendingExplosions.length > 0) {
       const area = pendingExplosions.shift();
@@ -1002,16 +1059,20 @@ Reduce Boss Trion to 0 to win!
       for (const target of this.getEnemyTargets()) {
         const boss = target.boss;
         if (boss.shieldActive && boss.shield && this.circleHitsShield(area, boss.shield)) {
-          boss.applyShieldDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+          boss.applyShieldDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale);
           continue;
         }
 
         const bossBounds = new Phaser.Geom.Circle(boss.x, boss.y, boss.getRadius());
         if (Phaser.Geom.Intersects.CircleToCircle(area, bossBounds)) {
-          target.setTrion(target.getTrion() - GAME_CONFIG.METEORA_TRION_DAMAGE);
+          target.setTrion(target.getTrion() - GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale);
         }
       }
     }
+  }
+
+  private getDamageScale() {
+    return DIFFICULTY_DAMAGE_MULTIPLIER[this.difficulty];
   }
 
   private triggerMeteoraExplosion(bullet: Bullet) {
