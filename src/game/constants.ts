@@ -1,0 +1,72 @@
+// Game balance constants - adjust these to tune gameplay
+export const GAME_CONFIG = {
+  // Game dimensions
+  WIDTH: 1280,
+  HEIGHT: 720,
+  
+  // Colors (fluorescent cyan/teal)
+  BULLET_COLOR: 0x00ffd5,
+  BULLET_COLOR_HEX: '#00FFD5',
+  BOSS_BULLET_COLOR: 0x00e5c8,
+  SHIELD_COLOR: 0x00ffd5,
+  SHIELD_GLOW_COLOR: 0x00b89c,
+  PLAYER_COLOR: 0x00ffd5,
+  BOSS_COLOR: 0xff6b6b,
+  BACKGROUND_COLOR: 0x0a0a12,
+  UI_BG_COLOR: 0x1a1a2e,
+  
+  // Player stats
+  PLAYER_SPEED: 260,
+  PLAYER_RADIUS: 12,
+  PLAYER_TRION_MAX: 100,
+  
+  // Boss stats
+  BOSS_RADIUS: 35,
+  BOSS_SPEED: 80,
+  BOSS_TRION_MAX: 140,
+  BOSS_FIRE_RATE: 1.5, // shots per second
+  BOSS_BULLET_SPEED: 350,
+  BOSS_BULLET_DAMAGE: 8,
+  BOSS_SHIELD_COOLDOWN: 3000, // ms
+  BOSS_SHIELD_DURATION: 600, // ms
+  
+  // Trion system
+  TRION_REGEN_RATE: 10, // per second
+  
+  // Bullets
+  BULLET_SPEED: 650,
+  BULLET_RADIUS: 6,
+  FIRE_RATE: 7, // shots per second
+  
+  // Asteroid bullet
+  ASTEROID_COST: 2,
+  ASTEROID_DAMAGE: 6,
+  ASTEROID_DIVIDE_COUNT: 3,
+  ASTEROID_DIVIDE_EXTRA_COST: 2,
+  ASTEROID_DIVIDE_SPREAD: 0.15, // radians
+  ASTEROID_DIVIDE_DAMAGE: 3, // per bullet when divided
+  
+  // Meteora bullet
+  METEORA_COST: 4,
+  METEORA_DAMAGE: 4,
+  METEORA_EXPLOSION_RADIUS: 70,
+  METEORA_EXPLOSION_DURATION: 200, // ms
+  
+  // Shield
+  SHIELD_COST: 8,
+  SHIELD_DURATION: 800, // ms
+  SHIELD_WIDTH: 4, // multiplier of bullet diameter
+  SHIELD_THICKNESS: 8,
+  SHIELD_DISTANCE: 30, // distance from player center
+};
+
+export type BulletType = 'asteroid' | 'meteora';
+
+export interface GameState {
+  playerTrion: number;
+  bossTrion: number;
+  currentBulletType: BulletType;
+  divideEnabled: boolean;
+  isGameOver: boolean;
+  playerWon: boolean;
+}
