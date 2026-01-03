@@ -51,7 +51,7 @@ export class Shield {
       // Width is scaled by bullet diameter
       const shieldWidth = GAME_CONFIG.BULLET_RADIUS * 2 * GAME_CONFIG.SHIELD_NARROW_WIDTH;
 
-      // Create shield rectangle (rotated perpendicular to bullet direction)
+      // Create shield rectangle (rotated to face bullet direction)
       this.sprite = scene.add.rectangle(
         this.x,
         this.y,
@@ -61,8 +61,8 @@ export class Shield {
         0.7
       );
 
-      // Rotate to be perpendicular to facing direction (add PI/2)
-      this.sprite.setRotation(shieldAngle + Math.PI / 2);
+      // Rotate 90 degrees from previous orientation to align with facing direction
+      this.sprite.setRotation(shieldAngle);
       this.sprite.setStrokeStyle(2, 0xffffff, 0.8);
 
       // Add spawn animation
@@ -83,7 +83,7 @@ export class Shield {
         GAME_CONFIG.SHIELD_GLOW_COLOR,
         0.3
       );
-      glow.setRotation(shieldAngle + Math.PI / 2);
+      glow.setRotation(shieldAngle);
       glow.setDepth(-1);
 
       // Pulsing glow animation
@@ -136,7 +136,7 @@ export class Shield {
     if (!this.active) return;
     
     if (this.type === 'narrow') {
-      // Shield stays at original angle (perpendicular to bullet trajectory)
+      // Shield stays at original angle
       // Only update position to follow player
       this.x = playerX + Math.cos(this.angle) * this.distance;
       this.y = playerY + Math.sin(this.angle) * this.distance;
