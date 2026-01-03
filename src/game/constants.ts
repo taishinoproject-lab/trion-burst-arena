@@ -28,7 +28,6 @@ export const GAME_CONFIG = {
   BOSS_BULLET_SPEED: 350,
   BOSS_BULLET_DAMAGE: 8,
   BOSS_SHIELD_COOLDOWN: 3000, // ms
-  BOSS_SHIELD_DURATION: 600, // ms
   
   // Trion system
   TRION_REGEN_RATE: 10, // per second
@@ -62,10 +61,12 @@ export const GAME_CONFIG = {
   
   // Shield
   SHIELD_COST: 8,
-  SHIELD_DURATION: 800, // ms
-  SHIELD_WIDTH: 4, // multiplier of bullet diameter
+  SHIELD_NARROW_STRENGTH: 18,
+  SHIELD_WIDE_STRENGTH: 10,
+  SHIELD_NARROW_WIDTH: 3.5, // multiplier of bullet diameter
   SHIELD_THICKNESS: 8,
-  SHIELD_DISTANCE: 30, // distance from player center
+  SHIELD_DISTANCE: 40, // distance from player/boss center (narrow)
+  SHIELD_WIDE_PADDING: 22, // extra radius beyond player/boss size
 };
 
 export type BulletType = 'asteroid' | 'meteora' | 'viper';

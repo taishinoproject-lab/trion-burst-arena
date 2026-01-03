@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../constants';
+import { Shield, ShieldType } from './Shield';
 
 export class Boss {
   private scene: Phaser.Scene;
@@ -19,10 +20,11 @@ export class Boss {
   public canFire: boolean = true;
   
   // Shield
-  public shield: Phaser.GameObjects.Rectangle | null = null;
+  public shield: Shield | null = null;
   public shieldActive: boolean = false;
   private lastShieldTime: number = 0;
-  private shieldAngle: number = 0;
+  private aimAngle: number = 0;
+  private nextShieldType: ShieldType = 'narrow';
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
@@ -74,7 +76,7 @@ export class Boss {
     this.canFire = currentTime - this.lastFireTime > fireInterval;
     
     // Update shield angle to face player
-    this.shieldAngle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
+    this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
     
     // Shield logic
     if (!this.shieldActive && currentTime - this.lastShieldTime > GAME_CONFIG.BOSS_SHIELD_COOLDOWN) {
@@ -83,12 +85,12 @@ export class Boss {
     
     // Update shield position if active
     if (this.shield && this.shieldActive) {
-      const shieldDist = GAME_CONFIG.BOSS_RADIUS + 15;
-      this.shield.setPosition(
-        this.x + Math.cos(this.shieldAngle) * shieldDist,
-        this.y + Math.sin(this.shieldAngle) * shieldDist
-      );
-      this.shield.setRotation(this.shieldAngle + Math.PI / 2);
+      if (!this.shield.active) {
+        this.shield = null;
+        this.shieldActive = false;
+      } else {
+        this.shield.update(this.x, this.y, this.aimAngle);
+      }
     }
   }
 
@@ -108,7 +110,7 @@ export class Boss {
     return {
       x: this.x,
       y: this.y,
-      angle: this.shieldAngle, // Fire towards player
+      angle: this.aimAngle, // Fire towards player
     };
   }
 
@@ -118,24 +120,10 @@ export class Boss {
     this.shieldActive = true;
     this.lastShieldTime = currentTime;
     
-    const shieldWidth = GAME_CONFIG.BULLET_RADIUS * GAME_CONFIG.SHIELD_WIDTH * 1.5;
-    const shieldDist = GAME_CONFIG.BOSS_RADIUS + 15;
-    
-    this.shield = this.scene.add.rectangle(
-      this.x + Math.cos(this.shieldAngle) * shieldDist,
-      this.y + Math.sin(this.shieldAngle) * shieldDist,
-      GAME_CONFIG.SHIELD_THICKNESS,
-      shieldWidth,
-      GAME_CONFIG.SHIELD_COLOR,
-      0.8
-    );
-    this.shield.setStrokeStyle(2, 0xffffff, 0.6);
-    this.shield.setRotation(this.shieldAngle + Math.PI / 2);
-    
-    // Deactivate shield after duration
-    this.scene.time.delayedCall(GAME_CONFIG.BOSS_SHIELD_DURATION, () => {
-      this.deactivateShield();
-    });
+    const shieldType = this.nextShieldType;
+    this.nextShieldType = shieldType === 'narrow' ? 'wide' : 'narrow';
+
+    this.shield = new Shield(this.scene, this.x, this.y, this.aimAngle, shieldType, GAME_CONFIG.BOSS_RADIUS);
   }
 
   deactivateShield() {
@@ -146,10 +134,23 @@ export class Boss {
     this.shieldActive = false;
   }
 
-  getShieldBounds(): Phaser.Geom.Rectangle | null {
+  getShieldBounds(): Phaser.Geom.Rectangle | Phaser.Geom.Circle | null {
     if (!this.shield || !this.shieldActive) return null;
-    
+    if (!this.shield.active) {
+      this.shield = null;
+      this.shieldActive = false;
+      return null;
+    }
     return this.shield.getBounds();
+  }
+
+  applyShieldDamage(amount: number) {
+    if (!this.shield || !this.shieldActive) return;
+    this.shield.applyDamage(amount);
+    if (!this.shield.active) {
+      this.shield = null;
+      this.shieldActive = false;
+    }
   }
 
   destroy() {
