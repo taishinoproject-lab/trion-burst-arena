@@ -28,6 +28,7 @@ export class MainScene extends Phaser.Scene {
   private eKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
   private fKey!: Phaser.Input.Keyboard.Key;
+  private gKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
   
   // UI Elements
@@ -63,9 +64,15 @@ export class MainScene extends Phaser.Scene {
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.gKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.G);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
     this.input.keyboard?.on('keydown-F', () => {
+      if (this.gameState.isGameOver) return;
+      this.releaseDividedAsteroids();
+    });
+
+    this.input.keyboard?.on('keydown-G', () => {
       if (this.gameState.isGameOver) return;
       this.releaseDividedAsteroids();
     });
@@ -76,6 +83,11 @@ export class MainScene extends Phaser.Scene {
       
       if (pointer.rightButtonDown()) {
         this.gameState.currentBulletType = 'meteora';
+      }
+
+      if (pointer.middleButtonDown()) {
+        this.releaseDividedAsteroids();
+        return;
       }
       // Viper fires on click (single shot guided)
       if (this.gameState.currentBulletType === 'viper') {
@@ -209,7 +221,8 @@ Space - Deploy Narrow Shield
 Shift + Space - Deploy Wide Shield
 Q - Toggle Divide Mode
 E - Switch Weapon (Asteroid/Meteora/Viper)
-F - Release Divided Asteroids (Aim Direction)
+F/G - Release Divided Asteroids (Aim Direction)
+Middle Click - Release Divided Asteroids
 R - Restart
 
 Viper: Guide bullets with mouse!
@@ -334,6 +347,10 @@ Reduce Boss Trion to 0 to win!
 
     // Release held divided asteroids
     if (Phaser.Input.Keyboard.JustDown(this.fKey)) {
+      this.releaseDividedAsteroids();
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.gKey)) {
       this.releaseDividedAsteroids();
     }
     
@@ -495,6 +512,32 @@ Reduce Boss Trion to 0 to win!
     });
   }
 
+  private handleHeldBulletImpact(bulletA: Bullet, bulletB: Bullet): boolean {
+    const hasHeld = bulletA.isHeld || bulletB.isHeld;
+    if (!hasHeld) return false;
+
+    if (bulletA.type === 'meteora' || bulletB.type === 'meteora') {
+      if (bulletA.type === 'meteora') {
+        bulletA.explode();
+      } else {
+        bulletA.destroy();
+      }
+
+      if (bulletB.type === 'meteora') {
+        bulletB.explode();
+      } else {
+        bulletB.destroy();
+      }
+
+      return true;
+    }
+
+    const angle = Math.atan2(bulletB.y - bulletA.y, bulletB.x - bulletA.x);
+    bulletA.releaseWithAngle(angle + Math.PI);
+    bulletB.releaseWithAngle(angle);
+    return true;
+  }
+
   private resolveBulletInterceptions() {
     for (const playerBullet of this.playerBullets) {
       if (!playerBullet.active) continue;
@@ -505,6 +548,11 @@ Reduce Boss Trion to 0 to win!
         const bossBounds = bossBullet.getBounds();
 
         if (Phaser.Geom.Intersects.CircleToCircle(playerBounds, bossBounds)) {
+          if (this.handleHeldBulletImpact(playerBullet, bossBullet)) {
+            this.createBulletClashEffect(playerBullet.x, playerBullet.y);
+            this.playBulletClashSound();
+            break;
+          }
           if (playerBullet.type === 'meteora') {
             playerBullet.explode();
           } else {
@@ -532,12 +580,14 @@ Reduce Boss Trion to 0 to win!
         const heldBounds = heldBullet.getBounds();
 
         if (Phaser.Geom.Intersects.CircleToCircle(bulletBounds, heldBounds)) {
-          if (bullet.type === 'meteora') {
-            bullet.explode();
-          } else {
-            bullet.destroy();
+          if (!this.handleHeldBulletImpact(bullet, heldBullet)) {
+            if (bullet.type === 'meteora') {
+              bullet.explode();
+            } else {
+              bullet.destroy();
+            }
+            heldBullet.destroy();
           }
-          heldBullet.destroy();
           this.createBulletClashEffect(bullet.x, bullet.y);
           this.playBulletClashSound();
           break;
