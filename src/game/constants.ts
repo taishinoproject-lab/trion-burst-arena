@@ -26,7 +26,6 @@ export const GAME_CONFIG = {
   BOSS_TRION_MAX: 140,
   BOSS_FIRE_RATE: 1.5, // shots per second
   BOSS_BULLET_SPEED: 350,
-  BOSS_BULLET_DAMAGE: 8,
   BOSS_SHIELD_COOLDOWN: 3000, // ms
   
   // Trion system
@@ -39,21 +38,25 @@ export const GAME_CONFIG = {
   
   // Asteroid bullet
   ASTEROID_COST: 2,
-  ASTEROID_DAMAGE: 6,
+  ASTEROID_TRION_DAMAGE: 6,
+  ASTEROID_SHIELD_DAMAGE: 9,
   ASTEROID_DIVIDE_COUNT: 3,
   ASTEROID_DIVIDE_EXTRA_COST: 2,
   ASTEROID_DIVIDE_SPREAD: 0.15, // radians
-  ASTEROID_DIVIDE_DAMAGE: 3, // per bullet when divided
+  ASTEROID_DIVIDE_TRION_DAMAGE: 4, // per bullet when divided
+  ASTEROID_DIVIDE_SHIELD_DAMAGE: 5, // per bullet when divided
   
   // Meteora bullet
   METEORA_COST: 4,
-  METEORA_DAMAGE: 4,
+  METEORA_TRION_DAMAGE: 3,
+  METEORA_SHIELD_DAMAGE: 20,
   METEORA_EXPLOSION_RADIUS: 70,
   METEORA_EXPLOSION_DURATION: 200, // ms
   
   // Viper bullet (guided)
   VIPER_COST: 5,
-  VIPER_DAMAGE: 5,
+  VIPER_TRION_DAMAGE: 9,
+  VIPER_SHIELD_DAMAGE: 4,
   VIPER_SPEED: 400,
   VIPER_TURN_RATE: 4.5, // radians per second
   VIPER_LIFETIME: 2500, // ms before auto-destroy
