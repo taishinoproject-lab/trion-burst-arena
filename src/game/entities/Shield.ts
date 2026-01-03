@@ -22,37 +22,17 @@ export class Shield {
     playerX: number, 
     playerY: number, 
     aimAngle: number,
-    incomingBullets?: IncomingBullet[]
+    _incomingBullets?: IncomingBullet[]
   ) {
     this.scene = scene;
     this.createdAt = scene.time.now;
     
-    // Find nearest incoming bullet and deploy perpendicular to its trajectory
-    let shieldAngle = aimAngle;
-    
-    if (incomingBullets && incomingBullets.length > 0) {
-      let nearestBullet: IncomingBullet | null = null;
-      let nearestDist = Infinity;
-      
-      for (const bullet of incomingBullets) {
-        const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, playerX, playerY);
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestBullet = bullet;
-        }
-      }
-      
-      if (nearestBullet) {
-        // Get bullet's travel direction (angle from velocity)
-        const bulletAngle = Math.atan2(nearestBullet.velocityY, nearestBullet.velocityX);
-        // Shield faces opposite to bullet direction (so it blocks)
-        shieldAngle = bulletAngle + Math.PI;
-      }
-    }
+    // Deploy shield based on player's facing direction
+    const shieldAngle = aimAngle;
     
     this.angle = shieldAngle;
     
-    // Shield is placed perpendicular to incoming bullet direction, in front of player
+    // Shield is placed in front of player based on facing direction
     const shieldDistance = GAME_CONFIG.SHIELD_DISTANCE;
     this.x = playerX + Math.cos(shieldAngle) * shieldDistance;
     this.y = playerY + Math.sin(shieldAngle) * shieldDistance;
@@ -70,7 +50,7 @@ export class Shield {
       0.7
     );
     
-    // Rotate to be perpendicular to bullet trajectory (add PI/2)
+    // Rotate to be perpendicular to facing direction (add PI/2)
     this.sprite.setRotation(shieldAngle + Math.PI / 2);
     this.sprite.setStrokeStyle(2, 0xffffff, 0.8);
     

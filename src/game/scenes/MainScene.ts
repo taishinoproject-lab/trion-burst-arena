@@ -27,6 +27,7 @@ export class MainScene extends Phaser.Scene {
   private qKey!: Phaser.Input.Keyboard.Key;
   private eKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
+  private fKey!: Phaser.Input.Keyboard.Key;
   
   // UI Elements
   private playerTrionBar!: Phaser.GameObjects.Graphics;
@@ -60,6 +61,7 @@ export class MainScene extends Phaser.Scene {
     this.qKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     
     // Mouse input for shooting
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -199,6 +201,7 @@ Right Click - Fire Meteora
 Space - Deploy Shield
 Q - Toggle Divide Mode
 E - Switch Weapon (Asteroid/Meteora/Viper)
+F - Release Divided Asteroids
 R - Restart
 
 Viper: Guide bullets with mouse!
@@ -320,6 +323,11 @@ Reduce Boss Trion to 0 to win!
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.tryDeployShield();
     }
+
+    // Release held divided asteroids
+    if (Phaser.Input.Keyboard.JustDown(this.fKey)) {
+      this.releaseDividedAsteroids();
+    }
     
     // Continuous fire while holding (except for viper which fires on click)
     if (this.input.activePointer.isDown && !this.input.activePointer.rightButtonDown()) {
@@ -427,13 +435,15 @@ Reduce Boss Trion to 0 to win!
     // Consume Trion
     this.gameState.playerTrion -= GAME_CONFIG.SHIELD_COST;
     
-    // Get incoming boss bullets for shield to orient against
-    const incomingBullets = this.bossBullets
-      .filter(b => b.active)
-      .map(b => ({ x: b.x, y: b.y, velocityX: b.velocityX, velocityY: b.velocityY }));
-    
-    // Create shield perpendicular to nearest bullet's trajectory
-    this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, incomingBullets);
+    // Create shield perpendicular to player facing direction
+    this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle);
+  }
+
+  private releaseDividedAsteroids() {
+    for (const bullet of this.playerBullets) {
+      if (!bullet.active || bullet.type !== 'asteroid' || !bullet.isHeld) continue;
+      bullet.releaseTowards(this.boss.x, this.boss.y);
+    }
   }
 
   private bossFire(time: number) {
