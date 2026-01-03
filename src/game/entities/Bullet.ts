@@ -95,6 +95,14 @@ export class Bullet {
     this.velocityY = Math.sin(this.angle) * this.speed;
   }
 
+  releaseWithAngle(angle: number) {
+    if (!this.active) return;
+    this.isHeld = false;
+    this.angle = angle;
+    this.velocityX = Math.cos(this.angle) * this.speed;
+    this.velocityY = Math.sin(this.angle) * this.speed;
+  }
+
   update(delta: number, mouseX?: number, mouseY?: number) {
     if (!this.active) return;
     

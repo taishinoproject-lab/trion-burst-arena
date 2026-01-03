@@ -28,6 +28,7 @@ export class MainScene extends Phaser.Scene {
   private eKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
   private fKey!: Phaser.Input.Keyboard.Key;
+  private shiftKey!: Phaser.Input.Keyboard.Key;
   
   // UI Elements
   private playerTrionBar!: Phaser.GameObjects.Graphics;
@@ -62,6 +63,7 @@ export class MainScene extends Phaser.Scene {
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     
     // Mouse input for shooting
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -198,10 +200,11 @@ WASD - Move
 Mouse - Aim
 Left Click - Fire
 Right Click - Fire Meteora
-Space - Deploy Shield
+Space - Deploy Narrow Shield
+Shift + Space - Deploy Wide Shield
 Q - Toggle Divide Mode
 E - Switch Weapon (Asteroid/Meteora/Viper)
-F - Release Divided Asteroids
+F - Release Divided Asteroids (Aim Direction)
 R - Restart
 
 Viper: Guide bullets with mouse!
@@ -435,14 +438,16 @@ Reduce Boss Trion to 0 to win!
     // Consume Trion
     this.gameState.playerTrion -= GAME_CONFIG.SHIELD_COST;
     
-    // Create shield perpendicular to player facing direction
-    this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle);
+    const shieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
+    this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
   }
 
   private releaseDividedAsteroids() {
+    const aim = this.player.getAimDirection();
+    const releaseAngle = Math.atan2(aim.y, aim.x);
     for (const bullet of this.playerBullets) {
       if (!bullet.active || bullet.type !== 'asteroid' || !bullet.isHeld) continue;
-      bullet.releaseTowards(this.boss.x, this.boss.y);
+      bullet.releaseWithAngle(releaseAngle);
     }
   }
 
@@ -480,24 +485,58 @@ Reduce Boss Trion to 0 to win!
     });
   }
 
+  private resolveBulletInterceptions() {
+    for (const playerBullet of this.playerBullets) {
+      if (!playerBullet.active) continue;
+      const playerBounds = playerBullet.getBounds();
+
+      for (const bossBullet of this.bossBullets) {
+        if (!bossBullet.active) continue;
+        const bossBounds = bossBullet.getBounds();
+
+        if (Phaser.Geom.Intersects.CircleToCircle(playerBounds, bossBounds)) {
+          if (playerBullet.type === 'meteora') {
+            playerBullet.explode();
+          } else {
+            playerBullet.destroy();
+          }
+          bossBullet.destroy();
+          break;
+        }
+      }
+    }
+  }
+
+  private bulletHitsShield(bullet: Bullet, shield: Shield): boolean {
+    const bulletBounds = bullet.getBounds();
+    const shieldBounds = shield.getBounds();
+
+    if (shieldBounds instanceof Phaser.Geom.Rectangle) {
+      return Phaser.Geom.Intersects.CircleToRectangle(bulletBounds, shieldBounds);
+    }
+
+    return Phaser.Geom.Intersects.CircleToCircle(bulletBounds, shieldBounds);
+  }
+
   private checkCollisions() {
     const bossRadius = GAME_CONFIG.BOSS_RADIUS;
     const playerRadius = GAME_CONFIG.PLAYER_RADIUS;
+
+    this.resolveBulletInterceptions();
     
     // Player bullets vs Boss
     for (const bullet of this.playerBullets) {
       if (!bullet.active) continue;
       
       // Check boss shield first
-      const bossShieldBounds = this.boss.getShieldBounds();
-      if (bossShieldBounds) {
-        const bulletBounds = bullet.getBounds();
-        if (Phaser.Geom.Intersects.CircleToRectangle(bulletBounds, bossShieldBounds)) {
+      if (this.boss.shieldActive && this.boss.shield) {
+        if (this.bulletHitsShield(bullet, this.boss.shield)) {
           if (bullet.type === 'meteora') {
             bullet.explode();
           } else {
             bullet.destroy();
           }
+          this.boss.applyShieldDamage(bullet.damage);
           continue;
         }
       }
@@ -527,12 +566,14 @@ Reduce Boss Trion to 0 to win!
       if (!bullet.active) continue;
       
       // Check player shield
-      if (this.playerShield?.active) {
-        const shieldBounds = this.playerShield.getBounds();
-        const bulletBounds = bullet.getBounds();
-        
-        if (Phaser.Geom.Intersects.CircleToRectangle(bulletBounds, shieldBounds)) {
-          bullet.destroy();
+      if (this.playerShield?.active && this.playerShield) {
+        if (this.bulletHitsShield(bullet, this.playerShield)) {
+          if (bullet.type === 'meteora') {
+            bullet.explode();
+          } else {
+            bullet.destroy();
+          }
+          this.playerShield.applyDamage(bullet.damage);
           continue;
         }
       }
