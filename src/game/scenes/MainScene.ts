@@ -395,10 +395,11 @@ Reduce Boss Trion to 0 to win!
     const aim = this.player.getAimDirection();
     const baseAngle = Math.atan2(aim.y, aim.x);
     
+    let bullet: Bullet;
     if (bulletType === 'asteroid') {
       if (this.gameState.divideEnabled) {
         // Create a single bullet that will split after traveling a short distance (World Trigger style)
-        const bullet = new Bullet(
+        bullet = new Bullet(
           this,
           this.player.x + aim.x * 20,
           this.player.y + aim.y * 20,
@@ -414,9 +415,8 @@ Reduce Boss Trion to 0 to win!
         bullet.setOnDivide((newBullets) => {
           this.playerBullets.push(...newBullets);
         });
-        this.playerBullets.push(bullet);
       } else {
-        const bullet = new Bullet(
+        bullet = new Bullet(
           this,
           this.player.x + aim.x * 20,
           this.player.y + aim.y * 20,
@@ -425,10 +425,9 @@ Reduce Boss Trion to 0 to win!
           true,
           GAME_CONFIG.ASTEROID_DAMAGE
         );
-        this.playerBullets.push(bullet);
       }
     } else if (bulletType === 'meteora') {
-      const bullet = new Bullet(
+      bullet = new Bullet(
         this,
         this.player.x + aim.x * 20,
         this.player.y + aim.y * 20,
@@ -437,10 +436,9 @@ Reduce Boss Trion to 0 to win!
         true,
         GAME_CONFIG.METEORA_DAMAGE
       );
-      this.playerBullets.push(bullet);
     } else {
       // Viper - guided bullet
-      const bullet = new Bullet(
+      bullet = new Bullet(
         this,
         this.player.x + aim.x * 20,
         this.player.y + aim.y * 20,
@@ -449,8 +447,9 @@ Reduce Boss Trion to 0 to win!
         true,
         GAME_CONFIG.VIPER_DAMAGE
       );
-      this.playerBullets.push(bullet);
     }
+    this.playerBullets.push(bullet);
+    this.holdAndScheduleRelease(bullet, 3000);
   }
 
   private tryDeployShield() {
@@ -469,6 +468,16 @@ Reduce Boss Trion to 0 to win!
 
   private releaseDividedAsteroids() {
     this.scheduleHeldBulletRelease(this.playerBullets, () => ({ x: this.boss.x, y: this.boss.y }), 3000);
+  }
+
+  private holdAndScheduleRelease(bullet: Bullet, delayMs: number) {
+    if (!bullet.active || bullet.releaseScheduled) return;
+    bullet.hold();
+    bullet.releaseScheduled = true;
+    this.time.delayedCall(delayMs, () => {
+      if (!bullet.active || !bullet.isHeld) return;
+      bullet.releaseTowards(this.boss.x, this.boss.y);
+    });
   }
 
   private scheduleHeldBulletRelease(
