@@ -279,8 +279,7 @@ export class MainScene extends Phaser.Scene {
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2,
-      500,
-      390,
+
       0x0a0a12,
       0.95
     );
@@ -293,7 +292,7 @@ export class MainScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
     
-    const instructions = `
+    const leftInstructions = `
 WASD - Move
 Mouse - Aim
 Left Click - Fire
@@ -302,74 +301,54 @@ Space - Deploy Narrow Shield
 Shift + Space - Deploy Wide Shield
 Q - Toggle Asteroid Delay Mode
 C - Toggle Divide Mode
-E - Switch Weapon (Asteroid/Meteora/Viper)
-F/G - Release Divided Asteroids (Auto-Lock)
+    `.trim();
+
+    const rightInstructions = `
+E - Switch Weapon
+F/G - Release Divided Asteroids
 Middle Click - Release Divided Asteroids
 R - Restart
 
 Viper: Guide bullets with mouse!
 Reduce Boss Trion to 0 to win!
     `.trim();
-    
-    const text = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 10, instructions, {
-      fontSize: '16px',
+
       color: '#ffffff',
       fontFamily: 'monospace',
-      align: 'center',
+      align: 'left',
       lineSpacing: 6,
     });
-    text.setOrigin(0.5);
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 140, 'Difficulty', {
-      fontSize: '16px',
+      fontSize: '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
-    difficultyLabel.setOrigin(0.5);
 
-    const easyText = this.add.text(GAME_CONFIG.WIDTH / 2 - 70, GAME_CONFIG.HEIGHT / 2 + 170, 'Easy', {
-      fontSize: '18px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    easyText.setOrigin(0.5);
-    easyText.setInteractive({ useHandCursor: true });
-
-    const middleText = this.add.text(GAME_CONFIG.WIDTH / 2 + 70, GAME_CONFIG.HEIGHT / 2 + 170, 'Middle', {
-      fontSize: '18px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    middleText.setOrigin(0.5);
-    middleText.setInteractive({ useHandCursor: true });
-
-    const updateDifficultyUI = () => {
-      easyText.setColor(this.difficulty === 'easy' ? '#00ffd5' : '#ffffff');
-      middleText.setColor(this.difficulty === 'middle' ? '#00ffd5' : '#ffffff');
+      this.tweens.add({
+        targets: this.instructionsOverlay,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => {
+          this.instructionsOverlay.destroy();
+        },
+      });
     };
-    updateDifficultyUI();
 
     easyText.on('pointerdown', () => {
       this.difficulty = 'easy';
       updateDifficultyUI();
+      startGame();
     });
 
     middleText.on('pointerdown', () => {
       this.difficulty = 'middle';
       updateDifficultyUI();
+      startGame();
     });
-
-    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 210, 'Click to Start', {
-      fontSize: '20px',
-      color: '#00ffd5',
-      fontFamily: 'monospace',
-    });
-    startText.setOrigin(0.5);
-    startText.setInteractive({ useHandCursor: true });
     
     // Blink effect
     this.tweens.add({
-      targets: startText,
+      targets: [easyText, middleText],
       alpha: 0.3,
       yoyo: true,
       repeat: -1,
@@ -379,24 +358,13 @@ Reduce Boss Trion to 0 to win!
     this.instructionsOverlay = this.add.container(0, 0, [
       bg,
       title,
-      text,
+      leftText,
+      rightText,
       difficultyLabel,
       easyText,
       middleText,
-      startText,
     ]);
     this.instructionsOverlay.setDepth(100);
-    
-    startText.once('pointerdown', () => {
-      this.tweens.add({
-        targets: this.instructionsOverlay,
-        alpha: 0,
-        duration: 300,
-        onComplete: () => {
-          this.instructionsOverlay.destroy();
-        },
-      });
-    });
   }
 
   private resetGameState() {
