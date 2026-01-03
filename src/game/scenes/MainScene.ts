@@ -292,26 +292,6 @@ export class MainScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
     
-    const leftInstructions = `
-WASD - Move
-Mouse - Aim
-Left Click - Fire
-Right Click - Fire Meteora
-Space - Deploy Narrow Shield
-Shift + Space - Deploy Wide Shield
-Q - Toggle Asteroid Delay Mode
-C - Toggle Divide Mode
-    `.trim();
-
-    const rightInstructions = `
-E - Switch Weapon
-F/G - Release Divided Asteroids
-Middle Click - Release Divided Asteroids
-R - Restart
-
-Viper: Guide bullets with mouse!
-Reduce Boss Trion to 0 to win!
-    `.trim();
 
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -324,36 +304,6 @@ Reduce Boss Trion to 0 to win!
       fontFamily: 'monospace',
     });
 
-      this.tweens.add({
-        targets: this.instructionsOverlay,
-        alpha: 0,
-        duration: 300,
-        onComplete: () => {
-          this.instructionsOverlay.destroy();
-        },
-      });
-    };
-
-    easyText.on('pointerdown', () => {
-      this.difficulty = 'easy';
-      updateDifficultyUI();
-      startGame();
-    });
-
-    middleText.on('pointerdown', () => {
-      this.difficulty = 'middle';
-      updateDifficultyUI();
-      startGame();
-    });
-    
-    // Blink effect
-    this.tweens.add({
-      targets: [easyText, middleText],
-      alpha: 0.3,
-      yoyo: true,
-      repeat: -1,
-      duration: 500,
-    });
     
     this.instructionsOverlay = this.add.container(0, 0, [
       bg,
