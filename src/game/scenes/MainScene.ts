@@ -1,16 +1,43 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG, BulletType, GameState } from '../constants';
 import { Player } from '../entities/Player';
-import { Boss } from '../entities/Boss';
+import { Boss, BossConfig } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
 import { Shield } from '../entities/Shield';
+
+type EnemyPattern = 'mixed' | 'delayedAsteroid' | 'meteoraBarrage';
+
+interface EnemyBehavior {
+  pattern: EnemyPattern;
+  delayedShotChance: number;
+  divideChance: number;
+  bulletWeights?: { asteroid: number; meteora: number; viper: number };
+}
+
+interface EnemyEntry {
+  boss: Boss;
+  trion: number;
+  maxTrion: number;
+  behavior: EnemyBehavior;
+}
+
+interface EnemyTarget {
+  boss: Boss;
+  getTrion: () => number;
+  setTrion: (value: number) => void;
+  maxTrion: number;
+}
 
 export class MainScene extends Phaser.Scene {
   private player!: Player;
   private boss!: Boss;
+  private extraEnemies: EnemyEntry[] = [];
   private playerBullets: Bullet[] = [];
   private bossBullets: Bullet[] = [];
   private playerShield: Shield | null = null;
+  private gameStartTime: number = 0;
+  private spawnedShieldedEnemy = false;
+  private spawnedRapidEnemy = false;
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -112,6 +139,7 @@ export class MainScene extends Phaser.Scene {
     
     // Reset game state
     this.resetGameState();
+    this.gameStartTime = this.time.now;
   }
 
   private createBackgroundGrid() {
@@ -294,6 +322,9 @@ Reduce Boss Trion to 0 to win!
       isGameOver: false,
       playerWon: false,
     };
+    this.extraEnemies = [];
+    this.spawnedShieldedEnemy = false;
+    this.spawnedRapidEnemy = false;
     this.gameOverText.setVisible(false);
   }
 
@@ -316,13 +347,23 @@ Reduce Boss Trion to 0 to win!
     
     // Regenerate Trion
     this.regenerateTrion(delta);
+
+    // Spawn timed enemies
+    this.spawnTimedEnemies(time);
     
     // Update entities
     this.player.update(delta);
-    this.boss.update(delta, this.player.x, this.player.y, time);
-    
-    // Boss firing
-    this.bossFire(time);
+    if (this.gameState.bossTrion > 0) {
+      this.boss.update(delta, this.player.x, this.player.y, time);
+      // Boss firing
+      this.fireEnemy({ boss: this.boss, trion: this.gameState.bossTrion, maxTrion: GAME_CONFIG.BOSS_TRION_MAX, behavior: this.getPrimaryBossBehavior() }, time);
+    }
+
+    for (const enemy of this.extraEnemies) {
+      if (enemy.trion <= 0) continue;
+      enemy.boss.update(delta, this.player.x, this.player.y, time);
+      this.fireEnemy(enemy, time);
+    }
     
     // Update bullets
     this.updateBullets(delta);
@@ -334,6 +375,8 @@ Reduce Boss Trion to 0 to win!
     
     // Check collisions
     this.checkCollisions();
+
+    this.cleanupDefeatedEnemies();
     
     // Update UI
     this.updateUI();
@@ -471,7 +514,7 @@ Reduce Boss Trion to 0 to win!
     }
     this.playerBullets.push(bullet);
     if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled && !this.gameState.divideEnabled) {
-      this.scheduleDelayedRelease(bullet, () => ({ x: this.boss.x, y: this.boss.y }), 3000);
+      this.scheduleDelayedRelease(bullet, () => this.getClosestEnemyPosition(), 3000);
     }
   }
 
@@ -490,7 +533,7 @@ Reduce Boss Trion to 0 to win!
   }
 
   private releaseDividedAsteroids() {
-    this.scheduleHeldBulletRelease(this.playerBullets, () => ({ x: this.boss.x, y: this.boss.y }), 3000);
+    this.scheduleHeldBulletRelease(this.playerBullets, () => this.getClosestEnemyPosition(), 3000);
   }
 
   private scheduleDelayedRelease(
@@ -524,16 +567,142 @@ Reduce Boss Trion to 0 to win!
     }
   }
 
-  private bossFire(time: number) {
-    const fireData = this.boss.fire(time);
+  private spawnTimedEnemies(time: number) {
+    const elapsed = time - this.gameStartTime;
+    if (!this.spawnedShieldedEnemy && elapsed >= 30000) {
+      this.spawnedShieldedEnemy = true;
+      this.spawnShieldedEnemy();
+    }
+
+    if (!this.spawnedRapidEnemy && elapsed >= 60000) {
+      this.spawnedRapidEnemy = true;
+      this.spawnRapidEnemy();
+    }
+  }
+
+  private spawnShieldedEnemy() {
+    const config: Partial<BossConfig> = {
+      speed: GAME_CONFIG.BOSS_SPEED * 0.95,
+      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.25,
+      bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED * 1.1,
+      shieldCooldown: 1400,
+      color: 0xffa94d,
+    };
+    const boss = new Boss(this, GAME_CONFIG.WIDTH * 0.25, 200, config);
+    this.extraEnemies.push({
+      boss,
+      trion: GAME_CONFIG.BOSS_TRION_MAX + 15,
+      maxTrion: GAME_CONFIG.BOSS_TRION_MAX + 15,
+      behavior: {
+        pattern: 'delayedAsteroid',
+        delayedShotChance: 0.85,
+        divideChance: 0.2,
+      },
+    });
+  }
+
+  private spawnRapidEnemy() {
+    const config: Partial<BossConfig> = {
+      speed: GAME_CONFIG.BOSS_SPEED * 1.6,
+      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.6,
+      bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED * 1.3,
+      shieldCooldown: 2200,
+      color: 0xff6bf0,
+    };
+    const boss = new Boss(this, GAME_CONFIG.WIDTH * 0.75, 220, config);
+    this.extraEnemies.push({
+      boss,
+      trion: GAME_CONFIG.BOSS_TRION_MAX + 30,
+      maxTrion: GAME_CONFIG.BOSS_TRION_MAX + 30,
+      behavior: {
+        pattern: 'meteoraBarrage',
+        delayedShotChance: 0.15,
+        divideChance: 0,
+      },
+    });
+  }
+
+  private getEnemyTargets(): EnemyTarget[] {
+    const targets: EnemyTarget[] = [];
+    if (this.gameState.bossTrion > 0) {
+      targets.push({
+        boss: this.boss,
+        getTrion: () => this.gameState.bossTrion,
+        setTrion: (value: number) => {
+          this.gameState.bossTrion = value;
+        },
+        maxTrion: GAME_CONFIG.BOSS_TRION_MAX,
+      });
+    }
+
+    for (const enemy of this.extraEnemies) {
+      if (enemy.trion <= 0) continue;
+      targets.push({
+        boss: enemy.boss,
+        getTrion: () => enemy.trion,
+        setTrion: (value: number) => {
+          enemy.trion = value;
+        },
+        maxTrion: enemy.maxTrion,
+      });
+    }
+
+    return targets;
+  }
+
+  private getClosestEnemyPosition() {
+    const targets = this.getEnemyTargets();
+    if (targets.length === 0) {
+      return { x: this.player.x, y: this.player.y };
+    }
+    let closest = targets[0];
+    let closestDist = Phaser.Math.Distance.Between(this.player.x, this.player.y, closest.boss.x, closest.boss.y);
+    for (const target of targets.slice(1)) {
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.boss.x, target.boss.y);
+      if (dist < closestDist) {
+        closest = target;
+        closestDist = dist;
+      }
+    }
+    return { x: closest.boss.x, y: closest.boss.y };
+  }
+
+  private getPrimaryBossBehavior(): EnemyBehavior {
+    return {
+      pattern: 'mixed',
+      delayedShotChance: 0.3,
+      divideChance: 0.6,
+      bulletWeights: { asteroid: 0.45, meteora: 0.3, viper: 0.25 },
+    };
+  }
+
+  private fireEnemy(enemy: EnemyEntry, time: number) {
+    const fireData = enemy.boss.fire(time);
     if (!fireData) return;
 
-    const roll = Phaser.Math.FloatBetween(0, 1);
-    const bulletType: BulletType = roll < 0.45 ? 'asteroid' : roll < 0.75 ? 'meteora' : 'viper';
-    const useDelayedShot = Phaser.Math.FloatBetween(0, 1) < 0.3;
+    const behavior = enemy.behavior;
+    const bulletSpeed = enemy.boss.getBulletSpeed();
+    let bulletType: BulletType = 'asteroid';
+    let useDelayedShot = Phaser.Math.FloatBetween(0, 1) < behavior.delayedShotChance;
+
+    if (behavior.pattern === 'mixed') {
+      const weights = behavior.bulletWeights ?? { asteroid: 0.45, meteora: 0.3, viper: 0.25 };
+      const roll = Phaser.Math.FloatBetween(0, 1);
+      if (roll < weights.asteroid) {
+        bulletType = 'asteroid';
+      } else if (roll < weights.asteroid + weights.meteora) {
+        bulletType = 'meteora';
+      } else {
+        bulletType = 'viper';
+      }
+    } else if (behavior.pattern === 'meteoraBarrage') {
+      bulletType = 'meteora';
+    } else {
+      bulletType = 'asteroid';
+    }
 
     if (bulletType === 'asteroid') {
-      const shouldDivide = !useDelayedShot && Phaser.Math.FloatBetween(0, 1) < 0.6;
+      const shouldDivide = !useDelayedShot && Phaser.Math.FloatBetween(0, 1) < behavior.divideChance;
       if (shouldDivide) {
         const bullet = new Bullet(
           this,
@@ -544,7 +713,7 @@ Reduce Boss Trion to 0 to win!
           false,
           GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE,
           GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE,
-          GAME_CONFIG.BOSS_BULLET_SPEED,
+          bulletSpeed,
           true,
           GAME_CONFIG.ASTEROID_DIVIDE_COUNT
         );
@@ -565,7 +734,7 @@ Reduce Boss Trion to 0 to win!
         false,
         GAME_CONFIG.ASTEROID_TRION_DAMAGE,
         GAME_CONFIG.ASTEROID_SHIELD_DAMAGE,
-        GAME_CONFIG.BOSS_BULLET_SPEED
+        bulletSpeed
       );
       this.bossBullets.push(bullet);
       if (useDelayedShot) {
@@ -584,7 +753,7 @@ Reduce Boss Trion to 0 to win!
         false,
         GAME_CONFIG.METEORA_TRION_DAMAGE,
         GAME_CONFIG.METEORA_SHIELD_DAMAGE,
-        GAME_CONFIG.BOSS_BULLET_SPEED
+        bulletSpeed
       );
       this.bossBullets.push(bullet);
       if (useDelayedShot) {
@@ -623,6 +792,20 @@ Reduce Boss Trion to 0 to win!
     this.bossBullets = this.bossBullets.filter(bullet => {
       bullet.update(delta, this.player.x, this.player.y);
       return bullet.active;
+    });
+  }
+
+  private cleanupDefeatedEnemies() {
+    if (this.gameState.bossTrion <= 0 && this.boss.sprite.active) {
+      this.boss.destroy();
+    }
+
+    this.extraEnemies = this.extraEnemies.filter(enemy => {
+      if (enemy.trion <= 0) {
+        enemy.boss.destroy();
+        return false;
+      }
+      return true;
     });
   }
 
@@ -744,7 +927,6 @@ Reduce Boss Trion to 0 to win!
   }
 
   private checkCollisions() {
-    const bossRadius = GAME_CONFIG.BOSS_RADIUS;
     const playerRadius = GAME_CONFIG.PLAYER_RADIUS;
 
     this.resolveBulletInterceptions();
@@ -754,34 +936,39 @@ Reduce Boss Trion to 0 to win!
     // Player bullets vs Boss
     for (const bullet of this.playerBullets) {
       if (!bullet.active) continue;
-      
-      // Check boss shield first
-      if (this.boss.shieldActive && this.boss.shield) {
-        if (this.bulletHitsShield(bullet, this.boss.shield)) {
-          if (bullet.type === 'meteora') {
-            bullet.explode();
-          } else {
-            bullet.destroy();
+
+      for (const target of this.getEnemyTargets()) {
+        // Check boss shield first
+        if (target.boss.shieldActive && target.boss.shield) {
+          if (this.bulletHitsShield(bullet, target.boss.shield)) {
+            if (bullet.type === 'meteora') {
+              bullet.explode();
+            } else {
+              bullet.destroy();
+            }
+            target.boss.applyShieldDamage(bullet.shieldDamage);
+            break;
           }
-          this.boss.applyShieldDamage(bullet.shieldDamage);
-          continue;
         }
-      }
-      
-      // Check bullet vs boss
-      const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, this.boss.x, this.boss.y);
-      
-      if (bullet.type === 'meteora') {
-        // Meteora explodes on contact
-        if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
-          bullet.explode();
-          this.gameState.bossTrion -= bullet.trionDamage;
-        }
-      } else {
-        // Asteroid direct hit
-        if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
-          this.gameState.bossTrion -= bullet.trionDamage;
-          bullet.destroy();
+
+        // Check bullet vs boss
+        const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, target.boss.x, target.boss.y);
+        const bossRadius = target.boss.getRadius();
+
+        if (bullet.type === 'meteora') {
+          // Meteora explodes on contact
+          if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
+            bullet.explode();
+            target.setTrion(target.getTrion() - bullet.trionDamage);
+            break;
+          }
+        } else {
+          // Asteroid direct hit
+          if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
+            target.setTrion(target.getTrion() - bullet.trionDamage);
+            bullet.destroy();
+            break;
+          }
         }
       }
     }
@@ -822,10 +1009,17 @@ Reduce Boss Trion to 0 to win!
       this.gameState.playerTrion + regenAmount
     );
     
-    this.gameState.bossTrion = Math.min(
-      GAME_CONFIG.BOSS_TRION_MAX,
-      this.gameState.bossTrion + regenAmount
-    );
+    if (this.gameState.bossTrion > 0) {
+      this.gameState.bossTrion = Math.min(
+        GAME_CONFIG.BOSS_TRION_MAX,
+        this.gameState.bossTrion + regenAmount
+      );
+    }
+
+    for (const enemy of this.extraEnemies) {
+      if (enemy.trion <= 0) continue;
+      enemy.trion = Math.min(enemy.maxTrion, enemy.trion + regenAmount);
+    }
   }
 
   private updateUI() {
@@ -880,7 +1074,7 @@ Reduce Boss Trion to 0 to win!
       this.gameState.isGameOver = true;
       this.gameState.playerWon = false;
       this.showGameOver('TRION DEPLETED\n\nYOU LOSE\n\nPress R to Restart');
-    } else if (this.gameState.bossTrion <= 0) {
+    } else if (this.gameState.bossTrion <= 0 && this.extraEnemies.length === 0) {
       this.gameState.isGameOver = true;
       this.gameState.playerWon = true;
       this.showGameOver('BOSS DEFEATED\n\nYOU WIN!\n\nPress R to Restart');
