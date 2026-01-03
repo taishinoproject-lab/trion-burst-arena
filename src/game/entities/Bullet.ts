@@ -13,6 +13,13 @@ export class Bullet {
   public isPlayerBullet: boolean;
   public active: boolean = true;
   public hasExploded: boolean = false;
+  
+  // Viper-specific properties
+  private angle: number;
+  private speed: number;
+  private createdAt: number;
+  private trail: Phaser.GameObjects.Arc[] = [];
+  private trailTimer: number = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -30,12 +37,23 @@ export class Bullet {
     this.type = type;
     this.isPlayerBullet = isPlayerBullet;
     this.damage = damage;
+    this.angle = angle;
+    this.speed = type === 'viper' ? GAME_CONFIG.VIPER_SPEED : speed;
+    this.createdAt = scene.time.now;
     
-    this.velocityX = Math.cos(angle) * speed;
-    this.velocityY = Math.sin(angle) * speed;
+    this.velocityX = Math.cos(angle) * this.speed;
+    this.velocityY = Math.sin(angle) * this.speed;
     
-    const color = isPlayerBullet ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_BULLET_COLOR;
-    const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 : GAME_CONFIG.BULLET_RADIUS;
+    let color: number;
+    if (type === 'viper') {
+      color = GAME_CONFIG.VIPER_COLOR;
+    } else {
+      color = isPlayerBullet ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_BULLET_COLOR;
+    }
+    
+    const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 : 
+                   type === 'viper' ? GAME_CONFIG.BULLET_RADIUS * 0.9 : 
+                   GAME_CONFIG.BULLET_RADIUS;
     
     this.sprite = scene.add.circle(x, y, radius, color);
     this.sprite.setStrokeStyle(1, 0xffffff, 0.5);
@@ -44,10 +62,49 @@ export class Bullet {
     this.sprite.setAlpha(0.9);
   }
 
-  update(delta: number) {
+  update(delta: number, mouseX?: number, mouseY?: number) {
     if (!this.active) return;
     
     const dt = delta / 1000;
+    
+    // Viper guided behavior
+    if (this.type === 'viper' && mouseX !== undefined && mouseY !== undefined) {
+      // Calculate desired angle toward mouse
+      const targetAngle = Math.atan2(mouseY - this.y, mouseX - this.x);
+      
+      // Gradually turn toward target
+      let angleDiff = targetAngle - this.angle;
+      
+      // Normalize angle difference to -PI to PI
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      
+      // Apply turn rate
+      const maxTurn = GAME_CONFIG.VIPER_TURN_RATE * dt;
+      if (Math.abs(angleDiff) < maxTurn) {
+        this.angle = targetAngle;
+      } else {
+        this.angle += Math.sign(angleDiff) * maxTurn;
+      }
+      
+      // Update velocity based on new angle
+      this.velocityX = Math.cos(this.angle) * this.speed;
+      this.velocityY = Math.sin(this.angle) * this.speed;
+      
+      // Create trail effect
+      this.trailTimer += delta;
+      if (this.trailTimer > 30) {
+        this.trailTimer = 0;
+        this.createTrailParticle();
+      }
+      
+      // Check lifetime
+      if (this.scene.time.now - this.createdAt > GAME_CONFIG.VIPER_LIFETIME) {
+        this.destroy();
+        return;
+      }
+    }
+    
     this.x += this.velocityX * dt;
     this.y += this.velocityY * dt;
     
@@ -62,6 +119,26 @@ export class Bullet {
     ) {
       this.destroy();
     }
+  }
+  
+  private createTrailParticle() {
+    const particle = this.scene.add.circle(
+      this.x,
+      this.y,
+      3,
+      GAME_CONFIG.VIPER_COLOR,
+      0.6
+    );
+    
+    this.scene.tweens.add({
+      targets: particle,
+      alpha: 0,
+      scale: 0.3,
+      duration: 200,
+      onComplete: () => {
+        particle.destroy();
+      }
+    });
   }
 
   explode(): Phaser.GameObjects.Arc | null {
@@ -98,6 +175,9 @@ export class Bullet {
   destroy() {
     this.active = false;
     this.sprite.destroy();
+    // Clean up any remaining trail particles
+    this.trail.forEach(p => p.destroy());
+    this.trail = [];
   }
 
   getBounds(): Phaser.Geom.Circle {

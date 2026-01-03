@@ -52,6 +52,14 @@ export const GAME_CONFIG = {
   METEORA_EXPLOSION_RADIUS: 70,
   METEORA_EXPLOSION_DURATION: 200, // ms
   
+  // Viper bullet (guided)
+  VIPER_COST: 5,
+  VIPER_DAMAGE: 5,
+  VIPER_SPEED: 400,
+  VIPER_TURN_RATE: 4.5, // radians per second
+  VIPER_LIFETIME: 2500, // ms before auto-destroy
+  VIPER_COLOR: 0x00e5ff, // slightly different cyan for viper
+  
   // Shield
   SHIELD_COST: 8,
   SHIELD_DURATION: 800, // ms
@@ -60,7 +68,7 @@ export const GAME_CONFIG = {
   SHIELD_DISTANCE: 30, // distance from player center
 };
 
-export type BulletType = 'asteroid' | 'meteora';
+export type BulletType = 'asteroid' | 'meteora' | 'viper';
 
 export interface GameState {
   playerTrion: number;
