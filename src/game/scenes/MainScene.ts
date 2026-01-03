@@ -64,6 +64,11 @@ export class MainScene extends Phaser.Scene {
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+
+    this.input.keyboard?.on('keydown-F', () => {
+      if (this.gameState.isGameOver) return;
+      this.releaseDividedAsteroids();
+    });
     
     // Mouse input for shooting
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -514,6 +519,33 @@ Reduce Boss Trion to 0 to win!
     }
   }
 
+  private resolveHeldBulletClashes(bullets: Bullet[]) {
+    const heldBullets = bullets.filter(bullet => bullet.active && bullet.isHeld);
+    if (heldBullets.length === 0) return;
+
+    for (const bullet of bullets) {
+      if (!bullet.active || bullet.isHeld) continue;
+      const bulletBounds = bullet.getBounds();
+
+      for (const heldBullet of heldBullets) {
+        if (!heldBullet.active || heldBullet === bullet) continue;
+        const heldBounds = heldBullet.getBounds();
+
+        if (Phaser.Geom.Intersects.CircleToCircle(bulletBounds, heldBounds)) {
+          if (bullet.type === 'meteora') {
+            bullet.explode();
+          } else {
+            bullet.destroy();
+          }
+          heldBullet.destroy();
+          this.createBulletClashEffect(bullet.x, bullet.y);
+          this.playBulletClashSound();
+          break;
+        }
+      }
+    }
+  }
+
   private createBulletClashEffect(x: number, y: number) {
     const core = this.add.circle(x, y, 8, 0xffffff, 0.9);
     core.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
@@ -569,6 +601,8 @@ Reduce Boss Trion to 0 to win!
     const playerRadius = GAME_CONFIG.PLAYER_RADIUS;
 
     this.resolveBulletInterceptions();
+    this.resolveHeldBulletClashes(this.playerBullets);
+    this.resolveHeldBulletClashes(this.bossBullets);
     
     // Player bullets vs Boss
     for (const bullet of this.playerBullets) {
