@@ -55,7 +55,7 @@ export const GAME_CONFIG = {
   
   // Viper bullet (guided)
   VIPER_COST: 5,
-  VIPER_TRION_DAMAGE: 9,
+  VIPER_TRION_DAMAGE: 60,
   VIPER_SHIELD_DAMAGE: 4,
   VIPER_SPEED: 400,
   VIPER_TURN_RATE: 4.5, // radians per second
