@@ -410,6 +410,7 @@ Reduce Boss Trion to 0 to win!
         // Register callback to add divided bullets to scene
         bullet.setOnDivide((newBullets) => {
           this.playerBullets.push(...newBullets);
+          this.scheduleHeldBulletRelease(newBullets, () => ({ x: this.boss.x, y: this.boss.y }));
         });
         this.playerBullets.push(bullet);
       } else {
@@ -473,6 +474,19 @@ Reduce Boss Trion to 0 to win!
     }
   }
 
+  private scheduleHeldBulletRelease(
+    bullets: Bullet[],
+    getTarget: () => { x: number; y: number }
+  ) {
+    for (const bullet of bullets) {
+      this.time.delayedCall(3000, () => {
+        if (!bullet.active || !bullet.isHeld) return;
+        const target = getTarget();
+        bullet.releaseTowards(target.x, target.y);
+      });
+    }
+  }
+
   private bossFire(time: number) {
     const fireData = this.boss.fire(time);
     if (!fireData) return;
@@ -496,10 +510,8 @@ Reduce Boss Trion to 0 to win!
           GAME_CONFIG.ASTEROID_DIVIDE_COUNT
         );
         bullet.setOnDivide((newBullets) => {
-          for (const newBullet of newBullets) {
-            newBullet.releaseTowards(this.player.x, this.player.y);
-          }
           this.bossBullets.push(...newBullets);
+          this.scheduleHeldBulletRelease(newBullets, () => ({ x: this.player.x, y: this.player.y }));
         });
         this.bossBullets.push(bullet);
         return;
