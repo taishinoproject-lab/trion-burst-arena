@@ -423,7 +423,8 @@ Reduce Boss Trion to 0 to win!
           baseAngle,
           'asteroid',
           true,
-          GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE,
+          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE,
+          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE,
           GAME_CONFIG.BULLET_SPEED,
           true, // isDividing
           GAME_CONFIG.ASTEROID_DIVIDE_COUNT
@@ -440,7 +441,8 @@ Reduce Boss Trion to 0 to win!
           baseAngle,
           'asteroid',
           true,
-          GAME_CONFIG.ASTEROID_DAMAGE
+          GAME_CONFIG.ASTEROID_TRION_DAMAGE,
+          GAME_CONFIG.ASTEROID_SHIELD_DAMAGE
         );
       }
     } else if (bulletType === 'meteora') {
@@ -451,7 +453,8 @@ Reduce Boss Trion to 0 to win!
         baseAngle,
         'meteora',
         true,
-        GAME_CONFIG.METEORA_DAMAGE
+        GAME_CONFIG.METEORA_TRION_DAMAGE,
+        GAME_CONFIG.METEORA_SHIELD_DAMAGE
       );
     } else {
       // Viper - guided bullet
@@ -462,7 +465,8 @@ Reduce Boss Trion to 0 to win!
         baseAngle,
         'viper',
         true,
-        GAME_CONFIG.VIPER_DAMAGE
+        GAME_CONFIG.VIPER_TRION_DAMAGE,
+        GAME_CONFIG.VIPER_SHIELD_DAMAGE
       );
     }
     this.playerBullets.push(bullet);
@@ -529,7 +533,7 @@ Reduce Boss Trion to 0 to win!
     const useDelayedShot = Phaser.Math.FloatBetween(0, 1) < 0.3;
 
     if (bulletType === 'asteroid') {
-      const shouldDivide = Phaser.Math.FloatBetween(0, 1) < 0.6;
+      const shouldDivide = !useDelayedShot && Phaser.Math.FloatBetween(0, 1) < 0.6;
       if (shouldDivide) {
         const bullet = new Bullet(
           this,
@@ -538,7 +542,8 @@ Reduce Boss Trion to 0 to win!
           fireData.angle,
           'asteroid',
           false,
-          GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE,
+          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE,
+          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE,
           GAME_CONFIG.BOSS_BULLET_SPEED,
           true,
           GAME_CONFIG.ASTEROID_DIVIDE_COUNT
@@ -558,7 +563,8 @@ Reduce Boss Trion to 0 to win!
         fireData.angle,
         'asteroid',
         false,
-        GAME_CONFIG.ASTEROID_DAMAGE,
+        GAME_CONFIG.ASTEROID_TRION_DAMAGE,
+        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE,
         GAME_CONFIG.BOSS_BULLET_SPEED
       );
       this.bossBullets.push(bullet);
@@ -576,7 +582,8 @@ Reduce Boss Trion to 0 to win!
         fireData.angle,
         'meteora',
         false,
-        GAME_CONFIG.METEORA_DAMAGE,
+        GAME_CONFIG.METEORA_TRION_DAMAGE,
+        GAME_CONFIG.METEORA_SHIELD_DAMAGE,
         GAME_CONFIG.BOSS_BULLET_SPEED
       );
       this.bossBullets.push(bullet);
@@ -593,7 +600,8 @@ Reduce Boss Trion to 0 to win!
       fireData.angle,
       'viper',
       false,
-      GAME_CONFIG.VIPER_DAMAGE
+      GAME_CONFIG.VIPER_TRION_DAMAGE,
+      GAME_CONFIG.VIPER_SHIELD_DAMAGE
     );
     this.bossBullets.push(bullet);
     if (useDelayedShot) {
@@ -755,7 +763,7 @@ Reduce Boss Trion to 0 to win!
           } else {
             bullet.destroy();
           }
-          this.boss.applyShieldDamage(bullet.damage);
+          this.boss.applyShieldDamage(bullet.shieldDamage);
           continue;
         }
       }
@@ -767,12 +775,12 @@ Reduce Boss Trion to 0 to win!
         // Meteora explodes on contact
         if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
           bullet.explode();
-          this.gameState.bossTrion -= bullet.damage;
+          this.gameState.bossTrion -= bullet.trionDamage;
         }
       } else {
         // Asteroid direct hit
         if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
-          this.gameState.bossTrion -= bullet.damage;
+          this.gameState.bossTrion -= bullet.trionDamage;
           bullet.destroy();
         }
       }
@@ -792,7 +800,7 @@ Reduce Boss Trion to 0 to win!
           } else {
             bullet.destroy();
           }
-          this.playerShield.applyDamage(bullet.damage);
+          this.playerShield.applyDamage(bullet.shieldDamage);
           continue;
         }
       }
@@ -800,7 +808,7 @@ Reduce Boss Trion to 0 to win!
       // Check bullet vs player
       const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, this.player.x, this.player.y);
       if (dist < playerRadius + GAME_CONFIG.BULLET_RADIUS) {
-        this.gameState.playerTrion -= bullet.damage;
+        this.gameState.playerTrion -= bullet.trionDamage;
         bullet.destroy();
       }
     }

@@ -9,7 +9,8 @@ export class Bullet {
   public velocityX: number;
   public velocityY: number;
   public type: BulletType;
-  public damage: number;
+  public trionDamage: number;
+  public shieldDamage: number;
   public isPlayerBullet: boolean;
   public active: boolean = true;
   public hasExploded: boolean = false;
@@ -38,7 +39,8 @@ export class Bullet {
     angle: number,
     type: BulletType,
     isPlayerBullet: boolean,
-    damage: number,
+    trionDamage: number,
+    shieldDamage: number,
     speed: number = GAME_CONFIG.BULLET_SPEED,
     isDividing: boolean = false,
     divideCount: number = 0
@@ -50,7 +52,8 @@ export class Bullet {
     this.startY = y;
     this.type = type;
     this.isPlayerBullet = isPlayerBullet;
-    this.damage = damage;
+    this.trionDamage = trionDamage;
+    this.shieldDamage = shieldDamage;
     this.angle = angle;
     this.speed = type === 'viper' ? GAME_CONFIG.VIPER_SPEED : speed;
     this.createdAt = scene.time.now;
@@ -200,7 +203,8 @@ export class Bullet {
         this.angle + offsetAngle,
         'asteroid',
         this.isPlayerBullet,
-        this.damage
+        this.trionDamage,
+        this.shieldDamage
       );
       // Make divided bullets slightly smaller
       bullet.sprite.setRadius(GAME_CONFIG.BULLET_RADIUS * 0.75);
