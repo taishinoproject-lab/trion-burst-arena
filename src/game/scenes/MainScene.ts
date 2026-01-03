@@ -70,6 +70,9 @@ export class MainScene extends Phaser.Scene {
   private divideText!: Phaser.GameObjects.Text;
   private gameOverText!: Phaser.GameObjects.Text;
   private instructionsOverlay!: Phaser.GameObjects.Container;
+  private enemyBars: Phaser.GameObjects.Graphics[] = [];
+  private enemyTexts: Phaser.GameObjects.Text[] = [];
+  private enemyLabels: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: 'MainScene' });
@@ -191,6 +194,42 @@ export class MainScene extends Phaser.Scene {
       color: '#ffffff',
       fontFamily: 'monospace',
     });
+
+    const enemyBarWidth = 160;
+    const enemyBarHeight = 12;
+    const enemyStartY = uiY + 44;
+    const enemySpacing = 26;
+
+    for (let i = 0; i < 2; i += 1) {
+      const y = enemyStartY + i * enemySpacing;
+      const label = this.add.text(
+        GAME_CONFIG.WIDTH - 20 - enemyBarWidth,
+        y - 10,
+        `ENEMY ${i + 1}`,
+        {
+          fontSize: '12px',
+          color: '#ffb347',
+          fontFamily: 'monospace',
+        }
+      );
+      const bar = this.add.graphics();
+      const text = this.add.text(
+        GAME_CONFIG.WIDTH - 20 - enemyBarWidth - 40,
+        y + 2,
+        '',
+        {
+          fontSize: '12px',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+        }
+      );
+      label.setVisible(false);
+      bar.setVisible(false);
+      text.setVisible(false);
+      this.enemyLabels.push(label);
+      this.enemyBars.push(bar);
+      this.enemyTexts.push(text);
+    }
     
     // Bottom UI - Bullet type and Divide status
     const bottomY = GAME_CONFIG.HEIGHT - 40;
@@ -325,6 +364,7 @@ Reduce Boss Trion to 0 to win!
     this.extraEnemies = [];
     this.spawnedShieldedEnemy = false;
     this.spawnedRapidEnemy = false;
+
     this.gameOverText.setVisible(false);
   }
 
@@ -1067,6 +1107,44 @@ Reduce Boss Trion to 0 to win!
     const divideStatus = this.gameState.divideEnabled ? 'ON' : 'OFF';
     this.divideText.setText(`DIVIDE: ${divideStatus}`);
     this.divideText.setColor(this.gameState.divideEnabled ? '#00ffd5' : '#666666');
+
+    const enemyBarWidth = 160;
+    const enemyBarHeight = 12;
+    const enemyStartY = uiY + 44;
+    const enemySpacing = 26;
+
+    const activeEnemies = this.extraEnemies.filter(enemy => enemy.trion > 0);
+    this.enemyBars.forEach((bar, index) => {
+      const enemy = activeEnemies[index];
+      const label = this.enemyLabels[index];
+      const text = this.enemyTexts[index];
+      if (!enemy) {
+        bar.clear();
+        bar.setVisible(false);
+        label.setVisible(false);
+        text.setVisible(false);
+        return;
+      }
+
+      const barX = GAME_CONFIG.WIDTH - 20 - enemyBarWidth;
+      const barY = enemyStartY + index * enemySpacing;
+      const ratio = Math.max(0, enemy.trion / enemy.maxTrion);
+      bar.clear();
+      bar.fillStyle(0x1a1a2e, 1);
+      bar.fillRect(barX, barY, enemyBarWidth, enemyBarHeight);
+      bar.fillStyle(enemy.boss === this.extraEnemies[0]?.boss ? 0xffa94d : 0xff6bf0, 1);
+      bar.fillRect(barX, barY, enemyBarWidth * ratio, enemyBarHeight);
+      bar.lineStyle(1, 0xffffff, 0.4);
+      bar.strokeRect(barX, barY, enemyBarWidth, enemyBarHeight);
+      bar.setVisible(true);
+
+      label.setPosition(barX, barY - 10);
+      label.setVisible(true);
+
+      text.setText(`${Math.floor(enemy.trion)}`);
+      text.setPosition(barX - 40, barY + 2);
+      text.setVisible(true);
+    });
   }
 
   private checkGameOver() {
