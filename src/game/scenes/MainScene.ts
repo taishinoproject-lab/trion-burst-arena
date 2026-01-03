@@ -364,12 +364,7 @@ Reduce Boss Trion to 0 to win!
     this.extraEnemies = [];
     this.spawnedShieldedEnemy = false;
     this.spawnedRapidEnemy = false;
-    this.enemyBars.forEach((bar, index) => {
-      bar.clear();
-      bar.setVisible(false);
-      this.enemyLabels[index]?.setVisible(false);
-      this.enemyTexts[index]?.setVisible(false);
-    });
+
     this.gameOverText.setVisible(false);
   }
 
