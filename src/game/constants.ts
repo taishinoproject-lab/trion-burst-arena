@@ -76,6 +76,7 @@ export interface GameState {
   bossTrion: number;
   currentBulletType: BulletType;
   divideEnabled: boolean;
+  delayedAsteroidEnabled: boolean;
   isGameOver: boolean;
   playerWon: boolean;
 }
