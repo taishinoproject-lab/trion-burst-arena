@@ -280,16 +280,21 @@ export class Bullet {
     });
   }
 
-  explode(): Phaser.GameObjects.Arc | null {
+  getExplosionArea(): Phaser.Geom.Circle {
+    return new Phaser.Geom.Circle(this.x, this.y, GAME_CONFIG.METEORA_EXPLOSION_RADIUS);
+  }
+
+  explode(): Phaser.Geom.Circle | null {
     if (!this.active || this.type !== 'meteora' || this.hasExploded) return null;
     
     this.hasExploded = true;
+    const explosionArea = this.getExplosionArea();
     
     // Create explosion visual
     const explosion = this.scene.add.circle(
-      this.x,
-      this.y,
-      GAME_CONFIG.METEORA_EXPLOSION_RADIUS,
+      explosionArea.x,
+      explosionArea.y,
+      explosionArea.radius,
       GAME_CONFIG.BULLET_COLOR,
       0.3
     );
@@ -308,7 +313,7 @@ export class Bullet {
     });
     
     this.destroy();
-    return explosion;
+    return explosionArea;
   }
 
   destroy() {

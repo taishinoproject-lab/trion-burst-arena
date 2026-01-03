@@ -874,7 +874,7 @@ Reduce Boss Trion to 0 to win!
             break;
           }
           if (playerBullet.type === 'meteora') {
-            playerBullet.explode();
+            this.triggerMeteoraExplosion(playerBullet);
           } else {
             playerBullet.destroy();
           }
@@ -902,7 +902,7 @@ Reduce Boss Trion to 0 to win!
         if (Phaser.Geom.Intersects.CircleToCircle(bulletBounds, heldBounds)) {
           if (!this.handleHeldBulletImpact(bullet, heldBullet)) {
             if (bullet.type === 'meteora') {
-              bullet.explode();
+              this.triggerMeteoraExplosion(bullet);
             } else {
               bullet.destroy();
             }
@@ -955,6 +955,16 @@ Reduce Boss Trion to 0 to win!
     oscillator.stop(context.currentTime + 0.15);
   }
 
+  private circleHitsShield(area: Phaser.Geom.Circle, shield: Shield): boolean {
+    const shieldBounds = shield.getBounds();
+
+    if (shieldBounds instanceof Phaser.Geom.Rectangle) {
+      return Phaser.Geom.Intersects.CircleToRectangle(area, shieldBounds);
+    }
+
+    return Phaser.Geom.Intersects.CircleToCircle(area, shieldBounds);
+  }
+
   private bulletHitsShield(bullet: Bullet, shield: Shield): boolean {
     const bulletBounds = bullet.getBounds();
     const shieldBounds = shield.getBounds();
@@ -964,6 +974,51 @@ Reduce Boss Trion to 0 to win!
     }
 
     return Phaser.Geom.Intersects.CircleToCircle(bulletBounds, shieldBounds);
+  }
+
+  private applyMeteoraExplosion(initialArea: Phaser.Geom.Circle) {
+    const pendingExplosions: Phaser.Geom.Circle[] = [initialArea];
+
+    while (pendingExplosions.length > 0) {
+      const area = pendingExplosions.shift();
+      if (!area) continue;
+
+      const bullets = [...this.playerBullets, ...this.bossBullets];
+      for (const bullet of bullets) {
+        if (!bullet.active) continue;
+        const bulletBounds = bullet.getBounds();
+        if (!Phaser.Geom.Intersects.CircleToCircle(area, bulletBounds)) continue;
+
+        if (bullet.type === 'meteora') {
+          const chainedArea = bullet.explode();
+          if (chainedArea) {
+            pendingExplosions.push(chainedArea);
+          }
+        } else {
+          bullet.destroy();
+        }
+      }
+
+      for (const target of this.getEnemyTargets()) {
+        const boss = target.boss;
+        if (boss.shieldActive && boss.shield && this.circleHitsShield(area, boss.shield)) {
+          boss.applyShieldDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+          continue;
+        }
+
+        const bossBounds = new Phaser.Geom.Circle(boss.x, boss.y, boss.getRadius());
+        if (Phaser.Geom.Intersects.CircleToCircle(area, bossBounds)) {
+          target.setTrion(target.getTrion() - GAME_CONFIG.METEORA_TRION_DAMAGE);
+        }
+      }
+    }
+  }
+
+  private triggerMeteoraExplosion(bullet: Bullet) {
+    const explosionArea = bullet.explode();
+    if (explosionArea) {
+      this.applyMeteoraExplosion(explosionArea);
+    }
   }
 
   private checkCollisions() {
@@ -982,11 +1037,11 @@ Reduce Boss Trion to 0 to win!
         if (target.boss.shieldActive && target.boss.shield) {
           if (this.bulletHitsShield(bullet, target.boss.shield)) {
             if (bullet.type === 'meteora') {
-              bullet.explode();
+              this.triggerMeteoraExplosion(bullet);
             } else {
               bullet.destroy();
+              target.boss.applyShieldDamage(bullet.shieldDamage);
             }
-            target.boss.applyShieldDamage(bullet.shieldDamage);
             break;
           }
         }
@@ -998,8 +1053,7 @@ Reduce Boss Trion to 0 to win!
         if (bullet.type === 'meteora') {
           // Meteora explodes on contact
           if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
-            bullet.explode();
-            target.setTrion(target.getTrion() - bullet.trionDamage);
+            this.triggerMeteoraExplosion(bullet);
             break;
           }
         } else {
@@ -1013,7 +1067,7 @@ Reduce Boss Trion to 0 to win!
       }
     }
     
-    // Check Meteora explosions (area damage - already handled in explode)
+    // Meteora explosions handled by triggerMeteoraExplosion/applyMeteoraExplosion
     
     // Boss bullets vs Player
     for (const bullet of this.bossBullets) {
@@ -1023,7 +1077,7 @@ Reduce Boss Trion to 0 to win!
       if (this.playerShield?.active && this.playerShield) {
         if (this.bulletHitsShield(bullet, this.playerShield)) {
           if (bullet.type === 'meteora') {
-            bullet.explode();
+            this.triggerMeteoraExplosion(bullet);
           } else {
             bullet.destroy();
           }
