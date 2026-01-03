@@ -20,6 +20,14 @@ export class Bullet {
   private createdAt: number;
   private trail: Phaser.GameObjects.Arc[] = [];
   private trailTimer: number = 0;
+  
+  // Divide-specific properties
+  private isDividing: boolean = false;
+  private divideCount: number = 0;
+  private hasDivided: boolean = false;
+  private startX: number;
+  private startY: number;
+  private onDivide?: (bullets: Bullet[]) => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -29,17 +37,23 @@ export class Bullet {
     type: BulletType,
     isPlayerBullet: boolean,
     damage: number,
-    speed: number = GAME_CONFIG.BULLET_SPEED
+    speed: number = GAME_CONFIG.BULLET_SPEED,
+    isDividing: boolean = false,
+    divideCount: number = 0
   ) {
     this.scene = scene;
     this.x = x;
     this.y = y;
+    this.startX = x;
+    this.startY = y;
     this.type = type;
     this.isPlayerBullet = isPlayerBullet;
     this.damage = damage;
     this.angle = angle;
     this.speed = type === 'viper' ? GAME_CONFIG.VIPER_SPEED : speed;
     this.createdAt = scene.time.now;
+    this.isDividing = isDividing;
+    this.divideCount = divideCount;
     
     this.velocityX = Math.cos(angle) * this.speed;
     this.velocityY = Math.sin(angle) * this.speed;
@@ -61,11 +75,24 @@ export class Bullet {
     // Add glow effect
     this.sprite.setAlpha(0.9);
   }
+  
+  setOnDivide(callback: (bullets: Bullet[]) => void) {
+    this.onDivide = callback;
+  }
 
   update(delta: number, mouseX?: number, mouseY?: number) {
     if (!this.active) return;
     
     const dt = delta / 1000;
+    
+    // Check for divide trigger (after traveling certain distance)
+    if (this.isDividing && !this.hasDivided) {
+      const traveled = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
+      if (traveled > 60) { // Divide after 60px
+        this.performDivide();
+        return;
+      }
+    }
     
     // Viper guided behavior
     if (this.type === 'viper' && mouseX !== undefined && mouseY !== undefined) {
@@ -118,6 +145,81 @@ export class Bullet {
       this.y > GAME_CONFIG.HEIGHT + 50
     ) {
       this.destroy();
+    }
+  }
+  
+  private performDivide() {
+    this.hasDivided = true;
+    
+    // Create split effect visual
+    this.createDivideEffect();
+    
+    // Create divided bullets
+    const newBullets: Bullet[] = [];
+    const count = this.divideCount;
+    const spread = GAME_CONFIG.ASTEROID_DIVIDE_SPREAD;
+    
+    for (let i = 0; i < count; i++) {
+      const offsetAngle = spread * (i - (count - 1) / 2);
+      const bullet = new Bullet(
+        this.scene,
+        this.x,
+        this.y,
+        this.angle + offsetAngle,
+        'asteroid',
+        this.isPlayerBullet,
+        this.damage
+      );
+      // Make divided bullets slightly smaller
+      bullet.sprite.setRadius(GAME_CONFIG.BULLET_RADIUS * 0.75);
+      newBullets.push(bullet);
+    }
+    
+    // Callback to add bullets to scene
+    if (this.onDivide) {
+      this.onDivide(newBullets);
+    }
+    
+    // Destroy original bullet
+    this.destroy();
+  }
+  
+  private createDivideEffect() {
+    // Flash effect at divide point
+    const flash = this.scene.add.circle(this.x, this.y, 15, GAME_CONFIG.BULLET_COLOR, 0.8);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 2.5,
+      duration: 150,
+      ease: 'Power2',
+      onComplete: () => flash.destroy()
+    });
+    
+    // Create splitting lines emanating from divide point
+    const count = this.divideCount;
+    const spread = GAME_CONFIG.ASTEROID_DIVIDE_SPREAD;
+    
+    for (let i = 0; i < count; i++) {
+      const offsetAngle = spread * (i - (count - 1) / 2);
+      const lineAngle = this.angle + offsetAngle;
+      
+      const lineLength = 25;
+      const endX = this.x + Math.cos(lineAngle) * lineLength;
+      const endY = this.y + Math.sin(lineAngle) * lineLength;
+      
+      const graphics = this.scene.add.graphics();
+      graphics.lineStyle(2, GAME_CONFIG.BULLET_COLOR, 0.9);
+      graphics.moveTo(this.x, this.y);
+      graphics.lineTo(endX, endY);
+      graphics.strokePath();
+      
+      this.scene.tweens.add({
+        targets: graphics,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => graphics.destroy()
+      });
     }
   }
   

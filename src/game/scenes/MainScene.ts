@@ -361,23 +361,24 @@ Reduce Boss Trion to 0 to win!
     
     if (bulletType === 'asteroid') {
       if (this.gameState.divideEnabled) {
-        // Fire multiple bullets in spread pattern
-        const count = GAME_CONFIG.ASTEROID_DIVIDE_COUNT;
-        const spread = GAME_CONFIG.ASTEROID_DIVIDE_SPREAD;
-        
-        for (let i = 0; i < count; i++) {
-          const offsetAngle = spread * (i - (count - 1) / 2);
-          const bullet = new Bullet(
-            this,
-            this.player.x + aim.x * 20,
-            this.player.y + aim.y * 20,
-            baseAngle + offsetAngle,
-            'asteroid',
-            true,
-            GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE
-          );
-          this.playerBullets.push(bullet);
-        }
+        // Create a single bullet that will split after traveling a short distance (World Trigger style)
+        const bullet = new Bullet(
+          this,
+          this.player.x + aim.x * 20,
+          this.player.y + aim.y * 20,
+          baseAngle,
+          'asteroid',
+          true,
+          GAME_CONFIG.ASTEROID_DIVIDE_DAMAGE,
+          GAME_CONFIG.BULLET_SPEED,
+          true, // isDividing
+          GAME_CONFIG.ASTEROID_DIVIDE_COUNT
+        );
+        // Register callback to add divided bullets to scene
+        bullet.setOnDivide((newBullets) => {
+          this.playerBullets.push(...newBullets);
+        });
+        this.playerBullets.push(bullet);
       } else {
         const bullet = new Bullet(
           this,
@@ -426,8 +427,13 @@ Reduce Boss Trion to 0 to win!
     // Consume Trion
     this.gameState.playerTrion -= GAME_CONFIG.SHIELD_COST;
     
-    // Create shield perpendicular to aim direction
-    this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle);
+    // Get incoming boss bullets for shield to orient against
+    const incomingBullets = this.bossBullets
+      .filter(b => b.active)
+      .map(b => ({ x: b.x, y: b.y, velocityX: b.velocityX, velocityY: b.velocityY }));
+    
+    // Create shield perpendicular to nearest bullet's trajectory
+    this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, incomingBullets);
   }
 
   private bossFire(time: number) {
