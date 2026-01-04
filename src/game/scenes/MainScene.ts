@@ -1368,31 +1368,64 @@ export class MainScene extends Phaser.Scene {
     if (this.gameState.playerTrion <= 0) {
       this.gameState.isGameOver = true;
       this.gameState.playerWon = false;
-      this.showGameOver('TRION DEPLETED\n\nYOU LOSE\n\nPress R to Restart');
+      this.showGameOver('TRION DEPLETED\n\nYOU LOSE');
     } else if (this.gameState.bossTrion <= 0 && this.extraEnemies.length === 0) {
       this.gameState.isGameOver = true;
       this.gameState.playerWon = true;
-      this.showGameOver('BOSS DEFEATED\n\nYOU WIN!\n\nPress R to Restart');
+      this.showGameOver('BOSS DEFEATED\n\nYOU WIN!');
     }
   }
 
   private showGameOver(message: string) {
-    this.gameOverText.setText(message);
+    const restartMessage = this.isMobileMode ? 'TAP RESTART BUTTON' : 'Press R to Restart';
+    this.gameOverText.setText(`${message}\n\n${restartMessage}`);
     this.gameOverText.setVisible(true);
     this.gameOverText.setColor(this.gameState.playerWon ? '#00ffd5' : '#ff6b6b');
     
     // Add background
+    const backgroundHeight = this.isMobileMode ? 360 : 300;
+    const backgroundWidth = this.isMobileMode ? 440 : 400;
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2,
-      400,
-      250,
+      backgroundWidth,
+      backgroundHeight,
       0x0a0a12,
       0.9
     );
     bg.setStrokeStyle(2, this.gameState.playerWon ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_COLOR);
     bg.setDepth(99);
     this.gameOverText.setDepth(100);
+
+    const buttonWidth = this.isMobileMode ? 260 : 200;
+    const buttonHeight = this.isMobileMode ? 90 : 55;
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 140 : 120);
+
+    const restartButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      buttonY,
+      buttonWidth,
+      buttonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    restartButton.setStrokeStyle(3, this.gameState.playerWon ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_COLOR, 0.9);
+    restartButton.setDepth(101);
+
+    const restartText = this.add.text(GAME_CONFIG.WIDTH / 2, buttonY, 'RESTART', {
+      fontSize: this.isMobileMode ? '36px' : '20px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    restartText.setOrigin(0.5);
+    restartText.setDepth(102);
+
+    const handleRestart = () => {
+      this.scene.restart();
+    };
+
+    restartButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
+    restartText.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
   }
 
   // Mobile control methods - called from React component
