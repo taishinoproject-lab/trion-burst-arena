@@ -367,16 +367,18 @@ export class MainScene extends Phaser.Scene {
     // Create large touch-friendly buttons for mobile
     const buttonWidth = this.isMobileMode ? 360 : 80;
     const buttonHeight = this.isMobileMode ? 84 : 40;
-    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 150 : 110);
-    const buttonSpacing = this.isMobileMode ? 104 : 45;
-    const easyButtonY = buttonY - buttonSpacing;
-    const middleButtonY = buttonY;
-    const hardButtonY = buttonY + buttonSpacing;
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 140 : 110);
+    const buttonSpacing = this.isMobileMode ? 30 : 20;
+    const totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
+    const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
+    const easyButtonX = firstButtonX;
+    const middleButtonX = firstButtonX + buttonWidth + buttonSpacing;
+    const hardButtonX = middleButtonX + buttonWidth + buttonSpacing;
 
     // Easy button
     const easyBg = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2,
-      easyButtonY,
+      easyButtonX,
+      buttonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -385,8 +387,8 @@ export class MainScene extends Phaser.Scene {
     easyBg.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.8);
     
     const easyText = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      easyButtonY,
+      easyButtonX,
+      buttonY,
       'EASY',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
@@ -398,8 +400,8 @@ export class MainScene extends Phaser.Scene {
 
     // Middle button
     const middleBg = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2,
-      middleButtonY,
+      middleButtonX,
+      buttonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -408,8 +410,8 @@ export class MainScene extends Phaser.Scene {
     middleBg.setStrokeStyle(3, 0xffd166, 0.8);
 
     const middleText = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      middleButtonY,
+      middleButtonX,
+      buttonY,
       'MIDDLE',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
@@ -421,8 +423,8 @@ export class MainScene extends Phaser.Scene {
 
     // Hard button
     const hardBg = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2,
-      hardButtonY,
+      hardButtonX,
+      buttonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -431,8 +433,8 @@ export class MainScene extends Phaser.Scene {
     hardBg.setStrokeStyle(3, 0xff6b6b, 0.8);
     
     const hardText = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      hardButtonY,
+      hardButtonX,
+      buttonY,
       'HARD',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
@@ -799,6 +801,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private spawnTimedEnemies(time: number) {
+    if (this.difficulty === 'easy') {
+      return;
+    }
     const elapsed = time - this.gameStartTime;
     if (!this.spawnedShieldedEnemy && elapsed >= 30000) {
       this.spawnedShieldedEnemy = true;
