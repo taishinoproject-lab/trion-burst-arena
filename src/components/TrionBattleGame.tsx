@@ -13,6 +13,8 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<MainScene | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
 
   useEffect(() => {
     // Detect mobile/touch device
@@ -23,6 +25,15 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    setCanFullscreen(Boolean(document.fullscreenEnabled));
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   useEffect(() => {
@@ -64,6 +75,15 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     };
   }, [isMobile]);
 
+  const handleFullscreenToggle = useCallback(async () => {
+    if (!gameContainerRef.current || !canFullscreen) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    await gameContainerRef.current.requestFullscreen();
+  }, [canFullscreen]);
+
   const handleMove = useCallback((x: number, y: number) => {
     if (sceneRef.current) {
       sceneRef.current.setMobileMove(x, y);
@@ -95,17 +115,43 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   return (
-    <div className={className} style={isMobile ? { width: '100vw', height: '100vh', position: 'fixed', top: 0, left: 0 } : undefined}>
+    <div
+      className={className}
+      style={
+        isMobile
+          ? {
+              width: '100dvw',
+              height: '100dvh',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              background: 'radial-gradient(circle at top, rgba(0, 255, 213, 0.08), transparent 55%)',
+            }
+          : undefined
+      }
+    >
       <div
         id="game-container"
         ref={gameContainerRef}
-        className={isMobile ? '' : 'rounded-lg overflow-hidden shadow-xl border border-border/30'}
-        style={{ 
-          width: isMobile ? '100%' : '1280px', 
+        className={isMobile ? 'relative' : 'rounded-lg overflow-hidden shadow-xl border border-border/30'}
+        style={{
+          width: isMobile ? '100%' : '1280px',
           height: isMobile ? '100%' : '720px',
           maxWidth: '100%',
         }}
       />
+      {isMobile && canFullscreen && (
+        <button
+          type="button"
+          onClick={handleFullscreenToggle}
+          className="fixed top-3 right-3 z-[60] rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wide text-primary-foreground shadow-md"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.85), rgba(0, 180, 150, 0.95))',
+          }}
+        >
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+        </button>
+      )}
       <MobileControls
         visible={isMobile}
         onMove={handleMove}
