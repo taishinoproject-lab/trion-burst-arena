@@ -83,11 +83,13 @@ export class MainScene extends Phaser.Scene {
   private delayedAsteroidText!: Phaser.GameObjects.Text;
   private gameOverText!: Phaser.GameObjects.Text;
   private instructionsOverlay!: Phaser.GameObjects.Container;
+  private instructionsContent?: Phaser.GameObjects.Container;
   private tutorialOverlay?: Phaser.GameObjects.Container;
   private tutorialHelpText?: Phaser.GameObjects.Text;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
+  private instructionScrollCleanup?: () => void;
 
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
@@ -306,7 +308,7 @@ export class MainScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
 
-    const instructionElements: Phaser.GameObjects.GameObject[] = [bg, title];
+    const instructionElements: Phaser.GameObjects.GameObject[] = [title];
 
     const tutorialButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
@@ -620,8 +622,13 @@ export class MainScene extends Phaser.Scene {
 
     updateWeaponButtons();
     
-    this.instructionsOverlay = this.add.container(0, 0, instructionElements);
+    this.instructionsContent = this.add.container(0, 0, instructionElements);
+    this.instructionsOverlay = this.add.container(0, 0, [bg, this.instructionsContent]);
     this.instructionsOverlay.setDepth(100);
+
+    if (this.isMobileMode) {
+      this.enableInstructionScroll(bg, this.instructionsContent);
+    }
   }
 
   private startBattle() {
@@ -631,7 +638,7 @@ export class MainScene extends Phaser.Scene {
     this.battleStartTime = this.time.now;
     this.gameState.availableBulletTypes = [...this.selectedBulletTypes];
     this.gameState.currentBulletType = this.gameState.availableBulletTypes[0] ?? 'asteroid';
-    this.instructionsOverlay.destroy(true);
+    this.destroyInstructionsOverlay();
   }
 
   private startTutorial() {
@@ -645,9 +652,70 @@ export class MainScene extends Phaser.Scene {
     this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
     this.gameOverText.setVisible(false);
-    this.instructionsOverlay.destroy(true);
+    this.destroyInstructionsOverlay();
     this.boss.deactivateShield();
     this.showTutorialOverlay();
+  }
+
+  private enableInstructionScroll(
+    background: Phaser.GameObjects.Rectangle,
+    content: Phaser.GameObjects.Container
+  ) {
+    const contentBounds = content.getBounds();
+    const minScrollY = Math.min(0, GAME_CONFIG.HEIGHT - contentBounds.bottom);
+    const maxScrollY = Math.max(0, -contentBounds.top);
+
+    if (minScrollY === maxScrollY) return;
+
+    let startContentY = 0;
+    let startPointerY = 0;
+    let isDragging = false;
+    const dragThreshold = 6;
+
+    background.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT),
+      Phaser.Geom.Rectangle.Contains
+    );
+
+    const handlePointerDown = (pointer: Phaser.Input.Pointer) => {
+      startContentY = content.y;
+      startPointerY = pointer.y;
+      isDragging = false;
+    };
+
+    const handlePointerMove = (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown) return;
+      const delta = pointer.y - startPointerY;
+      if (Math.abs(delta) > dragThreshold) {
+        isDragging = true;
+      }
+      if (!isDragging) return;
+      content.y = Phaser.Math.Clamp(startContentY + delta, minScrollY, maxScrollY);
+    };
+
+    const handlePointerUp = () => {
+      isDragging = false;
+    };
+
+    this.input.on('pointerdown', handlePointerDown);
+    this.input.on('pointermove', handlePointerMove);
+    this.input.on('pointerup', handlePointerUp);
+    this.input.on('pointerupoutside', handlePointerUp);
+
+    this.instructionScrollCleanup = () => {
+      this.input.off('pointerdown', handlePointerDown);
+      this.input.off('pointermove', handlePointerMove);
+      this.input.off('pointerup', handlePointerUp);
+      this.input.off('pointerupoutside', handlePointerUp);
+      background.disableInteractive();
+    };
+  }
+
+  private destroyInstructionsOverlay() {
+    this.instructionScrollCleanup?.();
+    this.instructionScrollCleanup = undefined;
+    this.instructionsContent = undefined;
+    this.instructionsOverlay.destroy(true);
   }
 
   private showTutorialOverlay() {
