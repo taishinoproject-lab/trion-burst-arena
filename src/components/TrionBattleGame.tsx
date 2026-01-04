@@ -135,9 +135,10 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         ref={gameContainerRef}
         className={isMobile ? 'relative' : 'rounded-lg overflow-hidden shadow-xl border border-border/30'}
         style={{
-          width: isMobile ? '100%' : '1280px',
-          height: isMobile ? '100%' : '720px',
+          width: '100%',
+          height: isMobile ? '100%' : 'auto',
           maxWidth: '100%',
+          ...(isMobile ? {} : { aspectRatio: '16 / 9' }),
         }}
       />
       {isMobile && canFullscreen && (
