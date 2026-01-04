@@ -3,12 +3,14 @@ import Phaser from 'phaser';
 import { createGameConfig } from '../game/config';
 import { MobileControls } from './MobileControls';
 import { MainScene } from '../game/scenes/MainScene';
+import { PvpScene } from '../game/scenes/PvpScene';
 
 interface TrionBattleGameProps {
   className?: string;
+  mode?: 'boss' | 'pvp';
 }
 
-export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
+export const TrionBattleGame = ({ className, mode = 'boss' }: TrionBattleGameProps) => {
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<MainScene | null>(null);
@@ -55,15 +57,18 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     gameContainerRef.current.addEventListener('contextmenu', handleContextMenu);
 
     // Create Phaser game instance with mobile scaling
-    const config = createGameConfig('game-container', isMobile);
+    const scenes = mode === 'boss' ? [MainScene] : [PvpScene];
+    const config = createGameConfig('game-container', isMobile, scenes);
     gameRef.current = new Phaser.Game(config);
 
     // Get reference to MainScene when it's ready
     gameRef.current.events.on('ready', () => {
-      const scene = gameRef.current?.scene.getScene('MainScene') as MainScene;
-      if (scene) {
-        sceneRef.current = scene;
-        scene.setMobileMode(isMobile);
+      if (mode === 'boss') {
+        const scene = gameRef.current?.scene.getScene('MainScene') as MainScene;
+        if (scene) {
+          sceneRef.current = scene;
+          scene.setMobileMode(isMobile);
+        }
       }
     });
 
@@ -75,7 +80,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         sceneRef.current = null;
       }
     };
-  }, [isMobile]);
+  }, [isMobile, mode]);
 
   const handleFullscreenToggle = useCallback(async () => {
     if (!gameContainerRef.current || !canFullscreen) return;
@@ -162,7 +167,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         </button>
       )}
       <MobileControls
-        visible={isMobile}
+        visible={isMobile && mode === 'boss'}
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}
