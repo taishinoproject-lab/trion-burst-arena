@@ -308,7 +308,7 @@ export class MainScene extends Phaser.Scene {
     bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 180, '- TRION BATTLE -', {
-      fontSize: this.isMobileMode ? '48px' : '28px',
+      fontSize: this.isMobileMode ? '42px' : '28px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
@@ -340,13 +340,13 @@ export class MainScene extends Phaser.Scene {
       );
       instructionElements.push(leftText, rightText);
     } else {
-      // Mobile instructions
+      // Mobile instructions: omit key-specific details
       const mobileInstructions = this.add.text(
         GAME_CONFIG.WIDTH / 2,
-        GAME_CONFIG.HEIGHT / 2 - 100,
-        'LEFT STICK: MOVE\nRIGHT BUTTONS: ATTACK',
+        GAME_CONFIG.HEIGHT / 2 - 110,
+        'トリオンを使って戦うゲーム。\n「弾を打つ」「シールドを張る」「攻撃を受ける」と\nトリオンが減る。\nトリオンが0になったら死ぬ。',
         {
-          fontSize: '28px',
+          fontSize: '26px',
           color: '#ffffff',
           fontFamily: 'monospace',
           align: 'center',
@@ -357,23 +357,23 @@ export class MainScene extends Phaser.Scene {
       instructionElements.push(mobileInstructions);
     }
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 20, 'SELECT DIFFICULTY', {
-      fontSize: this.isMobileMode ? '32px' : '18px',
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 30, 'SELECT DIFFICULTY', {
+      fontSize: this.isMobileMode ? '30px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
     difficultyLabel.setOrigin(0.5);
 
     // Create large touch-friendly buttons for mobile
-    const buttonWidth = this.isMobileMode ? 220 : 80;
-    const buttonHeight = this.isMobileMode ? 100 : 40;
-    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 120 : 110);
-    const buttonSpacing = this.isMobileMode ? 140 : 45;
+    const buttonWidth = this.isMobileMode ? 360 : 80;
+    const buttonHeight = this.isMobileMode ? 84 : 40;
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 150 : 110);
+    const buttonSpacing = this.isMobileMode ? 104 : 45;
 
     // Easy button
     const easyBg = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2 - buttonSpacing,
-      buttonY,
+      GAME_CONFIG.WIDTH / 2,
+      this.isMobileMode ? buttonY - buttonSpacing : buttonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -382,11 +382,11 @@ export class MainScene extends Phaser.Scene {
     easyBg.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.8);
     
     const easyText = this.add.text(
-      GAME_CONFIG.WIDTH / 2 - buttonSpacing,
-      buttonY,
+      GAME_CONFIG.WIDTH / 2,
+      this.isMobileMode ? buttonY - buttonSpacing : buttonY,
       'EASY',
       {
-        fontSize: this.isMobileMode ? '42px' : '20px',
+        fontSize: this.isMobileMode ? '36px' : '20px',
         color: this.difficulty === 'easy' ? '#00ffd5' : '#aaaaaa',
         fontFamily: 'monospace',
       }
@@ -395,8 +395,8 @@ export class MainScene extends Phaser.Scene {
 
     // Hard button
     const hardBg = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2 + buttonSpacing,
-      buttonY,
+      GAME_CONFIG.WIDTH / 2,
+      this.isMobileMode ? buttonY + buttonSpacing : buttonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -405,28 +405,30 @@ export class MainScene extends Phaser.Scene {
     hardBg.setStrokeStyle(3, 0xff6b6b, 0.8);
     
     const hardText = this.add.text(
-      GAME_CONFIG.WIDTH / 2 + buttonSpacing,
-      buttonY,
+      GAME_CONFIG.WIDTH / 2,
+      this.isMobileMode ? buttonY + buttonSpacing : buttonY,
       'HARD',
       {
-        fontSize: this.isMobileMode ? '42px' : '20px',
+        fontSize: this.isMobileMode ? '36px' : '20px',
         color: this.difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa',
         fontFamily: 'monospace',
       }
     );
     hardText.setOrigin(0.5);
 
-    const promptText = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 220 : 150),
-      this.isMobileMode ? 'TAP TO START' : 'CLICK EASY OR HARD TO START',
-      {
-        fontSize: this.isMobileMode ? '28px' : '16px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-      }
-    );
-    promptText.setOrigin(0.5);
+    const promptText = !this.isMobileMode
+      ? this.add.text(
+          GAME_CONFIG.WIDTH / 2,
+          GAME_CONFIG.HEIGHT / 2 + 150,
+          'CLICK EASY OR HARD TO START',
+          {
+            fontSize: '16px',
+            color: '#ffffff',
+            fontFamily: 'monospace',
+          }
+        )
+      : null;
+    promptText?.setOrigin(0.5);
 
     const updateDifficultySelection = (difficulty: Difficulty) => {
       this.difficulty = difficulty;
@@ -455,7 +457,10 @@ export class MainScene extends Phaser.Scene {
       this.startBattle();
     });
 
-    instructionElements.push(difficultyLabel, easyBg, easyText, hardBg, hardText, promptText);
+    instructionElements.push(difficultyLabel, easyBg, easyText, hardBg, hardText);
+    if (promptText) {
+      instructionElements.push(promptText);
+    }
     
     this.instructionsOverlay = this.add.container(0, 0, instructionElements);
     this.instructionsOverlay.setDepth(100);
