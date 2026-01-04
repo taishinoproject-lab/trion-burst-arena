@@ -10,7 +10,8 @@ export class Player {
   public y: number;
   public angle: number = 0;
   private slowUntil = 0;
-  private slowMultiplier = 1;
+  private slowStacks = 0;
+  private slowStackMultiplier = 1;
   
   private keys: {
     W: Phaser.Input.Keyboard.Key;
@@ -49,10 +50,10 @@ export class Player {
 
   update(delta: number, mobileInput?: { moveX: number; moveY: number; aimX: number; aimY: number }) {
     const now = this.scene.time.now;
-    if (now >= this.slowUntil && this.slowMultiplier !== 1) {
-      this.slowMultiplier = 1;
+    if (now >= this.slowUntil && this.slowStacks > 0) {
+      this.slowStacks = 0;
     }
-    const speedMultiplier = now < this.slowUntil ? this.slowMultiplier : 1;
+    const speedMultiplier = this.getSpeedMultiplier(now);
     const speed = GAME_CONFIG.PLAYER_SPEED * speedMultiplier * (delta / 1000);
     
     // Handle keyboard movement
@@ -110,14 +111,35 @@ export class Player {
 
   applySlow(durationMs: number, multiplier: number) {
     const now = this.scene.time.now;
-    this.slowUntil = Math.max(this.slowUntil, now + durationMs);
-    this.slowMultiplier = Math.min(this.slowMultiplier, multiplier);
     if (multiplier >= 1) {
-      this.slowMultiplier = 1;
+      this.slowStacks = 0;
+      this.slowUntil = 0;
+      this.slowStackMultiplier = 1;
+      return;
     }
+    const isActive = now < this.slowUntil;
+    this.slowStacks = isActive ? Math.min(this.slowStacks + 1, GAME_CONFIG.RED_BULLET_MAX_STACKS) : 1;
+    this.slowUntil = now + durationMs;
+    this.slowStackMultiplier = multiplier;
+  }
+
+  getBulletSpeedMultiplier(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    if (stacks === 0) return 1;
+    return Math.pow(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER, stacks);
   }
 
   destroy() {
     this.sprite.destroy();
+  }
+
+  private getSlowStacks(currentTime: number) {
+    return currentTime < this.slowUntil ? this.slowStacks : 0;
+  }
+
+  private getSpeedMultiplier(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    if (stacks === 0) return 1;
+    return Math.pow(this.slowStackMultiplier, stacks);
   }
 }

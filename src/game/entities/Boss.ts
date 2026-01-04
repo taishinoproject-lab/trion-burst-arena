@@ -37,7 +37,8 @@ export class Boss {
   private nextShieldType: ShieldType = 'narrow';
   private config: BossConfig;
   private slowUntil = 0;
-  private slowMultiplier = 1;
+  private slowStacks = 0;
+  private slowStackMultiplier = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: Partial<BossConfig> = {}) {
     this.scene = scene;
@@ -82,9 +83,9 @@ export class Boss {
     }
     
     // Move towards target
-    const isSlowed = currentTime < this.slowUntil;
-    if (!isSlowed && this.slowMultiplier !== 1) {
-      this.slowMultiplier = 1;
+    const isSlowed = currentTime < this.slowUntil && this.slowStacks > 0;
+    if (!isSlowed && this.slowStacks > 0) {
+      this.slowStacks = 0;
     }
     if (this.slowIndicator.visible !== isSlowed) {
       this.slowIndicator.setVisible(isSlowed);
@@ -204,18 +205,31 @@ export class Boss {
 
   applySlow(durationMs: number, multiplier: number) {
     const now = this.scene.time.now;
-    this.slowUntil = Math.max(this.slowUntil, now + durationMs);
-    this.slowMultiplier = Math.min(this.slowMultiplier, multiplier);
     if (multiplier >= 1) {
-      this.slowMultiplier = 1;
+      this.slowStacks = 0;
+      this.slowUntil = 0;
+      this.slowStackMultiplier = 1;
+      return;
     }
+    const isActive = now < this.slowUntil;
+    this.slowStacks = isActive ? Math.min(this.slowStacks + 1, GAME_CONFIG.RED_BULLET_MAX_STACKS) : 1;
+    this.slowUntil = now + durationMs;
+    this.slowStackMultiplier = multiplier;
   }
 
   private getSpeedMultiplier(currentTime: number) {
-    return currentTime < this.slowUntil ? this.slowMultiplier : 1;
+    const stacks = this.getSlowStacks(currentTime);
+    if (stacks === 0) return 1;
+    return Math.pow(this.slowStackMultiplier, stacks);
   }
 
   private getBulletSpeedMultiplier(currentTime: number) {
-    return currentTime < this.slowUntil ? GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER : 1;
+    const stacks = this.getSlowStacks(currentTime);
+    if (stacks === 0) return 1;
+    return Math.pow(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER, stacks);
+  }
+
+  private getSlowStacks(currentTime: number) {
+    return currentTime < this.slowUntil ? this.slowStacks : 0;
   }
 }

@@ -940,6 +940,7 @@ export class MainScene extends Phaser.Scene {
     
     const aim = this.player.getAimDirection();
     const baseAngle = Math.atan2(aim.y, aim.x);
+    const bulletSpeedMultiplier = this.player.getBulletSpeedMultiplier(now);
     
     const damageScale = this.getDamageScale();
     let bullet: Bullet;
@@ -952,7 +953,8 @@ export class MainScene extends Phaser.Scene {
         'asteroid',
         true,
         GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
-        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale
+        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
+        GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier
       );
     } else if (bulletType === 'meteora') {
       bullet = new Bullet(
@@ -963,7 +965,8 @@ export class MainScene extends Phaser.Scene {
         'meteora',
         true,
         GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale,
-        GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale
+        GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale,
+        GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier
       );
     } else if (bulletType === 'viper') {
       // Viper - guided bullet
@@ -975,7 +978,8 @@ export class MainScene extends Phaser.Scene {
         'viper',
         true,
         GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
-        GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale
+        GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
+        GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier
       );
     } else {
       bullet = new Bullet(
@@ -986,7 +990,8 @@ export class MainScene extends Phaser.Scene {
         'red',
         true,
         GAME_CONFIG.RED_BULLET_TRION_DAMAGE * damageScale,
-        GAME_CONFIG.RED_BULLET_SHIELD_DAMAGE * damageScale
+        GAME_CONFIG.RED_BULLET_SHIELD_DAMAGE * damageScale,
+        GAME_CONFIG.RED_BULLET_SPEED * bulletSpeedMultiplier
       );
     }
     this.playerBullets.push(bullet);
