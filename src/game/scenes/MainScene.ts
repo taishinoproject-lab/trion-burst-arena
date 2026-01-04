@@ -1394,15 +1394,16 @@ export class MainScene extends Phaser.Scene {
         const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, target.boss.x, target.boss.y);
         const bossRadius = target.boss.getRadius();
 
+        const bulletRadius = bullet.getBounds().radius;
         if (bullet.type === 'meteora') {
           // Meteora explodes on contact
-          if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
+          if (dist < bossRadius + bulletRadius) {
             this.triggerMeteoraExplosion(bullet);
             break;
           }
         } else {
           // Asteroid direct hit
-          if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
+          if (dist < bossRadius + bulletRadius) {
             target.setTrion(target.getTrion() - bullet.trionDamage);
             if (bullet.type === 'red') {
               target.boss.applySlow(
@@ -1438,7 +1439,8 @@ export class MainScene extends Phaser.Scene {
       
       // Check bullet vs player
       const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, this.player.x, this.player.y);
-      if (dist < playerRadius + GAME_CONFIG.BULLET_RADIUS) {
+      const bulletRadius = bullet.getBounds().radius;
+      if (dist < playerRadius + bulletRadius) {
         this.gameState.playerTrion -= bullet.trionDamage;
         if (bullet.type === 'red') {
           this.player.applySlow(

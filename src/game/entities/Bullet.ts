@@ -69,7 +69,7 @@ export class Bullet {
     
     const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 :
                    type === 'viper' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
-                   type === 'red' ? GAME_CONFIG.BULLET_RADIUS * 0.95 :
+                   type === 'red' ? GAME_CONFIG.BULLET_RADIUS * 1.4 :
                    GAME_CONFIG.BULLET_RADIUS;
     
     this.sprite = scene.add.circle(x, y, radius, color);
@@ -234,6 +234,6 @@ export class Bullet {
   }
 
   getBounds(): Phaser.Geom.Circle {
-    return new Phaser.Geom.Circle(this.x, this.y, GAME_CONFIG.BULLET_RADIUS);
+    return new Phaser.Geom.Circle(this.x, this.y, this.sprite.radius);
   }
 }
