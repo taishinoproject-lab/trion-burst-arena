@@ -19,7 +19,8 @@ export const MobileControls = ({
 }: MobileControlsProps) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const activeTouchIdRef = useRef<number | null>(null);
   const [isAttacking, setIsAttacking] = useState(false);
 
   useEffect(() => {
@@ -35,11 +36,13 @@ export const MobileControls = ({
 
     const handleStart = (e: TouchEvent) => {
       e.preventDefault();
-      const touch = e.touches[0];
+      const touch = e.changedTouches[0];
+      if (!touch) return;
       const rect = joystick.getBoundingClientRect();
       centerX = rect.left + rect.width / 2;
       centerY = rect.top + rect.height / 2;
-      setIsDragging(true);
+      isDraggingRef.current = true;
+      activeTouchIdRef.current = touch.identifier;
       handleMove(touch.clientX, touch.clientY);
     };
 
@@ -61,13 +64,22 @@ export const MobileControls = ({
 
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
-      if (!isDragging) return;
-      const touch = e.touches[0];
+      if (!isDraggingRef.current || activeTouchIdRef.current === null) return;
+      const touch = Array.from(e.touches).find(
+        (item) => item.identifier === activeTouchIdRef.current,
+      );
+      if (!touch) return;
       handleMove(touch.clientX, touch.clientY);
     };
 
-    const handleEnd = () => {
-      setIsDragging(false);
+    const handleEnd = (e: TouchEvent) => {
+      if (activeTouchIdRef.current === null) return;
+      const ended = Array.from(e.changedTouches).some(
+        (item) => item.identifier === activeTouchIdRef.current,
+      );
+      if (!ended) return;
+      isDraggingRef.current = false;
+      activeTouchIdRef.current = null;
       knob.style.transform = 'translate(0px, 0px)';
       onMove(0, 0);
     };
@@ -75,13 +87,15 @@ export const MobileControls = ({
     joystick.addEventListener('touchstart', handleStart, { passive: false });
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleEnd);
+    document.addEventListener('touchcancel', handleEnd);
 
     return () => {
       joystick.removeEventListener('touchstart', handleStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener('touchcancel', handleEnd);
     };
-  }, [visible, isDragging, onMove]);
+  }, [visible, onMove]);
 
   const handleAttackStart = () => {
     setIsAttacking(true);
