@@ -42,6 +42,8 @@ export class MainScene extends Phaser.Scene {
   private gameStarted = false;
   private battleStartTime = 0;
   private readonly fireDelayMs = 2000;
+  private readonly maxPlayerBullets = 240;
+  private readonly maxBossBullets = 300;
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -104,6 +106,7 @@ export class MainScene extends Phaser.Scene {
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.gKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.G);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.input.keyboard?.addCapture([Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.SHIFT]);
 
     this.input.keyboard?.on('keydown-F', () => {
       if (this.gameState.isGameOver || !this.gameStarted) return;
@@ -562,6 +565,7 @@ export class MainScene extends Phaser.Scene {
         // Register callback to add divided bullets to scene
         bullet.setOnDivide((newBullets) => {
           this.playerBullets.push(...newBullets);
+          this.trimBulletPool(this.playerBullets, this.maxPlayerBullets);
         });
       } else {
         bullet = new Bullet(
@@ -600,6 +604,7 @@ export class MainScene extends Phaser.Scene {
       );
     }
     this.playerBullets.push(bullet);
+    this.trimBulletPool(this.playerBullets, this.maxPlayerBullets);
     if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled && !this.gameState.divideEnabled) {
       this.scheduleDelayedRelease(bullet, () => this.getClosestEnemyPosition(), 3000);
     }
@@ -607,6 +612,9 @@ export class MainScene extends Phaser.Scene {
 
   private tryDeployShield() {
     // Check cooldown (only one shield at a time)
+    if (this.playerShield && !this.playerShield.active) {
+      this.playerShield = null;
+    }
     if (this.playerShield?.active) return;
     
     // Check Trion
@@ -636,6 +644,15 @@ export class MainScene extends Phaser.Scene {
       const target = getTarget();
       bullet.releaseTowards(target.x, target.y);
     });
+  }
+
+  private trimBulletPool(bullets: Bullet[], maxBullets: number) {
+    const overflow = bullets.length - maxBullets;
+    if (overflow <= 0) return;
+    for (let i = 0; i < overflow; i += 1) {
+      bullets[i].destroy();
+    }
+    bullets.splice(0, overflow);
   }
 
   private scheduleHeldBulletRelease(
@@ -808,9 +825,11 @@ export class MainScene extends Phaser.Scene {
         );
         bullet.setOnDivide((newBullets) => {
           this.bossBullets.push(...newBullets);
+          this.trimBulletPool(this.bossBullets, this.maxBossBullets);
           this.scheduleHeldBulletRelease(newBullets, () => ({ x: this.player.x, y: this.player.y }));
         });
         this.bossBullets.push(bullet);
+        this.trimBulletPool(this.bossBullets, this.maxBossBullets);
         return;
       }
 
@@ -826,6 +845,7 @@ export class MainScene extends Phaser.Scene {
         bulletSpeed
       );
       this.bossBullets.push(bullet);
+      this.trimBulletPool(this.bossBullets, this.maxBossBullets);
       if (useDelayedShot) {
         this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
       }
@@ -845,6 +865,7 @@ export class MainScene extends Phaser.Scene {
         bulletSpeed
       );
       this.bossBullets.push(bullet);
+      this.trimBulletPool(this.bossBullets, this.maxBossBullets);
       if (useDelayedShot) {
         this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
       }
@@ -862,6 +883,7 @@ export class MainScene extends Phaser.Scene {
       GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale
     );
     this.bossBullets.push(bullet);
+    this.trimBulletPool(this.bossBullets, this.maxBossBullets);
     if (useDelayedShot) {
       this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
     }
