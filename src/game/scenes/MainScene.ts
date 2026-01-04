@@ -314,7 +314,7 @@ export class MainScene extends Phaser.Scene {
       const rightText = this.add.text(
         GAME_CONFIG.WIDTH / 2 + 30,
         GAME_CONFIG.HEIGHT / 2 - 100,
-        'E: CYCLE WEAPON\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+        'E: CYCLE TRIGGER\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
         {
           fontSize: '16px',
           color: '#ffffff',
@@ -433,7 +433,7 @@ export class MainScene extends Phaser.Scene {
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
           GAME_CONFIG.HEIGHT / 2 + 140,
-          'SELECT DIFFICULTY AND WEAPONS, THEN START',
+          'SELECT DIFFICULTY AND TRIGGERS, THEN START',
           {
             fontSize: '16px',
             color: '#ffffff',
@@ -483,7 +483,7 @@ export class MainScene extends Phaser.Scene {
     const weaponLabel = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 240 : 165),
-      'SELECT 3 WEAPONS',
+      'SELECT 3 TRIGGERS',
       {
         fontSize: this.isMobileMode ? '28px' : '16px',
         color: '#00ffd5',
@@ -601,8 +601,8 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     tutorialButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const tutorialText = this.add.text(GAME_CONFIG.WIDTH / 2, tutorialButtonY, 'TUTORIAL', {
-      fontSize: this.isMobileMode ? '28px' : '18px',
+    const tutorialText = this.add.text(GAME_CONFIG.WIDTH / 2, tutorialButtonY, 'チュートリアル', {
+      fontSize: this.isMobileMode ? '26px' : '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -687,7 +687,7 @@ export class MainScene extends Phaser.Scene {
       'MOVE: WASD',
       'AIM: MOUSE',
       'LMB/HOLD: FIRE',
-      'E: 武器切替',
+      'E: トリガー切替',
       'Q: アステロイド遅延',
       'SPACE: シールド',
       'SHIFT+SPACE: ワイドシールド',
@@ -1509,7 +1509,7 @@ export class MainScene extends Phaser.Scene {
     
     // Bullet type display
     const bulletName = this.gameState.currentBulletType.toUpperCase();
-    this.bulletTypeText.setText(`WEAPON: ${bulletName}`);
+    this.bulletTypeText.setText(`TRIGGER: ${bulletName}`);
 
     const delayStatus = this.gameState.delayedAsteroidEnabled ? 'ON' : 'OFF';
     this.delayedAsteroidText.setText(`DELAY: ${delayStatus}`);
