@@ -32,6 +32,7 @@ interface TutorialStep {
   description: string[];
   onEnter?: () => void;
   isCompleted: () => boolean;
+  requiredBulletType?: BulletType;
 }
 
 export class MainScene extends Phaser.Scene {
@@ -97,6 +98,8 @@ export class MainScene extends Phaser.Scene {
   private instructionsContent?: Phaser.GameObjects.Container;
   private tutorialOverlay?: Phaser.GameObjects.Container;
   private tutorialHelpText?: Phaser.GameObjects.Text;
+  private tutorialHelpHighlight?: Phaser.GameObjects.Graphics;
+  private tutorialHelpHighlightTween?: Phaser.Tweens.Tween;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
@@ -309,6 +312,10 @@ export class MainScene extends Phaser.Scene {
     this.tutorialHelpText.setOrigin(1, 0);
     this.tutorialHelpText.setVisible(false);
     this.tutorialHelpText.setDepth(90);
+
+    this.tutorialHelpHighlight = this.add.graphics();
+    this.tutorialHelpHighlight.setVisible(false);
+    this.tutorialHelpHighlight.setDepth(89);
   }
 
   private showInstructions() {
@@ -772,6 +779,7 @@ export class MainScene extends Phaser.Scene {
     if (!this.tutorialHelpText) return;
     this.updateTutorialHelpText();
     this.tutorialHelpText.setVisible(true);
+    this.startTutorialHelpHighlight();
 
     const buttonX = this.isMobileMode ? 140 : 120;
     const buttonY = this.isMobileMode ? 70 : 60;
@@ -808,12 +816,47 @@ export class MainScene extends Phaser.Scene {
     if (!this.tutorialHelpText) return;
     if (this.tutorialSteps.length === 0) {
       this.tutorialHelpText.setText('');
+      this.updateTutorialHelpHighlight();
       return;
     }
     const step = this.tutorialSteps[this.tutorialStepIndex];
     const header = `STEP ${this.tutorialStepIndex + 1}/${this.tutorialSteps.length}`;
     const textLines = [header, step.title, ...step.description];
     this.tutorialHelpText.setText(textLines.join('\n'));
+    this.updateTutorialHelpHighlight();
+  }
+
+  private updateTutorialHelpHighlight() {
+    if (!this.tutorialHelpHighlight || !this.tutorialHelpText) return;
+    if (!this.tutorialHelpText.visible) {
+      this.tutorialHelpHighlight.setVisible(false);
+      return;
+    }
+    const bounds = this.tutorialHelpText.getBounds();
+    const padding = 10;
+    this.tutorialHelpHighlight.clear();
+    this.tutorialHelpHighlight.lineStyle(2, 0x2dff76, 1);
+    this.tutorialHelpHighlight.strokeRect(
+      bounds.x - padding,
+      bounds.y - padding,
+      bounds.width + padding * 2,
+      bounds.height + padding * 2
+    );
+    this.tutorialHelpHighlight.setVisible(true);
+  }
+
+  private startTutorialHelpHighlight() {
+    if (!this.tutorialHelpHighlight) return;
+    this.tutorialHelpHighlight.setAlpha(0.3);
+    if (this.tutorialHelpHighlightTween) return;
+    this.tutorialHelpHighlightTween = this.tweens.add({
+      targets: this.tutorialHelpHighlight,
+      alpha: 1,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private buildTutorialSteps(): TutorialStep[] {
@@ -827,22 +870,25 @@ export class MainScene extends Phaser.Scene {
           '撃つ/シールド/被弾で減る',
           '0で敗北・時間で回復',
           'トリガー=装備している弾種',
-          'タップ/クリックで次へ',
+          '画面右上の説明を読んで',
+          '画面タップ/クリックで次へ',
         ],
         isCompleted: () => this.tutorialProgress.introAcknowledged,
       },
       {
         title: 'Step2 移動',
         description: [
-          'WASD / スティックで移動',
-          '一度動いてみよう',
+          'キーボードの W/A/S/D で移動',
+          '（スマホは画面左のスティック）',
+          '1回だけ動いてみよう',
         ],
         isCompleted: () => this.tutorialProgress.moved,
       },
       {
         title: 'Step3 射撃',
         description: [
-          'LMB / 攻撃ボタンで射撃',
+          'マウスの左ボタン（左クリック）で射撃',
+          '（スマホは攻撃ボタン）',
           '1発撃つと次へ',
         ],
         isCompleted: () => this.tutorialProgress.fired,
@@ -850,7 +896,8 @@ export class MainScene extends Phaser.Scene {
       {
         title: 'Step4 シールド',
         description: [
-          'SPACE / シールドボタン',
+          'キーボードの SPACE でシールド',
+          '（スマホはシールドボタン）',
           '1回シールドを出そう',
           'シールドもトリオン消費',
         ],
@@ -859,7 +906,8 @@ export class MainScene extends Phaser.Scene {
       {
         title: 'Step5 弾切替',
         description: [
-          'E / トリガー切替',
+          'キーボードの E で弾種を切替',
+          '（スマホは弾切替ボタン）',
           '弾種を切り替えてみよう',
         ],
         isCompleted: () => this.tutorialProgress.switched,
@@ -869,9 +917,10 @@ export class MainScene extends Phaser.Scene {
         description: [
           '低コスト・連射向き',
           `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
-          '1発撃つと次へ',
+          'ASTEROID を1発撃つと次へ',
         ],
         onEnter: () => this.setTutorialBulletType('asteroid'),
+        requiredBulletType: 'asteroid',
         isCompleted: () => this.tutorialProgress.requiredBulletFired,
       },
       {
@@ -879,9 +928,10 @@ export class MainScene extends Phaser.Scene {
         description: [
           '爆発で範囲攻撃・コスト高め',
           `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
-          '1発撃つと次へ',
+          'METEORA を1発撃つと次へ',
         ],
         onEnter: () => this.setTutorialBulletType('meteora'),
+        requiredBulletType: 'meteora',
         isCompleted: () => this.tutorialProgress.requiredBulletFired,
       },
       {
@@ -890,9 +940,10 @@ export class MainScene extends Phaser.Scene {
           '誘導弾: マウス/指で誘導',
           '最も威力が高い',
           `コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
-          '1発撃つと次へ',
+          'VIPER を1発撃つと次へ',
         ],
         onEnter: () => this.setTutorialBulletType('viper'),
+        requiredBulletType: 'viper',
         isCompleted: () => this.tutorialProgress.requiredBulletFired,
       },
       {
@@ -902,9 +953,10 @@ export class MainScene extends Phaser.Scene {
           `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
           `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続`,
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
-          '1発撃つと次へ',
+          'RED を1発撃つと次へ',
         ],
         onEnter: () => this.setTutorialBulletType('red'),
+        requiredBulletType: 'red',
         isCompleted: () => this.tutorialProgress.requiredBulletFired,
       },
       {
@@ -913,7 +965,7 @@ export class MainScene extends Phaser.Scene {
           'トリオン0で敗北',
           '撃つ/守る/被弾で減る',
           '時間で回復する',
-          'タップ/クリックで完了',
+          '画面タップ/クリックで完了',
         ],
         isCompleted: () => this.tutorialProgress.summaryAcknowledged,
       },
@@ -925,6 +977,9 @@ export class MainScene extends Phaser.Scene {
     const step = this.tutorialSteps[this.tutorialStepIndex];
     step?.onEnter?.();
     this.updateTutorialHelpText();
+    if (step?.requiredBulletType) {
+      this.tutorialRequiredBulletType = step.requiredBulletType;
+    }
   }
 
   private resetTutorialProgress() {
@@ -975,7 +1030,6 @@ export class MainScene extends Phaser.Scene {
   private updateTutorialProgress() {
     if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
     this.registerTutorialMovement();
-    this.registerTutorialKeyAdvance();
     const step = this.tutorialSteps[this.tutorialStepIndex];
     if (step?.isCompleted()) {
       this.advanceTutorialStep();
@@ -993,26 +1047,6 @@ export class MainScene extends Phaser.Scene {
       this.mobileInput.moveY !== 0;
     if (moved) {
       this.tutorialProgress.moved = true;
-    }
-  }
-
-  private registerTutorialKeyAdvance() {
-    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
-    const keyPressed =
-      Phaser.Input.Keyboard.JustDown(this.spaceKey) ||
-      Phaser.Input.Keyboard.JustDown(this.qKey) ||
-      Phaser.Input.Keyboard.JustDown(this.eKey) ||
-      Phaser.Input.Keyboard.JustDown(this.shiftKey) ||
-      Phaser.Input.Keyboard.JustDown(this.wKey) ||
-      Phaser.Input.Keyboard.JustDown(this.aKey) ||
-      Phaser.Input.Keyboard.JustDown(this.sKey) ||
-      Phaser.Input.Keyboard.JustDown(this.dKey);
-    if (!keyPressed) return;
-    if (this.tutorialStepIndex === 0) {
-      this.tutorialProgress.introAcknowledged = true;
-    }
-    if (this.tutorialStepIndex === this.tutorialSteps.length - 1) {
-      this.tutorialProgress.summaryAcknowledged = true;
     }
   }
 
