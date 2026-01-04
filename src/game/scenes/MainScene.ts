@@ -518,7 +518,7 @@ export class MainScene extends Phaser.Scene {
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
           layoutCenterY + 140,
-          'SELECT DIFFICULTY AND TRIGGERS, THEN START\n難易度とトリガーを選んでから開始',
+          '難易度とトリガーを選んでから開始',
           {
             fontSize: '16px',
             color: '#ffffff',
@@ -566,21 +566,6 @@ export class MainScene extends Phaser.Scene {
     if (promptText) {
       instructionElements.push(promptText);
     }
-
-    const weaponLabel = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 200 : 240) : 165),
-      'SELECT 3 TRIGGERS\n好きなトリガーを3つセット',
-      {
-        fontSize: this.isMobileMode ? '28px' : '16px',
-        color: '#00ffd5',
-        fontFamily: 'monospace',
-        align: 'center',
-        lineSpacing: 6,
-      }
-    );
-    weaponLabel.setOrigin(0.5);
-    instructionElements.push(weaponLabel);
 
     const weaponStatus = this.add.text(
       GAME_CONFIG.WIDTH / 2,
