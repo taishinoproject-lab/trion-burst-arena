@@ -27,6 +27,13 @@ interface EnemyTarget {
   maxTrion: number;
 }
 
+interface TutorialStep {
+  title: string;
+  description: string[];
+  onEnter?: () => void;
+  isCompleted: () => boolean;
+}
+
 export class MainScene extends Phaser.Scene {
   private player!: Player;
   private boss!: Boss;
@@ -64,6 +71,10 @@ export class MainScene extends Phaser.Scene {
   private eKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
+  private wKey!: Phaser.Input.Keyboard.Key;
+  private aKey!: Phaser.Input.Keyboard.Key;
+  private sKey!: Phaser.Input.Keyboard.Key;
+  private dKey!: Phaser.Input.Keyboard.Key;
   
   // Mobile input state
   private mobileInput = {
@@ -90,6 +101,18 @@ export class MainScene extends Phaser.Scene {
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
   private instructionScrollCleanup?: () => void;
+  private tutorialSteps: TutorialStep[] = [];
+  private tutorialStepIndex = 0;
+  private tutorialRequiredBulletType: BulletType | null = null;
+  private tutorialProgress = {
+    introAcknowledged: false,
+    moved: false,
+    fired: false,
+    shielded: false,
+    switched: false,
+    requiredBulletFired: false,
+    summaryAcknowledged: false,
+  };
 
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
@@ -120,6 +143,10 @@ export class MainScene extends Phaser.Scene {
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.wKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    this.aKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    this.sKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    this.dKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     this.input.keyboard?.addCapture([Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.SHIFT]);
 
     // Mouse input for shooting
@@ -129,6 +156,7 @@ export class MainScene extends Phaser.Scene {
       if (pointer.middleButtonDown()) {
         return;
       }
+      this.registerTutorialTap();
       this.tryFireBullet();
     });
     
@@ -271,7 +299,7 @@ export class MainScene extends Phaser.Scene {
       uiY + 70,
       '',
       {
-        fontSize: '14px',
+        fontSize: this.isMobileMode ? '18px' : '14px',
         color: '#ffffff',
         fontFamily: 'monospace',
         align: 'right',
@@ -654,6 +682,10 @@ export class MainScene extends Phaser.Scene {
     this.difficulty = 'easy';
     this.selectedBulletTypes = [...AVAILABLE_BULLET_TYPES];
     this.resetGameState();
+    this.resetTutorialProgress();
+    this.tutorialSteps = this.buildTutorialSteps();
+    this.tutorialStepIndex = 0;
+    this.applyTutorialStep();
     this.gameState.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
     this.gameState.currentBulletType = 'asteroid';
     this.gameStarted = true;
@@ -738,7 +770,7 @@ export class MainScene extends Phaser.Scene {
 
   private showTutorialOverlay() {
     if (!this.tutorialHelpText) return;
-    this.tutorialHelpText.setText(this.getTutorialHelpText());
+    this.updateTutorialHelpText();
     this.tutorialHelpText.setVisible(true);
 
     const buttonX = this.isMobileMode ? 140 : 120;
@@ -772,23 +804,216 @@ export class MainScene extends Phaser.Scene {
     this.tutorialOverlay.setDepth(100);
   }
 
-  private getTutorialHelpText() {
+  private updateTutorialHelpText() {
+    if (!this.tutorialHelpText) return;
+    if (this.tutorialSteps.length === 0) {
+      this.tutorialHelpText.setText('');
+      return;
+    }
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    const header = `STEP ${this.tutorialStepIndex + 1}/${this.tutorialSteps.length}`;
+    const textLines = [header, step.title, ...step.description];
+    this.tutorialHelpText.setText(textLines.join('\n'));
+  }
+
+  private buildTutorialSteps(): TutorialStep[] {
+    const slowPercent = Math.round(GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER * 100);
+    const enemyBulletSlowPercent = Math.round(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER * 100);
     return [
-      '操作方法',
-      'MOVE: WASD',
-      'AIM: MOUSE',
-      'LMB/HOLD: FIRE',
-      'E: トリガー切替',
-      'Q: アステロイド遅延',
-      'SPACE: シールド',
-      'SHIFT+SPACE: ワイドシールド',
-      '',
-      '弾の種類 (コスト/ダメージ)',
-      `ASTEROID: ${GAME_CONFIG.ASTEROID_COST}/${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
-      `METEORA: ${GAME_CONFIG.METEORA_COST}/${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
-      `VIPER: ${GAME_CONFIG.VIPER_COST}/${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
-      `RED: ${GAME_CONFIG.RED_BULLET_COST}/${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
-    ].join('\n');
+      {
+        title: 'トリオン / トリガー',
+        description: [
+          'トリオン=体力兼エネルギー',
+          '撃つ/シールド/被弾で減る',
+          '0で敗北・時間で回復',
+          'トリガー=装備している弾種',
+          'タップ/クリックで次へ',
+        ],
+        isCompleted: () => this.tutorialProgress.introAcknowledged,
+      },
+      {
+        title: 'Step2 移動',
+        description: [
+          'WASD / スティックで移動',
+          '一度動いてみよう',
+        ],
+        isCompleted: () => this.tutorialProgress.moved,
+      },
+      {
+        title: 'Step3 射撃',
+        description: [
+          'LMB / 攻撃ボタンで射撃',
+          '1発撃つと次へ',
+        ],
+        isCompleted: () => this.tutorialProgress.fired,
+      },
+      {
+        title: 'Step4 シールド',
+        description: [
+          'SPACE / シールドボタン',
+          '1回シールドを出そう',
+          'シールドもトリオン消費',
+        ],
+        isCompleted: () => this.tutorialProgress.shielded,
+      },
+      {
+        title: 'Step5 弾切替',
+        description: [
+          'E / トリガー切替',
+          '弾種を切り替えてみよう',
+        ],
+        isCompleted: () => this.tutorialProgress.switched,
+      },
+      {
+        title: 'Step6 ASTEROID',
+        description: [
+          '低コスト・連射向き',
+          `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
+          '1発撃つと次へ',
+        ],
+        onEnter: () => this.setTutorialBulletType('asteroid'),
+        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+      },
+      {
+        title: 'Step7 METEORA',
+        description: [
+          '爆発で範囲攻撃・コスト高め',
+          `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
+          '1発撃つと次へ',
+        ],
+        onEnter: () => this.setTutorialBulletType('meteora'),
+        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+      },
+      {
+        title: 'Step8 VIPER',
+        description: [
+          '誘導弾: マウス/指で誘導',
+          '最も威力が高い',
+          `コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
+          '1発撃つと次へ',
+        ],
+        onEnter: () => this.setTutorialBulletType('viper'),
+        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+      },
+      {
+        title: 'Step9 RED',
+        description: [
+          '低ダメージだがスロー付与',
+          `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
+          `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続`,
+          `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
+          '1発撃つと次へ',
+        ],
+        onEnter: () => this.setTutorialBulletType('red'),
+        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+      },
+      {
+        title: 'Step10 トリオン勝敗',
+        description: [
+          'トリオン0で敗北',
+          '撃つ/守る/被弾で減る',
+          '時間で回復する',
+          'タップ/クリックで完了',
+        ],
+        isCompleted: () => this.tutorialProgress.summaryAcknowledged,
+      },
+    ];
+  }
+
+  private applyTutorialStep() {
+    this.resetTutorialStepFlags();
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    step?.onEnter?.();
+    this.updateTutorialHelpText();
+  }
+
+  private resetTutorialProgress() {
+    this.tutorialProgress = {
+      introAcknowledged: false,
+      moved: false,
+      fired: false,
+      shielded: false,
+      switched: false,
+      requiredBulletFired: false,
+      summaryAcknowledged: false,
+    };
+    this.tutorialRequiredBulletType = null;
+  }
+
+  private resetTutorialStepFlags() {
+    this.tutorialProgress.introAcknowledged = false;
+    this.tutorialProgress.moved = false;
+    this.tutorialProgress.fired = false;
+    this.tutorialProgress.shielded = false;
+    this.tutorialProgress.switched = false;
+    this.tutorialProgress.requiredBulletFired = false;
+    this.tutorialProgress.summaryAcknowledged = false;
+    this.tutorialRequiredBulletType = null;
+  }
+
+  private setTutorialBulletType(type: BulletType) {
+    this.tutorialRequiredBulletType = type;
+    this.gameState.currentBulletType = type;
+  }
+
+  private registerTutorialTap() {
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    if (this.tutorialStepIndex === 0) {
+      this.tutorialProgress.introAcknowledged = true;
+    }
+    if (this.tutorialStepIndex === this.tutorialSteps.length - 1) {
+      this.tutorialProgress.summaryAcknowledged = true;
+    }
+  }
+
+  private advanceTutorialStep() {
+    if (this.tutorialStepIndex >= this.tutorialSteps.length - 1) return;
+    this.tutorialStepIndex += 1;
+    this.applyTutorialStep();
+  }
+
+  private updateTutorialProgress() {
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    this.registerTutorialMovement();
+    this.registerTutorialKeyAdvance();
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (step?.isCompleted()) {
+      this.advanceTutorialStep();
+    }
+  }
+
+  private registerTutorialMovement() {
+    if (this.tutorialProgress.moved) return;
+    const moved =
+      this.wKey.isDown ||
+      this.aKey.isDown ||
+      this.sKey.isDown ||
+      this.dKey.isDown ||
+      this.mobileInput.moveX !== 0 ||
+      this.mobileInput.moveY !== 0;
+    if (moved) {
+      this.tutorialProgress.moved = true;
+    }
+  }
+
+  private registerTutorialKeyAdvance() {
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    const keyPressed =
+      Phaser.Input.Keyboard.JustDown(this.spaceKey) ||
+      Phaser.Input.Keyboard.JustDown(this.qKey) ||
+      Phaser.Input.Keyboard.JustDown(this.eKey) ||
+      Phaser.Input.Keyboard.JustDown(this.shiftKey) ||
+      Phaser.Input.Keyboard.JustDown(this.wKey) ||
+      Phaser.Input.Keyboard.JustDown(this.aKey) ||
+      Phaser.Input.Keyboard.JustDown(this.sKey) ||
+      Phaser.Input.Keyboard.JustDown(this.dKey);
+    if (!keyPressed) return;
+    if (this.tutorialStepIndex === 0) {
+      this.tutorialProgress.introAcknowledged = true;
+    }
+    if (this.tutorialStepIndex === this.tutorialSteps.length - 1) {
+      this.tutorialProgress.summaryAcknowledged = true;
+    }
   }
 
   private canFire(time: number = this.time.now) {
@@ -839,6 +1064,10 @@ export class MainScene extends Phaser.Scene {
     
     // Handle input
     this.handleInput();
+
+    if (this.isTutorialMode) {
+      this.updateTutorialProgress();
+    }
     
     // Regenerate Trion
     this.regenerateTrion(delta);
@@ -903,6 +1132,9 @@ export class MainScene extends Phaser.Scene {
       const currentIndex = types.indexOf(this.gameState.currentBulletType);
       if (types.length > 0) {
         this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+        if (this.isTutorialMode) {
+          this.tutorialProgress.switched = true;
+        }
       }
     }
     
@@ -1010,6 +1242,12 @@ export class MainScene extends Phaser.Scene {
     }
     this.playerBullets.push(bullet);
     this.trimBulletPool(this.playerBullets, this.maxPlayerBullets);
+    if (this.isTutorialMode) {
+      this.tutorialProgress.fired = true;
+      if (this.tutorialRequiredBulletType === bulletType) {
+        this.tutorialProgress.requiredBulletFired = true;
+      }
+    }
     if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled) {
       this.scheduleDelayedRelease(bullet, () => this.getClosestEnemyPosition(), 3000);
     }
@@ -1030,6 +1268,9 @@ export class MainScene extends Phaser.Scene {
     
     const shieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
     this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
+    if (this.isTutorialMode) {
+      this.tutorialProgress.shielded = true;
+    }
   }
 
   private scheduleDelayedRelease(
@@ -1736,6 +1977,9 @@ export class MainScene extends Phaser.Scene {
     const currentIndex = types.indexOf(this.gameState.currentBulletType);
     if (types.length > 0) {
       this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+      if (this.isTutorialMode) {
+        this.tutorialProgress.switched = true;
+      }
     }
   }
 
