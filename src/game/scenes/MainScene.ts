@@ -121,6 +121,7 @@ export class MainScene extends Phaser.Scene {
   private tutorialStepIndex = 0;
   private instructionStartMode: 'modeSelect' | 'twoPlayer' = 'modeSelect';
   private tutorialShieldFireActive = false;
+  private tutorialShieldFireEvent?: Phaser.Time.TimerEvent;
   private tutorialProgress = {
     introAcknowledged: false,
     moved: false,
@@ -1454,6 +1455,7 @@ export class MainScene extends Phaser.Scene {
       delayedAsteroidToggled: false,
       summaryAcknowledged: false,
     };
+    this.stopTutorialShieldFire();
   }
 
   private resetTutorialStepFlags() {
@@ -1468,7 +1470,7 @@ export class MainScene extends Phaser.Scene {
     this.tutorialProgress.requiredBulletHits = 0;
     this.tutorialProgress.delayedAsteroidToggled = false;
     this.tutorialProgress.summaryAcknowledged = false;
-    this.tutorialShieldFireActive = false;
+    this.stopTutorialShieldFire();
   }
 
   private registerTutorialTap() {
@@ -1532,33 +1534,40 @@ export class MainScene extends Phaser.Scene {
     if (this.tutorialShieldFireActive) return;
     this.tutorialShieldFireActive = true;
     const damageScale = this.getDamageScale();
-    const shieldStrength =
-      shield.type === 'wide' ? GAME_CONFIG.SHIELD_WIDE_STRENGTH : GAME_CONFIG.SHIELD_NARROW_STRENGTH;
-    const shieldDamage = Math.max(1, GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale);
-    const bulletCount = Math.max(2, Math.ceil(shieldStrength / shieldDamage));
     const delayStep = 280;
 
-    for (let i = 0; i < bulletCount; i += 1) {
-      this.time.delayedCall(delayStep * i, () => {
-        if (!this.playerShield?.active) return;
-        const step = this.tutorialSteps[this.tutorialStepIndex];
-        if (!step?.requiresShieldBreak || step.requiredShieldType !== shield.type) return;
-        const { startX, startY, angle } = this.getTutorialShieldFireData(shield);
-        const bullet = new Bullet(
-          this,
-          startX,
-          startY,
-          angle,
-          'asteroid',
-          false,
-          GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
-          GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
-          GAME_CONFIG.BOSS_BULLET_SPEED
-        );
-        this.bossBullets.push(bullet);
-        this.trimBulletPool(this.bossBullets, this.maxBossBullets);
-      });
-    }
+    const fireBullet = () => {
+      if (!this.playerShield?.active) {
+        this.stopTutorialShieldFire();
+        return;
+      }
+      const step = this.tutorialSteps[this.tutorialStepIndex];
+      if (!step?.requiresShieldBreak || step.requiredShieldType !== shield.type) {
+        this.stopTutorialShieldFire();
+        return;
+      }
+      const { startX, startY, angle } = this.getTutorialShieldFireData(shield);
+      const bullet = new Bullet(
+        this,
+        startX,
+        startY,
+        angle,
+        'asteroid',
+        false,
+        GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
+        GAME_CONFIG.BOSS_BULLET_SPEED
+      );
+      this.bossBullets.push(bullet);
+      this.trimBulletPool(this.bossBullets, this.maxBossBullets);
+    };
+
+    fireBullet();
+    this.tutorialShieldFireEvent = this.time.addEvent({
+      delay: delayStep,
+      callback: fireBullet,
+      loop: true,
+    });
   }
 
   private getTutorialShieldFireData(shield: Shield) {
@@ -1587,7 +1596,16 @@ export class MainScene extends Phaser.Scene {
     } else {
       this.tutorialProgress.shieldBroken = true;
     }
+    this.stopTutorialShieldFire();
     this.updateTutorialHelpText();
+  }
+
+  private stopTutorialShieldFire() {
+    if (this.tutorialShieldFireEvent) {
+      this.tutorialShieldFireEvent.remove(false);
+      this.tutorialShieldFireEvent = undefined;
+    }
+    this.tutorialShieldFireActive = false;
   }
 
   private registerTutorialMovement() {
