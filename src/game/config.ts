@@ -27,10 +27,12 @@ export const createGameConfig = (parent: string, isMobile: boolean = false): Pha
     antialias: true,
     pixelArt: false,
   },
-  scale: isMobile ? {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: GAME_CONFIG.WIDTH,
-    height: GAME_CONFIG.HEIGHT,
-  } : undefined,
+  scale: isMobile
+    ? {
+        mode: Phaser.Scale.ENVELOP,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: GAME_CONFIG.WIDTH,
+        height: GAME_CONFIG.HEIGHT,
+      }
+    : undefined,
 });
