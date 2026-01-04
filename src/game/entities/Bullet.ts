@@ -48,7 +48,7 @@ export class Bullet {
     if (type === 'viper') {
       this.speed = speed ?? GAME_CONFIG.VIPER_SPEED;
     } else if (type === 'red') {
-      this.speed = GAME_CONFIG.RED_BULLET_SPEED;
+      this.speed = speed ?? GAME_CONFIG.RED_BULLET_SPEED;
     } else {
       this.speed = speed ?? GAME_CONFIG.BULLET_SPEED;
     }
