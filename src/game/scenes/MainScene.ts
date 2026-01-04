@@ -1151,7 +1151,7 @@ export class MainScene extends Phaser.Scene {
     if (!fireData) return;
 
     const behavior = enemy.behavior;
-    const bulletSpeed = enemy.boss.getBulletSpeed();
+    const bulletSpeed = enemy.boss.getBulletSpeed(time);
     const damageScale = this.getDamageScale();
     let bulletType: BulletType = 'asteroid';
     let useDelayedShot = Phaser.Math.FloatBetween(0, 1) < behavior.delayedShotChance;
@@ -1220,7 +1220,8 @@ export class MainScene extends Phaser.Scene {
       'viper',
       false,
       GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
-      GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale
+      GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
+      enemy.boss.getBulletSpeed(time, GAME_CONFIG.VIPER_SPEED)
     );
     this.bossBullets.push(bullet);
     this.trimBulletPool(this.bossBullets, this.maxBossBullets);

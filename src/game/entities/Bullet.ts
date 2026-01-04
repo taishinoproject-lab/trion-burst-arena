@@ -35,7 +35,7 @@ export class Bullet {
     isPlayerBullet: boolean,
     trionDamage: number,
     shieldDamage: number,
-    speed: number = GAME_CONFIG.BULLET_SPEED
+    speed?: number
   ) {
     this.scene = scene;
     this.x = x;
@@ -46,11 +46,11 @@ export class Bullet {
     this.shieldDamage = shieldDamage;
     this.angle = angle;
     if (type === 'viper') {
-      this.speed = GAME_CONFIG.VIPER_SPEED;
+      this.speed = speed ?? GAME_CONFIG.VIPER_SPEED;
     } else if (type === 'red') {
       this.speed = GAME_CONFIG.RED_BULLET_SPEED;
     } else {
-      this.speed = speed;
+      this.speed = speed ?? GAME_CONFIG.BULLET_SPEED;
     }
     this.createdAt = scene.time.now;
     this.ignoreShield = type === 'red';
