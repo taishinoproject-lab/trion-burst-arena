@@ -16,6 +16,7 @@ export class Boss {
   public sprite: Phaser.GameObjects.Container;
   private body: Phaser.GameObjects.Arc;
   private innerRing: Phaser.GameObjects.Arc;
+  private slowIndicator: Phaser.GameObjects.Arc;
   public x: number;
   public y: number;
   
@@ -63,6 +64,13 @@ export class Boss {
     
     // Container for boss graphics
     this.sprite = scene.add.container(x, y, [this.body, this.innerRing]);
+
+    const slowRadius = GAME_CONFIG.BULLET_RADIUS * 1.4;
+    this.slowIndicator = scene.add.circle(0, 0, slowRadius, GAME_CONFIG.RED_BULLET_COLOR);
+    this.slowIndicator.setStrokeStyle(1, GAME_CONFIG.RED_BULLET_STROKE_COLOR, 0.7);
+    this.slowIndicator.setAlpha(0.9);
+    this.slowIndicator.setVisible(false);
+    this.sprite.add(this.slowIndicator);
   }
 
   update(delta: number, playerX: number, playerY: number, currentTime: number) {
@@ -74,8 +82,12 @@ export class Boss {
     }
     
     // Move towards target
-    if (currentTime >= this.slowUntil && this.slowMultiplier !== 1) {
+    const isSlowed = currentTime < this.slowUntil;
+    if (!isSlowed && this.slowMultiplier !== 1) {
       this.slowMultiplier = 1;
+    }
+    if (this.slowIndicator.visible !== isSlowed) {
+      this.slowIndicator.setVisible(isSlowed);
     }
     const speed = this.config.speed * this.getSpeedMultiplier(currentTime) * (delta / 1000);
     const dx = this.targetX - this.x;
@@ -158,8 +170,8 @@ export class Boss {
     this.shieldActive = false;
   }
 
-  getBulletSpeed() {
-    return this.config.bulletSpeed;
+  getBulletSpeed(currentTime: number, baseSpeed: number = this.config.bulletSpeed) {
+    return baseSpeed * this.getBulletSpeedMultiplier(currentTime);
   }
 
   getRadius() {
@@ -201,5 +213,9 @@ export class Boss {
 
   private getSpeedMultiplier(currentTime: number) {
     return currentTime < this.slowUntil ? this.slowMultiplier : 1;
+  }
+
+  private getBulletSpeedMultiplier(currentTime: number) {
+    return currentTime < this.slowUntil ? GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER : 1;
   }
 }
