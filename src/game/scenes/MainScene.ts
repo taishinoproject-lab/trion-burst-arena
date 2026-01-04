@@ -3,7 +3,7 @@ import { AVAILABLE_BULLET_TYPES, DIFFICULTY_DAMAGE_MULTIPLIER, Difficulty, GAME_
 import { Player } from '../entities/Player';
 import { Boss, BossConfig } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
-import { Shield } from '../entities/Shield';
+import { Shield, ShieldType } from '../entities/Shield';
 
 type EnemyPattern = 'mixed' | 'delayedAsteroid' | 'meteoraBarrage';
 
@@ -34,8 +34,11 @@ interface TutorialStep {
   isCompleted: () => boolean;
   requiredBulletType?: BulletType;
   requiredHits?: number;
+  requiredShieldType?: ShieldType;
   focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player' | 'backButton';
   requiresSwitch?: boolean;
+  requiresShieldBreak?: boolean;
+  requiresDelayToggle?: boolean;
 }
 
 export class MainScene extends Phaser.Scene {
@@ -115,13 +118,18 @@ export class MainScene extends Phaser.Scene {
   private instructionScrollCleanup?: () => void;
   private tutorialSteps: TutorialStep[] = [];
   private tutorialStepIndex = 0;
+  private tutorialShieldFireActive = false;
   private tutorialProgress = {
     introAcknowledged: false,
     moved: false,
     fired: false,
-    shielded: false,
+    shieldDeployed: false,
+    shieldBroken: false,
+    wideShieldDeployed: false,
+    wideShieldBroken: false,
     switched: false,
     requiredBulletHits: 0,
+    delayedAsteroidToggled: false,
     summaryAcknowledged: false,
   };
 
@@ -1010,14 +1018,29 @@ export class MainScene extends Phaser.Scene {
         description: [
           'キーボードの SPACE でシールド',
           '（スマホはシールドボタン）',
-          '1回シールドを出そう',
+          'シールドを出して弾を受けよう',
           'シールドもトリオン消費',
         ],
-        isCompleted: () => this.tutorialProgress.shielded,
+        requiredShieldType: 'narrow',
+        requiresShieldBreak: true,
+        isCompleted: () => this.tutorialProgress.shieldBroken,
         focusTarget: 'player',
       },
       {
-        title: 'Step5 弾切替',
+        title: 'Step5 前方位シールド',
+        description: [
+          'SHIFT + SPACE で前方位シールド',
+          '（スマホは前方位シールドボタン）',
+          '前方位シールドで弾を受けよう',
+          '弾を受けて消えたら次へ',
+        ],
+        requiredShieldType: 'wide',
+        requiresShieldBreak: true,
+        isCompleted: () => this.tutorialProgress.wideShieldBroken,
+        focusTarget: 'player',
+      },
+      {
+        title: 'Step6 弾切替',
         description: [
           'キーボードの E で弾種を切替',
           '（スマホは弾切替ボタン）',
@@ -1028,7 +1051,7 @@ export class MainScene extends Phaser.Scene {
         requiresSwitch: true,
       },
       {
-        title: 'Step6 ASTEROID',
+        title: 'Step7 ASTEROID',
         description: [
           '低コスト・連射向き',
           `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
@@ -1042,7 +1065,27 @@ export class MainScene extends Phaser.Scene {
         requiresSwitch: true,
       },
       {
-        title: 'Step7 METEORA',
+        title: 'Step8 ASTEROID 遅延弾',
+        description: [
+          'Qで遅延弾モードに切替',
+          'DELAY: ON を確認',
+          '遅延ASTEROIDで1発当てよう',
+        ],
+        onEnter: () => {
+          if (this.gameState.delayedAsteroidEnabled) {
+            this.tutorialProgress.delayedAsteroidToggled = true;
+          }
+        },
+        requiredBulletType: 'asteroid',
+        requiredHits: 1,
+        requiresDelayToggle: true,
+        isCompleted: () =>
+          this.tutorialProgress.delayedAsteroidToggled &&
+          this.tutorialProgress.requiredBulletHits >= 1,
+        focusTarget: 'triggerDisplay',
+      },
+      {
+        title: 'Step9 METEORA',
         description: [
           '爆発で範囲攻撃・コスト高め',
           `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
@@ -1056,7 +1099,7 @@ export class MainScene extends Phaser.Scene {
         requiresSwitch: true,
       },
       {
-        title: 'Step8 VIPER',
+        title: 'Step10 VIPER',
         description: [
           '誘導弾: マウス/指で誘導',
           '最も威力が高い',
@@ -1071,23 +1114,23 @@ export class MainScene extends Phaser.Scene {
         requiresSwitch: true,
       },
       {
-        title: 'Step9 RED',
+        title: 'Step11 RED',
         description: [
           '低ダメージだがスロー付与',
           `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
           `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続`,
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
           'EでREDに切替',
-          'REDで10発当てよう',
+          'REDで5発当てよう',
         ],
         requiredBulletType: 'red',
-        requiredHits: 10,
-        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        requiredHits: 5,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 5,
         focusTarget: 'triggerDisplay',
         requiresSwitch: true,
       },
       {
-        title: 'Step10 トリオン勝敗',
+        title: 'Step12 トリオン勝敗',
         description: [
           'トリオン0で敗北',
           '撃つ/守る/被弾で減る',
@@ -1112,9 +1155,13 @@ export class MainScene extends Phaser.Scene {
       introAcknowledged: false,
       moved: false,
       fired: false,
-      shielded: false,
+      shieldDeployed: false,
+      shieldBroken: false,
+      wideShieldDeployed: false,
+      wideShieldBroken: false,
       switched: false,
       requiredBulletHits: 0,
+      delayedAsteroidToggled: false,
       summaryAcknowledged: false,
     };
   }
@@ -1123,10 +1170,15 @@ export class MainScene extends Phaser.Scene {
     this.tutorialProgress.introAcknowledged = false;
     this.tutorialProgress.moved = false;
     this.tutorialProgress.fired = false;
-    this.tutorialProgress.shielded = false;
+    this.tutorialProgress.shieldDeployed = false;
+    this.tutorialProgress.shieldBroken = false;
+    this.tutorialProgress.wideShieldDeployed = false;
+    this.tutorialProgress.wideShieldBroken = false;
     this.tutorialProgress.switched = false;
     this.tutorialProgress.requiredBulletHits = 0;
+    this.tutorialProgress.delayedAsteroidToggled = false;
     this.tutorialProgress.summaryAcknowledged = false;
+    this.tutorialShieldFireActive = false;
   }
 
   private registerTutorialTap() {
@@ -1177,11 +1229,74 @@ export class MainScene extends Phaser.Scene {
     const step = this.tutorialSteps[this.tutorialStepIndex];
     if (!step?.requiredBulletType || !step.requiredHits) return;
     if (step.requiresSwitch && !this.tutorialProgress.switched) return;
+    if (step.requiresDelayToggle && !this.gameState.delayedAsteroidEnabled) return;
     if (bulletType !== step.requiredBulletType) return;
     this.tutorialProgress.requiredBulletHits = Math.min(
       step.requiredHits,
       this.tutorialProgress.requiredBulletHits + 1
     );
+    this.updateTutorialHelpText();
+  }
+
+  private startTutorialShieldTrial(shield: Shield) {
+    if (this.tutorialShieldFireActive) return;
+    this.tutorialShieldFireActive = true;
+    const damageScale = this.getDamageScale();
+    const shieldStrength =
+      shield.type === 'wide' ? GAME_CONFIG.SHIELD_WIDE_STRENGTH : GAME_CONFIG.SHIELD_NARROW_STRENGTH;
+    const shieldDamage = Math.max(1, GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale);
+    const bulletCount = Math.max(2, Math.ceil(shieldStrength / shieldDamage));
+    const delayStep = 280;
+
+    for (let i = 0; i < bulletCount; i += 1) {
+      this.time.delayedCall(delayStep * i, () => {
+        if (!this.playerShield?.active) return;
+        const step = this.tutorialSteps[this.tutorialStepIndex];
+        if (!step?.requiresShieldBreak || step.requiredShieldType !== shield.type) return;
+        const { startX, startY, angle } = this.getTutorialShieldFireData(shield);
+        const bullet = new Bullet(
+          this,
+          startX,
+          startY,
+          angle,
+          'asteroid',
+          false,
+          GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+          GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
+          GAME_CONFIG.BOSS_BULLET_SPEED
+        );
+        this.bossBullets.push(bullet);
+        this.trimBulletPool(this.bossBullets, this.maxBossBullets);
+      });
+    }
+  }
+
+  private getTutorialShieldFireData(shield: Shield) {
+    if (shield.type === 'narrow') {
+      const distance = 140;
+      return {
+        startX: shield.x + Math.cos(shield.angle) * distance,
+        startY: shield.y + Math.sin(shield.angle) * distance,
+        angle: shield.angle + Math.PI,
+      };
+    }
+    const angle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
+    return {
+      startX: this.boss.x,
+      startY: this.boss.y,
+      angle,
+    };
+  }
+
+  private registerTutorialShieldBreak(shieldType: ShieldType) {
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step?.requiresShieldBreak || step.requiredShieldType !== shieldType) return;
+    if (shieldType === 'wide') {
+      this.tutorialProgress.wideShieldBroken = true;
+    } else {
+      this.tutorialProgress.shieldBroken = true;
+    }
     this.updateTutorialHelpText();
   }
 
@@ -1311,6 +1426,13 @@ export class MainScene extends Phaser.Scene {
     // Toggle asteroid delay mode
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
       this.gameState.delayedAsteroidEnabled = !this.gameState.delayedAsteroidEnabled;
+      if (this.isTutorialMode) {
+        const step = this.tutorialSteps[this.tutorialStepIndex];
+        if (step?.requiresDelayToggle && this.gameState.delayedAsteroidEnabled) {
+          this.tutorialProgress.delayedAsteroidToggled = true;
+          this.updateTutorialHelpText();
+        }
+      }
     }
     
     // Switch bullet type (cycle through selected types)
@@ -1454,7 +1576,16 @@ export class MainScene extends Phaser.Scene {
     const shieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
     this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
     if (this.isTutorialMode) {
-      this.tutorialProgress.shielded = true;
+      const step = this.tutorialSteps[this.tutorialStepIndex];
+      if (step?.requiresShieldBreak && step.requiredShieldType === shieldType && this.playerShield) {
+        if (shieldType === 'wide') {
+          this.tutorialProgress.wideShieldDeployed = true;
+        } else {
+          this.tutorialProgress.shieldDeployed = true;
+        }
+        this.startTutorialShieldTrial(this.playerShield);
+        this.updateTutorialHelpText();
+      }
     }
   }
 
@@ -1962,12 +2093,17 @@ export class MainScene extends Phaser.Scene {
       // Check player shield
       if (this.playerShield?.active && this.playerShield) {
         if (this.bulletHitsShield(bullet, this.playerShield)) {
+          const shieldType = this.playerShield.type;
+          const wasActive = this.playerShield.active;
           if (bullet.type === 'meteora') {
             this.triggerMeteoraExplosion(bullet);
           } else {
             bullet.destroy();
           }
           this.playerShield.applyDamage(bullet.shieldDamage);
+          if (wasActive && !this.playerShield.active) {
+            this.registerTutorialShieldBreak(shieldType);
+          }
           continue;
         }
       }
