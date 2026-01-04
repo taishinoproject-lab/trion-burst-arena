@@ -294,12 +294,14 @@ export class MainScene extends Phaser.Scene {
     );
     bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     
-    const titleY = GAME_CONFIG.HEIGHT / 2 - 180;
-    const tutorialButtonY = GAME_CONFIG.HEIGHT / 2 - (this.isMobileMode ? 120 : 140);
-    const instructionTextY = GAME_CONFIG.HEIGHT / 2 - (this.isMobileMode ? 40 : 100);
-    const difficultyLabelY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 70 : 10);
+    const isCompactLayout = this.isMobileMode && this.scale.displaySize.height < 600;
+    const layoutCenterY = GAME_CONFIG.HEIGHT / 2 + (isCompactLayout ? -120 : 0);
+    const titleY = layoutCenterY - 180;
+    const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 120 : 140);
+    const instructionTextY = layoutCenterY - (this.isMobileMode ? 40 : 100);
+    const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 40 : 70) : 10);
     const actionButtonWidth = this.isMobileMode ? 320 : 180;
-    const actionButtonHeight = this.isMobileMode ? 80 : 50;
+    const actionButtonHeight = this.isMobileMode ? (isCompactLayout ? 64 : 80) : 50;
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
       fontSize: this.isMobileMode ? '42px' : '28px',
@@ -382,9 +384,9 @@ export class MainScene extends Phaser.Scene {
 
     // Create large touch-friendly buttons for mobile
     const buttonWidth = this.isMobileMode ? 360 : 80;
-    const buttonHeight = this.isMobileMode ? 84 : 40;
-    const buttonY = difficultyLabelY + (this.isMobileMode ? 100 : 80);
-    const buttonSpacing = this.isMobileMode ? 30 : 20;
+    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 72 : 84) : 40;
+    const buttonY = difficultyLabelY + (this.isMobileMode ? (isCompactLayout ? 80 : 100) : 80);
+    const buttonSpacing = this.isMobileMode ? (isCompactLayout ? 20 : 30) : 20;
     const totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
     const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
     const easyButtonX = firstButtonX;
@@ -463,7 +465,7 @@ export class MainScene extends Phaser.Scene {
     const promptText = !this.isMobileMode
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
-          GAME_CONFIG.HEIGHT / 2 + 140,
+          layoutCenterY + 140,
           'SELECT DIFFICULTY AND TRIGGERS, THEN START',
           {
             fontSize: '16px',
@@ -513,7 +515,7 @@ export class MainScene extends Phaser.Scene {
 
     const weaponLabel = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 240 : 165),
+      layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 200 : 240) : 165),
       'SELECT 3 TRIGGERS',
       {
         fontSize: this.isMobileMode ? '28px' : '16px',
@@ -526,7 +528,7 @@ export class MainScene extends Phaser.Scene {
 
     const weaponStatus = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 275 : 190),
+      layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 230 : 275) : 190),
       '',
       {
         fontSize: this.isMobileMode ? '22px' : '14px',
@@ -539,10 +541,10 @@ export class MainScene extends Phaser.Scene {
 
     const weaponButtons: { type: BulletType; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[] = [];
     const weaponButtonWidth = this.isMobileMode ? 220 : 120;
-    const weaponButtonHeight = this.isMobileMode ? 70 : 40;
-    const weaponSpacing = this.isMobileMode ? 20 : 16;
-    const weaponStartY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 350 : 245);
-    const weaponRowSpacing = this.isMobileMode ? 90 : 50;
+    const weaponButtonHeight = this.isMobileMode ? (isCompactLayout ? 60 : 70) : 40;
+    const weaponSpacing = this.isMobileMode ? (isCompactLayout ? 14 : 20) : 16;
+    const weaponStartY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 280 : 350) : 245);
+    const weaponRowSpacing = this.isMobileMode ? (isCompactLayout ? 70 : 90) : 50;
     const weaponRowCount = this.isMobileMode ? 2 : 1;
     const weaponButtonsPerRow = this.isMobileMode ? 2 : 4;
     const weaponTotalWidth = weaponButtonWidth * weaponButtonsPerRow + weaponSpacing * (weaponButtonsPerRow - 1);
@@ -555,7 +557,7 @@ export class MainScene extends Phaser.Scene {
       red: 'RED BULLET',
     };
 
-    const startButtonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 470 : 320);
+    const startButtonY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 380 : 470) : 320);
     const startButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       startButtonY,
@@ -566,7 +568,7 @@ export class MainScene extends Phaser.Scene {
     );
     startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
     const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'START', {
-      fontSize: this.isMobileMode ? '30px' : '20px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '26px' : '30px') : '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
