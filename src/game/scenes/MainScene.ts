@@ -292,7 +292,14 @@ export class MainScene extends Phaser.Scene {
     );
     bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 180, '- TRION BATTLE -', {
+    const titleY = GAME_CONFIG.HEIGHT / 2 - 180;
+    const tutorialButtonY = GAME_CONFIG.HEIGHT / 2 - (this.isMobileMode ? 120 : 140);
+    const instructionTextY = GAME_CONFIG.HEIGHT / 2 - (this.isMobileMode ? 40 : 100);
+    const difficultyLabelY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 70 : 10);
+    const actionButtonWidth = this.isMobileMode ? 320 : 180;
+    const actionButtonHeight = this.isMobileMode ? 80 : 50;
+
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
       fontSize: this.isMobileMode ? '42px' : '28px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -300,10 +307,32 @@ export class MainScene extends Phaser.Scene {
     title.setOrigin(0.5);
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [bg, title];
+
+    const tutorialButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      tutorialButtonY,
+      actionButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    tutorialButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const tutorialText = this.add.text(GAME_CONFIG.WIDTH / 2, tutorialButtonY, 'チュートリアル', {
+      fontSize: this.isMobileMode ? '26px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    tutorialText.setOrigin(0.5);
+    const handleTutorial = () => {
+      this.startTutorial();
+    };
+    tutorialButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
+    tutorialText.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
+    instructionElements.push(tutorialButton, tutorialText);
     
     // Only show keyboard instructions on desktop
     if (!this.isMobileMode) {
-      const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, GAME_CONFIG.HEIGHT / 2 - 100, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE', {
+      const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, instructionTextY, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE', {
         fontSize: '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
@@ -313,7 +342,7 @@ export class MainScene extends Phaser.Scene {
 
       const rightText = this.add.text(
         GAME_CONFIG.WIDTH / 2 + 30,
-        GAME_CONFIG.HEIGHT / 2 - 100,
+        instructionTextY,
         'E: CYCLE TRIGGER\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
         {
           fontSize: '16px',
@@ -328,7 +357,7 @@ export class MainScene extends Phaser.Scene {
       // Mobile instructions: omit key-specific details
       const mobileInstructions = this.add.text(
         GAME_CONFIG.WIDTH / 2,
-        GAME_CONFIG.HEIGHT / 2 - 110,
+        instructionTextY,
         'トリオンを使って戦うゲーム。\n「弾を打つ」「シールドを張る」「攻撃を受ける」と\nトリオンが減る。\nトリオンが0になったら死ぬ。',
         {
           fontSize: '26px',
@@ -342,7 +371,7 @@ export class MainScene extends Phaser.Scene {
       instructionElements.push(mobileInstructions);
     }
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 10, 'SELECT DIFFICULTY', {
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, 'SELECT DIFFICULTY', {
       fontSize: this.isMobileMode ? '30px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -352,7 +381,7 @@ export class MainScene extends Phaser.Scene {
     // Create large touch-friendly buttons for mobile
     const buttonWidth = this.isMobileMode ? 360 : 80;
     const buttonHeight = this.isMobileMode ? 84 : 40;
-    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 110 : 90);
+    const buttonY = difficultyLabelY + (this.isMobileMode ? 100 : 80);
     const buttonSpacing = this.isMobileMode ? 30 : 20;
     const totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
     const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
@@ -525,13 +554,11 @@ export class MainScene extends Phaser.Scene {
     };
 
     const startButtonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 470 : 320);
-    const startButtonWidth = this.isMobileMode ? 320 : 180;
-    const startButtonHeight = this.isMobileMode ? 80 : 50;
     const startButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       startButtonY,
-      startButtonWidth,
-      startButtonHeight,
+      actionButtonWidth,
+      actionButtonHeight,
       0x1a1a3a,
       0.95
     );
@@ -591,28 +618,6 @@ export class MainScene extends Phaser.Scene {
     startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
     instructionElements.push(startButton, startText);
 
-    const tutorialButtonY = startButtonY + (this.isMobileMode ? 110 : 70);
-    const tutorialButton = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2,
-      tutorialButtonY,
-      startButtonWidth,
-      startButtonHeight,
-      0x1a1a3a,
-      0.95
-    );
-    tutorialButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const tutorialText = this.add.text(GAME_CONFIG.WIDTH / 2, tutorialButtonY, 'チュートリアル', {
-      fontSize: this.isMobileMode ? '26px' : '18px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    tutorialText.setOrigin(0.5);
-    const handleTutorial = () => {
-      this.startTutorial();
-    };
-    tutorialButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
-    tutorialText.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
-    instructionElements.push(tutorialButton, tutorialText);
     updateWeaponButtons();
     
     this.instructionsOverlay = this.add.container(0, 0, instructionElements);
