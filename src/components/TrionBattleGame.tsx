@@ -138,7 +138,13 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
           width: '100%',
           height: isMobile ? '100%' : 'auto',
           maxWidth: '100%',
-          ...(isMobile ? {} : { aspectRatio: '16 / 9' }),
+          ...(isMobile
+            ? {}
+            : {
+                aspectRatio: '16 / 9',
+                maxHeight: 'calc(100dvh - 9rem)',
+                maxWidth: 'calc((100dvh - 9rem) * 16 / 9)',
+              }),
         }}
       />
       {isMobile && canFullscreen && (
