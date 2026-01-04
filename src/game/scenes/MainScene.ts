@@ -662,8 +662,10 @@ export class MainScene extends Phaser.Scene {
     content: Phaser.GameObjects.Container
   ) {
     const contentBounds = content.getBounds();
-    const minScrollY = Math.min(0, GAME_CONFIG.HEIGHT - contentBounds.bottom);
-    const maxScrollY = Math.max(0, -contentBounds.top);
+    const bottomPadding = this.isMobileMode ? 160 : 0;
+    const topPadding = this.isMobileMode ? 20 : 0;
+    const minScrollY = Math.min(0, GAME_CONFIG.HEIGHT - (contentBounds.bottom + bottomPadding));
+    const maxScrollY = Math.max(0, -contentBounds.top + topPadding);
 
     if (minScrollY === maxScrollY) return;
 
