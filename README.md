@@ -64,6 +64,12 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+## GitHub Pages deployment notes
+
+- Public URL: `https://<github-username>.github.io/trion-burst-arena/`
+- Favicon updates can take time to appear due to browser cache. If it does not update, try a hard refresh, an incognito window, or append a cache-busting query like `?v=2`.
+- If you see a blank page after deployment, a common cause is an incorrect Vite `base` setting (assets 404).
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
