@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { MainScene } from './scenes/MainScene';
 import { GAME_CONFIG } from './constants';
 
-export const createGameConfig = (parent: string): Phaser.Types.Core.GameConfig => ({
+export const createGameConfig = (parent: string, isMobile: boolean = false): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
   width: GAME_CONFIG.WIDTH,
   height: GAME_CONFIG.HEIGHT,
@@ -19,9 +19,18 @@ export const createGameConfig = (parent: string): Phaser.Types.Core.GameConfig =
     mouse: {
       target: undefined,
     },
+    touch: {
+      capture: true,
+    },
   },
   render: {
     antialias: true,
     pixelArt: false,
   },
+  scale: isMobile ? {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: GAME_CONFIG.WIDTH,
+    height: GAME_CONFIG.HEIGHT,
+  } : undefined,
 });

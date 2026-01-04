@@ -44,6 +44,7 @@ export class MainScene extends Phaser.Scene {
   private readonly fireDelayMs = 2000;
   private readonly maxPlayerBullets = 240;
   private readonly maxBossBullets = 300;
+  private isMobileMode = false;
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -88,6 +89,10 @@ export class MainScene extends Phaser.Scene {
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
+
+  public setMobileMode(mobile: boolean) {
+    this.isMobileMode = mobile;
+  }
 
   constructor() {
     super({ key: 'MainScene' });
@@ -302,59 +307,121 @@ export class MainScene extends Phaser.Scene {
     );
     bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 130, '- TRION BATTLE -', {
-      fontSize: '28px',
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 180, '- TRION BATTLE -', {
+      fontSize: this.isMobileMode ? '48px' : '28px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
     title.setOrigin(0.5);
-    
-    const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, GAME_CONFIG.HEIGHT / 2 - 70, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE VIPER', {
-      fontSize: '16px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      align: 'left',
-      lineSpacing: 6,
-    });
 
-    const rightText = this.add.text(
-      GAME_CONFIG.WIDTH / 2 + 30,
-      GAME_CONFIG.HEIGHT / 2 - 70,
-      'E: CYCLE WEAPON\nQ: DELAY ASTEROID\nC: TOGGLE DIVIDE\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
-      {
+    const instructionElements: Phaser.GameObjects.GameObject[] = [bg, title];
+    
+    // Only show keyboard instructions on desktop
+    if (!this.isMobileMode) {
+      const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, GAME_CONFIG.HEIGHT / 2 - 100, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE VIPER', {
         fontSize: '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
         align: 'left',
         lineSpacing: 6,
-      }
-    );
+      });
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 80, 'SELECT DIFFICULTY', {
-      fontSize: '18px',
+      const rightText = this.add.text(
+        GAME_CONFIG.WIDTH / 2 + 30,
+        GAME_CONFIG.HEIGHT / 2 - 100,
+        'E: CYCLE WEAPON\nQ: DELAY ASTEROID\nC: TOGGLE DIVIDE\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+        {
+          fontSize: '16px',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          align: 'left',
+          lineSpacing: 6,
+        }
+      );
+      instructionElements.push(leftText, rightText);
+    } else {
+      // Mobile instructions
+      const mobileInstructions = this.add.text(
+        GAME_CONFIG.WIDTH / 2,
+        GAME_CONFIG.HEIGHT / 2 - 100,
+        'LEFT STICK: MOVE\nRIGHT BUTTONS: ATTACK',
+        {
+          fontSize: '28px',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          align: 'center',
+          lineSpacing: 10,
+        }
+      );
+      mobileInstructions.setOrigin(0.5);
+      instructionElements.push(mobileInstructions);
+    }
+
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 20, 'SELECT DIFFICULTY', {
+      fontSize: this.isMobileMode ? '32px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
     difficultyLabel.setOrigin(0.5);
 
-    const easyText = this.add.text(GAME_CONFIG.WIDTH / 2 - 70, GAME_CONFIG.HEIGHT / 2 + 110, 'EASY', {
-      fontSize: '20px',
-      color: this.difficulty === 'easy' ? '#00ffd5' : '#666666',
-      fontFamily: 'monospace',
-    });
+    // Create large touch-friendly buttons for mobile
+    const buttonWidth = this.isMobileMode ? 220 : 80;
+    const buttonHeight = this.isMobileMode ? 100 : 40;
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 120 : 110);
+    const buttonSpacing = this.isMobileMode ? 140 : 45;
 
-    const hardText = this.add.text(GAME_CONFIG.WIDTH / 2 + 20, GAME_CONFIG.HEIGHT / 2 + 110, 'HARD', {
-      fontSize: '20px',
-      color: this.difficulty === 'hard' ? '#00ffd5' : '#666666',
-      fontFamily: 'monospace',
-    });
+    // Easy button
+    const easyBg = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2 - buttonSpacing,
+      buttonY,
+      buttonWidth,
+      buttonHeight,
+      0x1a1a3a,
+      0.9
+    );
+    easyBg.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.8);
+    
+    const easyText = this.add.text(
+      GAME_CONFIG.WIDTH / 2 - buttonSpacing,
+      buttonY,
+      'EASY',
+      {
+        fontSize: this.isMobileMode ? '42px' : '20px',
+        color: this.difficulty === 'easy' ? '#00ffd5' : '#aaaaaa',
+        fontFamily: 'monospace',
+      }
+    );
+    easyText.setOrigin(0.5);
+
+    // Hard button
+    const hardBg = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2 + buttonSpacing,
+      buttonY,
+      buttonWidth,
+      buttonHeight,
+      0x1a1a3a,
+      0.9
+    );
+    hardBg.setStrokeStyle(3, 0xff6b6b, 0.8);
+    
+    const hardText = this.add.text(
+      GAME_CONFIG.WIDTH / 2 + buttonSpacing,
+      buttonY,
+      'HARD',
+      {
+        fontSize: this.isMobileMode ? '42px' : '20px',
+        color: this.difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa',
+        fontFamily: 'monospace',
+      }
+    );
+    hardText.setOrigin(0.5);
 
     const promptText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      GAME_CONFIG.HEIGHT / 2 + 150,
-      'CLICK EASY OR HARD TO START',
+      GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 220 : 150),
+      this.isMobileMode ? 'TAP TO START' : 'CLICK EASY OR HARD TO START',
       {
-        fontSize: '16px',
+        fontSize: this.isMobileMode ? '28px' : '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
       }
@@ -363,31 +430,34 @@ export class MainScene extends Phaser.Scene {
 
     const updateDifficultySelection = (difficulty: Difficulty) => {
       this.difficulty = difficulty;
-      easyText.setColor(difficulty === 'easy' ? '#00ffd5' : '#666666');
-      hardText.setColor(difficulty === 'hard' ? '#00ffd5' : '#666666');
+      easyText.setColor(difficulty === 'easy' ? '#00ffd5' : '#aaaaaa');
+      hardText.setColor(difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa');
+      easyBg.setStrokeStyle(3, difficulty === 'easy' ? GAME_CONFIG.BULLET_COLOR : 0x444444, 0.8);
+      hardBg.setStrokeStyle(3, difficulty === 'hard' ? 0xff6b6b : 0x444444, 0.8);
     };
 
+    // Make both background and text interactive for touch
+    easyBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      updateDifficultySelection('easy');
+      this.startBattle();
+    });
     easyText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('easy');
       this.startBattle();
     });
 
+    hardBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      updateDifficultySelection('hard');
+      this.startBattle();
+    });
     hardText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('hard');
       this.startBattle();
     });
 
+    instructionElements.push(difficultyLabel, easyBg, easyText, hardBg, hardText, promptText);
     
-    this.instructionsOverlay = this.add.container(0, 0, [
-      bg,
-      title,
-      leftText,
-      rightText,
-      difficultyLabel,
-      easyText,
-      hardText,
-      promptText,
-    ]);
+    this.instructionsOverlay = this.add.container(0, 0, instructionElements);
     this.instructionsOverlay.setDepth(100);
   }
 

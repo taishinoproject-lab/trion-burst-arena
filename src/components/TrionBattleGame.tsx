@@ -26,7 +26,14 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   useEffect(() => {
-    if (!gameContainerRef.current || gameRef.current) return;
+    if (!gameContainerRef.current) return;
+    
+    // Destroy existing game if isMobile changed
+    if (gameRef.current) {
+      gameRef.current.destroy(true);
+      gameRef.current = null;
+      sceneRef.current = null;
+    }
 
     // Prevent context menu on right click (for Meteora firing)
     const handleContextMenu = (e: Event) => {
@@ -34,8 +41,8 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     };
     gameContainerRef.current.addEventListener('contextmenu', handleContextMenu);
 
-    // Create Phaser game instance
-    const config = createGameConfig('game-container');
+    // Create Phaser game instance with mobile scaling
+    const config = createGameConfig('game-container', isMobile);
     gameRef.current = new Phaser.Game(config);
 
     // Get reference to MainScene when it's ready
@@ -43,6 +50,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       const scene = gameRef.current?.scene.getScene('MainScene') as MainScene;
       if (scene) {
         sceneRef.current = scene;
+        scene.setMobileMode(isMobile);
       }
     });
 
@@ -54,7 +62,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         sceneRef.current = null;
       }
     };
-  }, []);
+  }, [isMobile]);
 
   const handleMove = useCallback((x: number, y: number) => {
     if (sceneRef.current) {
@@ -87,14 +95,14 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   return (
-    <div className={className}>
+    <div className={className} style={isMobile ? { width: '100vw', height: '100vh', position: 'fixed', top: 0, left: 0 } : undefined}>
       <div
         id="game-container"
         ref={gameContainerRef}
-        className="rounded-lg overflow-hidden shadow-xl border border-border/30"
+        className={isMobile ? '' : 'rounded-lg overflow-hidden shadow-xl border border-border/30'}
         style={{ 
-          width: isMobile ? '100vw' : '1280px', 
-          height: isMobile ? '100vh' : '720px',
+          width: isMobile ? '100%' : '1280px', 
+          height: isMobile ? '100%' : '720px',
           maxWidth: '100%',
         }}
       />
