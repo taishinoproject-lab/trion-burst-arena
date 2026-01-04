@@ -66,6 +66,15 @@ export class MainScene extends Phaser.Scene {
   private gKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
   
+  // Mobile input state
+  private mobileInput = {
+    moveX: 0,
+    moveY: 0,
+    attacking: false,
+    aimX: GAME_CONFIG.WIDTH / 2,
+    aimY: 0,
+  };
+  
   // UI Elements
   private playerTrionBar!: Phaser.GameObjects.Graphics;
   private bossTrionBar!: Phaser.GameObjects.Graphics;
@@ -440,7 +449,7 @@ export class MainScene extends Phaser.Scene {
     this.spawnTimedEnemies(time);
     
     // Update entities
-    this.player.update(delta);
+    this.player.update(delta, this.mobileInput);
     if (this.gameState.bossTrion > 0) {
       this.boss.update(delta, this.player.x, this.player.y, time);
       // Boss firing
@@ -506,8 +515,14 @@ export class MainScene extends Phaser.Scene {
     }
     
     // Continuous fire while holding (except for viper which fires on click)
-    if (this.input.activePointer.isDown && !this.input.activePointer.rightButtonDown()) {
+    const isDesktopFiring = this.input.activePointer.isDown && !this.input.activePointer.rightButtonDown();
+    const isMobileFiring = this.mobileInput.attacking;
+    
+    if (isDesktopFiring || isMobileFiring) {
       if (this.gameState.currentBulletType !== 'viper') {
+        this.tryFireBullet();
+      } else if (isMobileFiring) {
+        // Allow viper to fire on mobile hold
         this.tryFireBullet();
       }
     }
@@ -1006,7 +1021,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private playBulletClashSound() {
-    const context = this.sound?.context;
+    const soundManager = this.sound as Phaser.Sound.WebAudioSoundManager;
+    if (!soundManager || !('context' in soundManager)) return;
+    const context = soundManager.context;
     if (!context) return;
     if (context.state === 'suspended') {
       context.resume().catch(() => undefined);
@@ -1306,5 +1323,57 @@ export class MainScene extends Phaser.Scene {
     bg.setStrokeStyle(2, this.gameState.playerWon ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_COLOR);
     bg.setDepth(99);
     this.gameOverText.setDepth(100);
+  }
+
+  // Mobile control methods - called from React component
+  public setMobileMove(x: number, y: number) {
+    this.mobileInput.moveX = x;
+    this.mobileInput.moveY = y;
+    // Update aim direction based on movement for mobile
+    if (x !== 0 || y !== 0) {
+      this.mobileInput.aimX = this.player.x + x * 200;
+      this.mobileInput.aimY = this.player.y + y * 200;
+    }
+  }
+
+  public setMobileAttack(attacking: boolean) {
+    this.mobileInput.attacking = attacking;
+  }
+
+  public triggerCycleBullet() {
+    if (this.gameState.isGameOver || !this.gameStarted) return;
+    const types: Array<'asteroid' | 'meteora' | 'viper'> = ['asteroid', 'meteora', 'viper'];
+    const currentIndex = types.indexOf(this.gameState.currentBulletType);
+    this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+  }
+
+  public triggerShield(wide: boolean = false) {
+    if (this.gameState.isGameOver || !this.gameStarted) return;
+    if (wide) {
+      // Temporarily set shift key state for wide shield
+      const originalShift = this.shiftKey?.isDown;
+      if (this.shiftKey) {
+        (this.shiftKey as any).isDown = true;
+      }
+      this.tryDeployShield();
+      if (this.shiftKey) {
+        (this.shiftKey as any).isDown = originalShift || false;
+      }
+    } else {
+      this.tryDeployShield();
+    }
+  }
+
+  public getMobileInput() {
+    return this.mobileInput;
+  }
+
+  public isMobileAttacking() {
+    return this.mobileInput.attacking;
+  }
+
+  public startGameWithDifficulty(difficulty: Difficulty) {
+    this.difficulty = difficulty;
+    this.startBattle();
   }
 }

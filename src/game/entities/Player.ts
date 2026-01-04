@@ -17,6 +17,9 @@ export class Player {
     D: Phaser.Input.Keyboard.Key;
   };
 
+  // Mobile input reference
+  private mobileInput: { moveX: number; moveY: number; aimX: number; aimY: number } | null = null;
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
     this.x = x;
@@ -42,22 +45,26 @@ export class Player {
     };
   }
 
-  update(delta: number) {
+  update(delta: number, mobileInput?: { moveX: number; moveY: number; aimX: number; aimY: number }) {
     const speed = GAME_CONFIG.PLAYER_SPEED * (delta / 1000);
     
-    // Handle movement
-    if (this.keys.A.isDown) {
-      this.x -= speed;
+    // Handle keyboard movement
+    let moveX = 0;
+    let moveY = 0;
+    
+    if (this.keys.A.isDown) moveX -= 1;
+    if (this.keys.D.isDown) moveX += 1;
+    if (this.keys.W.isDown) moveY -= 1;
+    if (this.keys.S.isDown) moveY += 1;
+    
+    // Apply mobile input if provided and no keyboard input
+    if (mobileInput && moveX === 0 && moveY === 0) {
+      moveX = mobileInput.moveX;
+      moveY = mobileInput.moveY;
     }
-    if (this.keys.D.isDown) {
-      this.x += speed;
-    }
-    if (this.keys.W.isDown) {
-      this.y -= speed;
-    }
-    if (this.keys.S.isDown) {
-      this.y += speed;
-    }
+    
+    this.x += moveX * speed;
+    this.y += moveY * speed;
     
     // Clamp to screen bounds
     const padding = GAME_CONFIG.PLAYER_RADIUS;
@@ -67,12 +74,24 @@ export class Player {
     // Update sprite position
     this.sprite.setPosition(this.x, this.y);
     
-    // Update aim direction based on mouse
+    // Update aim direction - use mobile aim if provided and we're on mobile
     const pointer = this.scene.input.activePointer;
-    this.angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.x, pointer.y);
+    const isMobileMoving = mobileInput && (mobileInput.moveX !== 0 || mobileInput.moveY !== 0);
+    
+    if (isMobileMoving) {
+      // On mobile, aim in the direction of movement
+      this.angle = Phaser.Math.Angle.Between(this.x, this.y, mobileInput.aimX, mobileInput.aimY);
+    } else {
+      // Use mouse for aiming on desktop
+      this.angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.x, pointer.y);
+    }
     
     // Rotate aim indicator
     this.aimIndicator.setTo(0, 0, Math.cos(this.angle) * 40, Math.sin(this.angle) * 40);
+  }
+
+  setMobileInput(input: { moveX: number; moveY: number; aimX: number; aimY: number } | null) {
+    this.mobileInput = input;
   }
 
   getAimDirection(): { x: number; y: number } {
