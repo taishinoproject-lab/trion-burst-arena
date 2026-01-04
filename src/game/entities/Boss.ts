@@ -39,6 +39,7 @@ export class Boss {
   private slowUntil = 0;
   private slowStacks = 0;
   private slowStackMultiplier = 1;
+  private freezeUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: Partial<BossConfig> = {}) {
     this.scene = scene;
@@ -213,15 +214,22 @@ export class Boss {
       this.slowStacks = 0;
       this.slowUntil = 0;
       this.slowStackMultiplier = 1;
+      this.freezeUntil = 0;
       return;
     }
     const isActive = now < this.slowUntil;
+    if (isActive) {
+      this.freezeUntil = Math.max(this.freezeUntil, now + GAME_CONFIG.RED_BULLET_FREEZE_DURATION);
+    }
     this.slowStacks = isActive ? Math.min(this.slowStacks + 1, GAME_CONFIG.RED_BULLET_MAX_STACKS) : 1;
     this.slowUntil = now + durationMs;
     this.slowStackMultiplier = multiplier;
   }
 
   private getSpeedMultiplier(currentTime: number) {
+    if (currentTime < this.freezeUntil) {
+      return 0;
+    }
     const stacks = this.getSlowStacks(currentTime);
     if (stacks === 0) return 1;
     return Math.pow(this.slowStackMultiplier, stacks);
