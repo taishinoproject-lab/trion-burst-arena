@@ -518,11 +518,13 @@ export class MainScene extends Phaser.Scene {
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
           layoutCenterY + 140,
-          'SELECT DIFFICULTY AND TRIGGERS, THEN START',
+          'SELECT DIFFICULTY AND TRIGGERS, THEN START\n難易度とトリガーを選んでから開始',
           {
             fontSize: '16px',
             color: '#ffffff',
             fontFamily: 'monospace',
+            align: 'center',
+            lineSpacing: 6,
           }
         )
       : null;
@@ -568,11 +570,13 @@ export class MainScene extends Phaser.Scene {
     const weaponLabel = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 200 : 240) : 165),
-      'SELECT 3 TRIGGERS',
+      'SELECT 3 TRIGGERS\n好きなトリガーを3つセット',
       {
         fontSize: this.isMobileMode ? '28px' : '16px',
         color: '#00ffd5',
         fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 6,
       }
     );
     weaponLabel.setOrigin(0.5);
@@ -586,6 +590,8 @@ export class MainScene extends Phaser.Scene {
         fontSize: this.isMobileMode ? '22px' : '14px',
         color: '#ffffff',
         fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 4,
       }
     );
     weaponStatus.setOrigin(0.5);
@@ -627,7 +633,7 @@ export class MainScene extends Phaser.Scene {
     startText.setOrigin(0.5);
 
     const updateWeaponButtons = () => {
-      weaponStatus.setText(`SELECTED: ${this.selectedBulletTypes.length}/3`);
+      weaponStatus.setText(`SELECTED: ${this.selectedBulletTypes.length}/3\n選択済み: ${this.selectedBulletTypes.length}/3`);
       weaponButtons.forEach(({ type, bg, label }) => {
         const selected = this.selectedBulletTypes.includes(type);
         const strokeColor = selected ? GAME_CONFIG.BULLET_COLOR : 0x444444;
