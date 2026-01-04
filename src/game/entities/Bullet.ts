@@ -14,6 +14,7 @@ export class Bullet {
   public isPlayerBullet: boolean;
   public active: boolean = true;
   public hasExploded: boolean = false;
+  public ignoreShield: boolean = false;
   
   // Viper-specific properties
   private angle: number;
@@ -22,13 +23,6 @@ export class Bullet {
   private trail: Phaser.GameObjects.Arc[] = [];
   private trailTimer: number = 0;
   
-  // Divide-specific properties
-  private isDividing: boolean = false;
-  private divideCount: number = 0;
-  private hasDivided: boolean = false;
-  private startX: number;
-  private startY: number;
-  private onDivide?: (bullets: Bullet[]) => void;
   public isHeld: boolean = false;
   public releaseScheduled: boolean = false;
 
@@ -41,24 +35,25 @@ export class Bullet {
     isPlayerBullet: boolean,
     trionDamage: number,
     shieldDamage: number,
-    speed: number = GAME_CONFIG.BULLET_SPEED,
-    isDividing: boolean = false,
-    divideCount: number = 0
+    speed: number = GAME_CONFIG.BULLET_SPEED
   ) {
     this.scene = scene;
     this.x = x;
     this.y = y;
-    this.startX = x;
-    this.startY = y;
     this.type = type;
     this.isPlayerBullet = isPlayerBullet;
     this.trionDamage = trionDamage;
     this.shieldDamage = shieldDamage;
     this.angle = angle;
-    this.speed = type === 'viper' ? GAME_CONFIG.VIPER_SPEED : speed;
+    if (type === 'viper') {
+      this.speed = GAME_CONFIG.VIPER_SPEED;
+    } else if (type === 'red') {
+      this.speed = GAME_CONFIG.RED_BULLET_SPEED;
+    } else {
+      this.speed = speed;
+    }
     this.createdAt = scene.time.now;
-    this.isDividing = isDividing;
-    this.divideCount = divideCount;
+    this.ignoreShield = type === 'red';
     
     this.velocityX = Math.cos(angle) * this.speed;
     this.velocityY = Math.sin(angle) * this.speed;
@@ -66,25 +61,25 @@ export class Bullet {
     let color: number;
     if (type === 'viper') {
       color = GAME_CONFIG.VIPER_COLOR;
+    } else if (type === 'red') {
+      color = GAME_CONFIG.RED_BULLET_COLOR;
     } else {
       color = isPlayerBullet ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_BULLET_COLOR;
     }
     
-    const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 : 
-                   type === 'viper' ? GAME_CONFIG.BULLET_RADIUS * 0.9 : 
+    const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 :
+                   type === 'viper' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
+                   type === 'red' ? GAME_CONFIG.BULLET_RADIUS * 0.95 :
                    GAME_CONFIG.BULLET_RADIUS;
     
     this.sprite = scene.add.circle(x, y, radius, color);
-    this.sprite.setStrokeStyle(1, 0xffffff, 0.5);
+    const strokeColor = type === 'red' ? GAME_CONFIG.RED_BULLET_STROKE_COLOR : 0xffffff;
+    this.sprite.setStrokeStyle(1, strokeColor, 0.6);
     
     // Add glow effect
     this.sprite.setAlpha(0.9);
   }
   
-  setOnDivide(callback: (bullets: Bullet[]) => void) {
-    this.onDivide = callback;
-  }
-
   hold() {
     this.isHeld = true;
     this.releaseScheduled = false;
@@ -119,15 +114,6 @@ export class Bullet {
     }
 
     const dt = delta / 1000;
-    
-    // Check for divide trigger (after traveling certain distance)
-    if (this.isDividing && !this.hasDivided) {
-      const traveled = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
-      if (traveled > 60) { // Divide after 60px
-        this.performDivide();
-        return;
-      }
-    }
     
     // Viper guided behavior
     if (this.type === 'viper' && mouseX !== undefined && mouseY !== undefined) {
@@ -180,83 +166,6 @@ export class Bullet {
       this.y > GAME_CONFIG.HEIGHT + 50
     ) {
       this.destroy();
-    }
-  }
-  
-  private performDivide() {
-    this.hasDivided = true;
-    
-    // Create split effect visual
-    this.createDivideEffect();
-    
-    // Create divided bullets
-    const newBullets: Bullet[] = [];
-    const count = this.divideCount;
-    const spread = GAME_CONFIG.ASTEROID_DIVIDE_SPREAD;
-    
-    for (let i = 0; i < count; i++) {
-      const offsetAngle = spread * (i - (count - 1) / 2);
-      const bullet = new Bullet(
-        this.scene,
-        this.x,
-        this.y,
-        this.angle + offsetAngle,
-        'asteroid',
-        this.isPlayerBullet,
-        this.trionDamage,
-        this.shieldDamage
-      );
-      // Make divided bullets slightly smaller
-      bullet.sprite.setRadius(GAME_CONFIG.BULLET_RADIUS * 0.75);
-      bullet.hold();
-      newBullets.push(bullet);
-    }
-    
-    // Callback to add bullets to scene
-    if (this.onDivide) {
-      this.onDivide(newBullets);
-    }
-    
-    // Destroy original bullet
-    this.destroy();
-  }
-  
-  private createDivideEffect() {
-    // Flash effect at divide point
-    const flash = this.scene.add.circle(this.x, this.y, 15, GAME_CONFIG.BULLET_COLOR, 0.8);
-    this.scene.tweens.add({
-      targets: flash,
-      alpha: 0,
-      scale: 2.5,
-      duration: 150,
-      ease: 'Power2',
-      onComplete: () => flash.destroy()
-    });
-    
-    // Create splitting lines emanating from divide point
-    const count = this.divideCount;
-    const spread = GAME_CONFIG.ASTEROID_DIVIDE_SPREAD;
-    
-    for (let i = 0; i < count; i++) {
-      const offsetAngle = spread * (i - (count - 1) / 2);
-      const lineAngle = this.angle + offsetAngle;
-      
-      const lineLength = 25;
-      const endX = this.x + Math.cos(lineAngle) * lineLength;
-      const endY = this.y + Math.sin(lineAngle) * lineLength;
-      
-      const graphics = this.scene.add.graphics();
-      graphics.lineStyle(2, GAME_CONFIG.BULLET_COLOR, 0.9);
-      graphics.moveTo(this.x, this.y);
-      graphics.lineTo(endX, endY);
-      graphics.strokePath();
-      
-      this.scene.tweens.add({
-        targets: graphics,
-        alpha: 0,
-        duration: 200,
-        onComplete: () => graphics.destroy()
-      });
     }
   }
   

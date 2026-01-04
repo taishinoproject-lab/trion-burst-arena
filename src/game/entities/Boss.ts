@@ -35,6 +35,8 @@ export class Boss {
   private aimAngle: number = 0;
   private nextShieldType: ShieldType = 'narrow';
   private config: BossConfig;
+  private slowUntil = 0;
+  private slowMultiplier = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: Partial<BossConfig> = {}) {
     this.scene = scene;
@@ -72,7 +74,10 @@ export class Boss {
     }
     
     // Move towards target
-    const speed = this.config.speed * (delta / 1000);
+    if (currentTime >= this.slowUntil && this.slowMultiplier !== 1) {
+      this.slowMultiplier = 1;
+    }
+    const speed = this.config.speed * this.getSpeedMultiplier(currentTime) * (delta / 1000);
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -183,5 +188,18 @@ export class Boss {
   destroy() {
     this.deactivateShield();
     this.sprite.destroy();
+  }
+
+  applySlow(durationMs: number, multiplier: number) {
+    const now = this.scene.time.now;
+    this.slowUntil = Math.max(this.slowUntil, now + durationMs);
+    this.slowMultiplier = Math.min(this.slowMultiplier, multiplier);
+    if (multiplier >= 1) {
+      this.slowMultiplier = 1;
+    }
+  }
+
+  private getSpeedMultiplier(currentTime: number) {
+    return currentTime < this.slowUntil ? this.slowMultiplier : 1;
   }
 }

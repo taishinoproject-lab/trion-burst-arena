@@ -9,6 +9,8 @@ export class Player {
   public x: number;
   public y: number;
   public angle: number = 0;
+  private slowUntil = 0;
+  private slowMultiplier = 1;
   
   private keys: {
     W: Phaser.Input.Keyboard.Key;
@@ -46,7 +48,12 @@ export class Player {
   }
 
   update(delta: number, mobileInput?: { moveX: number; moveY: number; aimX: number; aimY: number }) {
-    const speed = GAME_CONFIG.PLAYER_SPEED * (delta / 1000);
+    const now = this.scene.time.now;
+    if (now >= this.slowUntil && this.slowMultiplier !== 1) {
+      this.slowMultiplier = 1;
+    }
+    const speedMultiplier = now < this.slowUntil ? this.slowMultiplier : 1;
+    const speed = GAME_CONFIG.PLAYER_SPEED * speedMultiplier * (delta / 1000);
     
     // Handle keyboard movement
     let moveX = 0;
@@ -99,6 +106,15 @@ export class Player {
       x: Math.cos(this.angle),
       y: Math.sin(this.angle),
     };
+  }
+
+  applySlow(durationMs: number, multiplier: number) {
+    const now = this.scene.time.now;
+    this.slowUntil = Math.max(this.slowUntil, now + durationMs);
+    this.slowMultiplier = Math.min(this.slowMultiplier, multiplier);
+    if (multiplier >= 1) {
+      this.slowMultiplier = 1;
+    }
   }
 
   destroy() {
