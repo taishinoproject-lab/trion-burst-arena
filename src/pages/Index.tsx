@@ -17,7 +17,7 @@ const Index = () => {
       </main>
       
       <footer className="mt-4 text-xs text-muted-foreground text-center hidden md:block">
-        <p>WASD: Move | Mouse: Aim | Left Click: Asteroid | Right Click: Meteora | Space: Shield | Q: Toggle Divide | R: Restart</p>
+        <p>WASD: Move | Mouse: Aim | Left Click: Fire | E: Cycle Weapon | Q: Delay Asteroid | Space: Shield | R: Restart</p>
       </footer>
     </div>
   );

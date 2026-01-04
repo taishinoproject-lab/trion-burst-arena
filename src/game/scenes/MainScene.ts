@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DIFFICULTY_DAMAGE_MULTIPLIER, Difficulty, GAME_CONFIG, BulletType, GameState } from '../constants';
+import { AVAILABLE_BULLET_TYPES, DIFFICULTY_DAMAGE_MULTIPLIER, Difficulty, GAME_CONFIG, BulletType, GameState } from '../constants';
 import { Player } from '../entities/Player';
 import { Boss, BossConfig } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
@@ -10,7 +10,6 @@ type EnemyPattern = 'mixed' | 'delayedAsteroid' | 'meteoraBarrage';
 interface EnemyBehavior {
   pattern: EnemyPattern;
   delayedShotChance: number;
-  divideChance: number;
   bulletWeights?: { asteroid: number; meteora: number; viper: number };
 }
 
@@ -45,15 +44,16 @@ export class MainScene extends Phaser.Scene {
   private readonly maxPlayerBullets = 240;
   private readonly maxBossBullets = 300;
   private isMobileMode = false;
+  private selectedBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
     bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
     currentBulletType: 'asteroid',
-    divideEnabled: false,
     delayedAsteroidEnabled: false,
     isGameOver: false,
     playerWon: false,
+    availableBulletTypes: ['asteroid', 'meteora', 'viper'],
   };
   
   // Input
@@ -62,9 +62,6 @@ export class MainScene extends Phaser.Scene {
   private qKey!: Phaser.Input.Keyboard.Key;
   private eKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
-  private cKey!: Phaser.Input.Keyboard.Key;
-  private fKey!: Phaser.Input.Keyboard.Key;
-  private gKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
   
   // Mobile input state
@@ -83,7 +80,6 @@ export class MainScene extends Phaser.Scene {
   private bossTrionText!: Phaser.GameObjects.Text;
   private bulletTypeText!: Phaser.GameObjects.Text;
   private delayedAsteroidText!: Phaser.GameObjects.Text;
-  private divideText!: Phaser.GameObjects.Text;
   private gameOverText!: Phaser.GameObjects.Text;
   private instructionsOverlay!: Phaser.GameObjects.Container;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
@@ -116,43 +112,17 @@ export class MainScene extends Phaser.Scene {
     this.qKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-    this.cKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.C);
-    this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
-    this.gKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.G);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.input.keyboard?.addCapture([Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.SHIFT]);
 
-    this.input.keyboard?.on('keydown-F', () => {
-      if (this.gameState.isGameOver || !this.gameStarted) return;
-      this.releaseDividedAsteroids();
-    });
-
-    this.input.keyboard?.on('keydown-G', () => {
-      if (this.gameState.isGameOver || !this.gameStarted) return;
-      this.releaseDividedAsteroids();
-    });
-    
     // Mouse input for shooting
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.gameState.isGameOver || !this.gameStarted) return;
-      
-      if (pointer.rightButtonDown()) {
-        this.gameState.currentBulletType = 'meteora';
-      }
 
       if (pointer.middleButtonDown()) {
-        this.releaseDividedAsteroids();
         return;
       }
-      if (pointer.leftButtonDown()) {
-        this.releaseDividedAsteroids();
-      }
-      // Viper fires on click (single shot guided)
-      if (this.gameState.currentBulletType === 'viper') {
-        this.tryFireBullet();
-      } else {
-        this.tryFireBullet();
-      }
+      this.tryFireBullet();
     });
     
     // Create UI
@@ -253,33 +223,27 @@ export class MainScene extends Phaser.Scene {
       this.enemyTexts.push(text);
     }
     
-    // Bottom UI - Bullet type and Divide status
+    // Bottom UI - Bullet type and Delay status
     const bottomY = GAME_CONFIG.HEIGHT - 40;
     
     // Background panel for bottom UI
     const panel = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       bottomY,
-      480,
+      360,
       50,
       GAME_CONFIG.UI_BG_COLOR,
       0.8
     );
     panel.setStrokeStyle(1, GAME_CONFIG.BULLET_COLOR, 0.5);
     
-    this.bulletTypeText = this.add.text(GAME_CONFIG.WIDTH / 2 - 180, bottomY - 10, '', {
+    this.bulletTypeText = this.add.text(GAME_CONFIG.WIDTH / 2 - 140, bottomY - 10, '', {
       fontSize: '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
     
-    this.delayedAsteroidText = this.add.text(GAME_CONFIG.WIDTH / 2 - 10, bottomY - 10, '', {
-      fontSize: '18px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    
-    this.divideText = this.add.text(GAME_CONFIG.WIDTH / 2 + 120, bottomY - 10, '', {
+    this.delayedAsteroidText = this.add.text(GAME_CONFIG.WIDTH / 2 + 40, bottomY - 10, '', {
       fontSize: '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -318,7 +282,7 @@ export class MainScene extends Phaser.Scene {
     
     // Only show keyboard instructions on desktop
     if (!this.isMobileMode) {
-      const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, GAME_CONFIG.HEIGHT / 2 - 100, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE VIPER', {
+      const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, GAME_CONFIG.HEIGHT / 2 - 100, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE', {
         fontSize: '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
@@ -329,7 +293,7 @@ export class MainScene extends Phaser.Scene {
       const rightText = this.add.text(
         GAME_CONFIG.WIDTH / 2 + 30,
         GAME_CONFIG.HEIGHT / 2 - 100,
-        'E: CYCLE WEAPON\nQ: DELAY ASTEROID\nC: TOGGLE DIVIDE\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+        'E: CYCLE WEAPON\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
         {
           fontSize: '16px',
           color: '#ffffff',
@@ -357,7 +321,7 @@ export class MainScene extends Phaser.Scene {
       instructionElements.push(mobileInstructions);
     }
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 30, 'SELECT DIFFICULTY', {
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 10, 'SELECT DIFFICULTY', {
       fontSize: this.isMobileMode ? '30px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -367,7 +331,7 @@ export class MainScene extends Phaser.Scene {
     // Create large touch-friendly buttons for mobile
     const buttonWidth = this.isMobileMode ? 360 : 80;
     const buttonHeight = this.isMobileMode ? 84 : 40;
-    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 140 : 110);
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 110 : 90);
     const buttonSpacing = this.isMobileMode ? 30 : 20;
     const totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
     const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
@@ -447,8 +411,8 @@ export class MainScene extends Phaser.Scene {
     const promptText = !this.isMobileMode
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
-          GAME_CONFIG.HEIGHT / 2 + 150,
-          'CLICK EASY, MIDDLE, OR HARD TO START',
+          GAME_CONFIG.HEIGHT / 2 + 140,
+          'SELECT DIFFICULTY AND WEAPONS, THEN START',
           {
             fontSize: '16px',
             color: '#ffffff',
@@ -471,35 +435,141 @@ export class MainScene extends Phaser.Scene {
     // Make both background and text interactive for touch
     easyBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('easy');
-      this.startBattle();
     });
     easyText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('easy');
-      this.startBattle();
     });
 
     middleBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('middle');
-      this.startBattle();
     });
     middleText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('middle');
-      this.startBattle();
     });
 
     hardBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('hard');
-      this.startBattle();
     });
     hardText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('hard');
-      this.startBattle();
     });
 
     instructionElements.push(difficultyLabel, easyBg, easyText, middleBg, middleText, hardBg, hardText);
     if (promptText) {
       instructionElements.push(promptText);
     }
+
+    const weaponLabel = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 240 : 165),
+      'SELECT 3 WEAPONS',
+      {
+        fontSize: this.isMobileMode ? '28px' : '16px',
+        color: '#00ffd5',
+        fontFamily: 'monospace',
+      }
+    );
+    weaponLabel.setOrigin(0.5);
+    instructionElements.push(weaponLabel);
+
+    const weaponStatus = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 275 : 190),
+      '',
+      {
+        fontSize: this.isMobileMode ? '22px' : '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      }
+    );
+    weaponStatus.setOrigin(0.5);
+    instructionElements.push(weaponStatus);
+
+    const weaponButtons: { type: BulletType; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[] = [];
+    const weaponButtonWidth = this.isMobileMode ? 220 : 120;
+    const weaponButtonHeight = this.isMobileMode ? 70 : 40;
+    const weaponSpacing = this.isMobileMode ? 20 : 16;
+    const weaponStartY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 350 : 245);
+    const weaponRowSpacing = this.isMobileMode ? 90 : 50;
+    const weaponRowCount = this.isMobileMode ? 2 : 1;
+    const weaponButtonsPerRow = this.isMobileMode ? 2 : 4;
+    const weaponTotalWidth = weaponButtonWidth * weaponButtonsPerRow + weaponSpacing * (weaponButtonsPerRow - 1);
+    const weaponStartX = GAME_CONFIG.WIDTH / 2 - weaponTotalWidth / 2 + weaponButtonWidth / 2;
+
+    const weaponNames: Record<BulletType, string> = {
+      asteroid: 'ASTEROID',
+      meteora: 'METEORA',
+      viper: 'VIPER',
+      red: 'RED BULLET',
+    };
+
+    const startButtonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 470 : 320);
+    const startButtonWidth = this.isMobileMode ? 320 : 180;
+    const startButtonHeight = this.isMobileMode ? 80 : 50;
+    const startButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      startButtonY,
+      startButtonWidth,
+      startButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'START', {
+      fontSize: this.isMobileMode ? '30px' : '20px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    startText.setOrigin(0.5);
+
+    const updateWeaponButtons = () => {
+      weaponStatus.setText(`SELECTED: ${this.selectedBulletTypes.length}/3`);
+      weaponButtons.forEach(({ type, bg, label }) => {
+        const selected = this.selectedBulletTypes.includes(type);
+        const strokeColor = selected ? GAME_CONFIG.BULLET_COLOR : 0x444444;
+        const textColor = selected ? '#00ffd5' : '#aaaaaa';
+        bg.setStrokeStyle(3, strokeColor, selected ? 0.9 : 0.5);
+        label.setColor(textColor);
+      });
+      startButton.setAlpha(this.selectedBulletTypes.length === 3 ? 1 : 0.45);
+    };
+
+    AVAILABLE_BULLET_TYPES.forEach((type, index) => {
+      const row = this.isMobileMode ? Math.floor(index / weaponButtonsPerRow) : 0;
+      const col = this.isMobileMode ? index % weaponButtonsPerRow : index;
+      if (row >= weaponRowCount) return;
+      const x = weaponStartX + col * (weaponButtonWidth + weaponSpacing);
+      const y = weaponStartY + row * weaponRowSpacing;
+      const bg = this.add.rectangle(x, y, weaponButtonWidth, weaponButtonHeight, 0x1a1a3a, 0.9);
+      bg.setStrokeStyle(3, 0x444444, 0.5);
+      const label = this.add.text(x, y, weaponNames[type], {
+        fontSize: this.isMobileMode ? '22px' : '14px',
+        color: '#aaaaaa',
+        fontFamily: 'monospace',
+      });
+      label.setOrigin(0.5);
+      const toggleSelection = () => {
+        if (this.selectedBulletTypes.includes(type)) {
+          this.selectedBulletTypes = this.selectedBulletTypes.filter(item => item !== type);
+        } else if (this.selectedBulletTypes.length < 3) {
+          this.selectedBulletTypes = [...this.selectedBulletTypes, type];
+        }
+        updateWeaponButtons();
+      };
+      bg.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+      label.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+      weaponButtons.push({ type, bg, label });
+      instructionElements.push(bg, label);
+    });
+
+    const handleStart = () => {
+      if (this.selectedBulletTypes.length !== 3) return;
+      this.startBattle();
+    };
+    startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
+    startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
+    instructionElements.push(startButton, startText);
+    updateWeaponButtons();
     
     this.instructionsOverlay = this.add.container(0, 0, instructionElements);
     this.instructionsOverlay.setDepth(100);
@@ -510,6 +580,8 @@ export class MainScene extends Phaser.Scene {
     this.gameStarted = true;
     this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
+    this.gameState.availableBulletTypes = [...this.selectedBulletTypes];
+    this.gameState.currentBulletType = this.gameState.availableBulletTypes[0] ?? 'asteroid';
     this.instructionsOverlay.destroy(true);
   }
 
@@ -523,10 +595,10 @@ export class MainScene extends Phaser.Scene {
       playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
       bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
       currentBulletType: 'asteroid',
-      divideEnabled: false,
       delayedAsteroidEnabled: false,
       isGameOver: false,
       playerWon: false,
+      availableBulletTypes: [...this.selectedBulletTypes],
     };
     this.extraEnemies = [];
     this.spawnedShieldedEnemy = false;
@@ -601,17 +673,14 @@ export class MainScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
       this.gameState.delayedAsteroidEnabled = !this.gameState.delayedAsteroidEnabled;
     }
-
-    // Toggle divide mode
-    if (Phaser.Input.Keyboard.JustDown(this.cKey)) {
-      this.gameState.divideEnabled = !this.gameState.divideEnabled;
-    }
     
-    // Switch bullet type (cycle through 3 types)
+    // Switch bullet type (cycle through selected types)
     if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
-      const types: Array<'asteroid' | 'meteora' | 'viper'> = ['asteroid', 'meteora', 'viper'];
+      const types = this.gameState.availableBulletTypes;
       const currentIndex = types.indexOf(this.gameState.currentBulletType);
-      this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+      if (types.length > 0) {
+        this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+      }
     }
     
     // Deploy shield
@@ -619,15 +688,6 @@ export class MainScene extends Phaser.Scene {
       this.tryDeployShield();
     }
 
-    // Release held divided asteroids
-    if (Phaser.Input.Keyboard.JustDown(this.fKey)) {
-      this.releaseDividedAsteroids();
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(this.gKey)) {
-      this.releaseDividedAsteroids();
-    }
-    
     // Continuous fire while holding (except for viper which fires on click)
     const isDesktopFiring = this.input.activePointer.isDown && !this.input.activePointer.rightButtonDown();
     const isMobileFiring = this.mobileInput.attacking;
@@ -654,13 +714,12 @@ export class MainScene extends Phaser.Scene {
     
     if (bulletType === 'asteroid') {
       cost = GAME_CONFIG.ASTEROID_COST;
-      if (this.gameState.divideEnabled) {
-        cost += GAME_CONFIG.ASTEROID_DIVIDE_EXTRA_COST;
-      }
     } else if (bulletType === 'meteora') {
       cost = GAME_CONFIG.METEORA_COST;
-    } else {
+    } else if (bulletType === 'viper') {
       cost = GAME_CONFIG.VIPER_COST;
+    } else {
+      cost = GAME_CONFIG.RED_BULLET_COST;
     }
     
     // Check if enough Trion
@@ -676,38 +735,16 @@ export class MainScene extends Phaser.Scene {
     const damageScale = this.getDamageScale();
     let bullet: Bullet;
     if (bulletType === 'asteroid') {
-      if (this.gameState.divideEnabled) {
-        // Create a single bullet that will split after traveling a short distance (World Trigger style)
-        bullet = new Bullet(
-          this,
-          this.player.x + aim.x * 20,
-          this.player.y + aim.y * 20,
-          baseAngle,
-          'asteroid',
-          true,
-          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE * damageScale,
-          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE * damageScale,
-          GAME_CONFIG.BULLET_SPEED,
-          true, // isDividing
-          GAME_CONFIG.ASTEROID_DIVIDE_COUNT
-        );
-        // Register callback to add divided bullets to scene
-        bullet.setOnDivide((newBullets) => {
-          this.playerBullets.push(...newBullets);
-          this.trimBulletPool(this.playerBullets, this.maxPlayerBullets);
-        });
-      } else {
-        bullet = new Bullet(
-          this,
-          this.player.x + aim.x * 20,
-          this.player.y + aim.y * 20,
-          baseAngle,
-          'asteroid',
-          true,
-          GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
-          GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale
-        );
-      }
+      bullet = new Bullet(
+        this,
+        this.player.x + aim.x * 20,
+        this.player.y + aim.y * 20,
+        baseAngle,
+        'asteroid',
+        true,
+        GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale
+      );
     } else if (bulletType === 'meteora') {
       bullet = new Bullet(
         this,
@@ -719,7 +756,7 @@ export class MainScene extends Phaser.Scene {
         GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale,
         GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale
       );
-    } else {
+    } else if (bulletType === 'viper') {
       // Viper - guided bullet
       bullet = new Bullet(
         this,
@@ -731,10 +768,21 @@ export class MainScene extends Phaser.Scene {
         GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
         GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale
       );
+    } else {
+      bullet = new Bullet(
+        this,
+        this.player.x + aim.x * 20,
+        this.player.y + aim.y * 20,
+        baseAngle,
+        'red',
+        true,
+        GAME_CONFIG.RED_BULLET_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.RED_BULLET_SHIELD_DAMAGE * damageScale
+      );
     }
     this.playerBullets.push(bullet);
     this.trimBulletPool(this.playerBullets, this.maxPlayerBullets);
-    if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled && !this.gameState.divideEnabled) {
+    if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled) {
       this.scheduleDelayedRelease(bullet, () => this.getClosestEnemyPosition(), 3000);
     }
   }
@@ -754,10 +802,6 @@ export class MainScene extends Phaser.Scene {
     
     const shieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
     this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
-  }
-
-  private releaseDividedAsteroids() {
-    this.scheduleHeldBulletRelease(this.playerBullets, () => this.getClosestEnemyPosition(), 3000);
   }
 
   private scheduleDelayedRelease(
@@ -784,21 +828,6 @@ export class MainScene extends Phaser.Scene {
     bullets.splice(0, overflow);
   }
 
-  private scheduleHeldBulletRelease(
-    bullets: Bullet[],
-    getTarget: () => { x: number; y: number },
-    delayMs: number = 3000
-  ) {
-    for (const bullet of bullets) {
-      if (!bullet.active || !bullet.isHeld || bullet.releaseScheduled) continue;
-      bullet.releaseScheduled = true;
-      this.time.delayedCall(delayMs, () => {
-        if (!bullet.active || !bullet.isHeld) return;
-        const target = getTarget();
-        bullet.releaseTowards(target.x, target.y);
-      });
-    }
-  }
 
   private spawnTimedEnemies(time: number) {
     if (this.difficulty === 'easy') {
@@ -832,7 +861,6 @@ export class MainScene extends Phaser.Scene {
       behavior: {
         pattern: 'delayedAsteroid',
         delayedShotChance: 0.85,
-        divideChance: 0.2,
       },
     });
   }
@@ -853,7 +881,6 @@ export class MainScene extends Phaser.Scene {
       behavior: {
         pattern: 'meteoraBarrage',
         delayedShotChance: 0.15,
-        divideChance: 0,
       },
     });
   }
@@ -907,7 +934,6 @@ export class MainScene extends Phaser.Scene {
     return {
       pattern: 'mixed',
       delayedShotChance: 0.3,
-      divideChance: 0.6,
       bulletWeights: { asteroid: 0.45, meteora: 0.3, viper: 0.25 },
     };
   }
@@ -940,31 +966,6 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (bulletType === 'asteroid') {
-      const shouldDivide = !useDelayedShot && Phaser.Math.FloatBetween(0, 1) < behavior.divideChance;
-      if (shouldDivide) {
-        const bullet = new Bullet(
-          this,
-          fireData.x,
-          fireData.y,
-          fireData.angle,
-          'asteroid',
-          false,
-          GAME_CONFIG.ASTEROID_DIVIDE_TRION_DAMAGE * damageScale,
-          GAME_CONFIG.ASTEROID_DIVIDE_SHIELD_DAMAGE * damageScale,
-          bulletSpeed,
-          true,
-          GAME_CONFIG.ASTEROID_DIVIDE_COUNT
-        );
-        bullet.setOnDivide((newBullets) => {
-          this.bossBullets.push(...newBullets);
-          this.trimBulletPool(this.bossBullets, this.maxBossBullets);
-          this.scheduleHeldBulletRelease(newBullets, () => ({ x: this.player.x, y: this.player.y }));
-        });
-        this.bossBullets.push(bullet);
-        this.trimBulletPool(this.bossBullets, this.maxBossBullets);
-        return;
-      }
-
       const bullet = new Bullet(
         this,
         fireData.x,
@@ -1171,6 +1172,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private bulletHitsShield(bullet: Bullet, shield: Shield): boolean {
+    if (bullet.ignoreShield) return false;
     const bulletBounds = bullet.getBounds();
     const shieldBounds = shield.getBounds();
 
@@ -1270,6 +1272,12 @@ export class MainScene extends Phaser.Scene {
           // Asteroid direct hit
           if (dist < bossRadius + GAME_CONFIG.BULLET_RADIUS) {
             target.setTrion(target.getTrion() - bullet.trionDamage);
+            if (bullet.type === 'red') {
+              target.boss.applySlow(
+                GAME_CONFIG.RED_BULLET_SLOW_DURATION,
+                GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER
+              );
+            }
             bullet.destroy();
             break;
           }
@@ -1300,6 +1308,12 @@ export class MainScene extends Phaser.Scene {
       const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, this.player.x, this.player.y);
       if (dist < playerRadius + GAME_CONFIG.BULLET_RADIUS) {
         this.gameState.playerTrion -= bullet.trionDamage;
+        if (bullet.type === 'red') {
+          this.player.applySlow(
+            GAME_CONFIG.RED_BULLET_SLOW_DURATION,
+            GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER
+          );
+        }
         bullet.destroy();
       }
     }
@@ -1367,11 +1381,6 @@ export class MainScene extends Phaser.Scene {
     this.delayedAsteroidText.setText(`DELAY: ${delayStatus}`);
     this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
     
-    // Divide status
-    const divideStatus = this.gameState.divideEnabled ? 'ON' : 'OFF';
-    this.divideText.setText(`DIVIDE: ${divideStatus}`);
-    this.divideText.setColor(this.gameState.divideEnabled ? '#00ffd5' : '#666666');
-
     const enemyBarWidth = 160;
     const enemyBarHeight = 12;
     const enemyStartY = uiY + 44;
@@ -1492,9 +1501,11 @@ export class MainScene extends Phaser.Scene {
 
   public triggerCycleBullet() {
     if (this.gameState.isGameOver || !this.gameStarted) return;
-    const types: Array<'asteroid' | 'meteora' | 'viper'> = ['asteroid', 'meteora', 'viper'];
+    const types = this.gameState.availableBulletTypes;
     const currentIndex = types.indexOf(this.gameState.currentBulletType);
-    this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+    if (types.length > 0) {
+      this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
+    }
   }
 
   public triggerShield(wide: boolean = false) {

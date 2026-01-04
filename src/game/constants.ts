@@ -40,11 +40,6 @@ export const GAME_CONFIG = {
   ASTEROID_COST: 2,
   ASTEROID_TRION_DAMAGE: 10,
   ASTEROID_SHIELD_DAMAGE: 9,
-  ASTEROID_DIVIDE_COUNT: 3,
-  ASTEROID_DIVIDE_EXTRA_COST: 2,
-  ASTEROID_DIVIDE_SPREAD: 0.15, // radians
-  ASTEROID_DIVIDE_TRION_DAMAGE: 10, // per bullet when divided
-  ASTEROID_DIVIDE_SHIELD_DAMAGE: 5, // per bullet when divided
   
   // Meteora bullet
   METEORA_COST: 10,
@@ -61,6 +56,16 @@ export const GAME_CONFIG = {
   VIPER_TURN_RATE: 4.5, // radians per second
   VIPER_LIFETIME: 2500, // ms before auto-destroy
   VIPER_COLOR: 0x00e5ff, // slightly different cyan for viper
+
+  // Red bullet (slow)
+  RED_BULLET_COST: 20,
+  RED_BULLET_TRION_DAMAGE: 5,
+  RED_BULLET_SHIELD_DAMAGE: 0,
+  RED_BULLET_SPEED: 320,
+  RED_BULLET_SLOW_DURATION: 3000, // ms
+  RED_BULLET_SLOW_MULTIPLIER: 0.6,
+  RED_BULLET_COLOR: 0x7a0d0d,
+  RED_BULLET_STROKE_COLOR: 0x140202,
   
   // Shield
   SHIELD_COST: 8,
@@ -72,7 +77,9 @@ export const GAME_CONFIG = {
   SHIELD_WIDE_PADDING: 22, // extra radius beyond player/boss size
 };
 
-export type BulletType = 'asteroid' | 'meteora' | 'viper';
+export type BulletType = 'asteroid' | 'meteora' | 'viper' | 'red';
+
+export const AVAILABLE_BULLET_TYPES: BulletType[] = ['asteroid', 'meteora', 'viper', 'red'];
 
 export type Difficulty = 'easy' | 'middle' | 'hard';
 
@@ -86,7 +93,6 @@ export interface GameState {
   playerTrion: number;
   bossTrion: number;
   currentBulletType: BulletType;
-  divideEnabled: boolean;
   delayedAsteroidEnabled: boolean;
   isGameOver: boolean;
   playerWon: boolean;
