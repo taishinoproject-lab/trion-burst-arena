@@ -19,8 +19,10 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   useEffect(() => {
     // Detect mobile/touch device
     const checkMobile = () => {
-      const mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      setIsMobile(mobile && window.innerWidth < 1024);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const hasCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+      const isCompactViewport = window.matchMedia?.('(max-width: 1366px)').matches ?? window.innerWidth < 1366;
+      setIsMobile((hasTouch || hasCoarsePointer) && isCompactViewport);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
