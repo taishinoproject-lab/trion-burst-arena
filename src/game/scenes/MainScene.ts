@@ -33,6 +33,9 @@ interface TutorialStep {
   onEnter?: () => void;
   isCompleted: () => boolean;
   requiredBulletType?: BulletType;
+  requiredHits?: number;
+  focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player';
+  requiresSwitch?: boolean;
 }
 
 export class MainScene extends Phaser.Scene {
@@ -100,20 +103,22 @@ export class MainScene extends Phaser.Scene {
   private tutorialHelpText?: Phaser.GameObjects.Text;
   private tutorialHelpHighlight?: Phaser.GameObjects.Graphics;
   private tutorialHelpHighlightTween?: Phaser.Tweens.Tween;
+  private tutorialFocusHighlight?: Phaser.GameObjects.Graphics;
+  private tutorialFocusHighlightTween?: Phaser.Tweens.Tween;
+  private tutorialTapReady = false;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
   private instructionScrollCleanup?: () => void;
   private tutorialSteps: TutorialStep[] = [];
   private tutorialStepIndex = 0;
-  private tutorialRequiredBulletType: BulletType | null = null;
   private tutorialProgress = {
     introAcknowledged: false,
     moved: false,
     fired: false,
     shielded: false,
     switched: false,
-    requiredBulletFired: false,
+    requiredBulletHits: 0,
     summaryAcknowledged: false,
   };
 
@@ -316,6 +321,10 @@ export class MainScene extends Phaser.Scene {
     this.tutorialHelpHighlight = this.add.graphics();
     this.tutorialHelpHighlight.setVisible(false);
     this.tutorialHelpHighlight.setDepth(89);
+
+    this.tutorialFocusHighlight = this.add.graphics();
+    this.tutorialFocusHighlight.setVisible(false);
+    this.tutorialFocusHighlight.setDepth(88);
   }
 
   private showInstructions() {
@@ -703,6 +712,10 @@ export class MainScene extends Phaser.Scene {
     this.destroyInstructionsOverlay();
     this.boss.deactivateShield();
     this.showTutorialOverlay();
+    this.tutorialTapReady = false;
+    this.time.delayedCall(200, () => {
+      this.tutorialTapReady = true;
+    });
   }
 
   private applyDifficultySettings() {
@@ -817,13 +830,19 @@ export class MainScene extends Phaser.Scene {
     if (this.tutorialSteps.length === 0) {
       this.tutorialHelpText.setText('');
       this.updateTutorialHelpHighlight();
+      this.updateTutorialFocusHighlight();
       return;
     }
     const step = this.tutorialSteps[this.tutorialStepIndex];
     const header = `STEP ${this.tutorialStepIndex + 1}/${this.tutorialSteps.length}`;
-    const textLines = [header, step.title, ...step.description];
+    const description = [...step.description];
+    if (step.requiredHits) {
+      description.push(`命中数: ${this.tutorialProgress.requiredBulletHits}/${step.requiredHits}`);
+    }
+    const textLines = [header, step.title, ...description];
     this.tutorialHelpText.setText(textLines.join('\n'));
     this.updateTutorialHelpHighlight();
+    this.updateTutorialFocusHighlight();
   }
 
   private updateTutorialHelpHighlight() {
@@ -845,12 +864,63 @@ export class MainScene extends Phaser.Scene {
     this.tutorialHelpHighlight.setVisible(true);
   }
 
+  private updateTutorialFocusHighlight() {
+    if (!this.tutorialFocusHighlight) return;
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) {
+      this.tutorialFocusHighlight.setVisible(false);
+      return;
+    }
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step?.focusTarget) {
+      this.tutorialFocusHighlight.setVisible(false);
+      return;
+    }
+
+    const highlight = this.tutorialFocusHighlight;
+    const padding = 12;
+    highlight.clear();
+    highlight.lineStyle(3, 0x2dff76, 1);
+
+    if (step.focusTarget === 'trionMeter') {
+      const barWidth = 250;
+      const barHeight = 24;
+      const uiY = 42;
+      const barX = 20;
+      const width = barWidth + 90;
+      const height = barHeight + 30;
+      highlight.strokeRect(barX - padding, uiY - 18, width + padding * 2, height + padding * 2);
+    } else if (step.focusTarget === 'triggerDisplay') {
+      const bounds = this.bulletTypeText.getBounds();
+      highlight.strokeRect(
+        bounds.x - padding,
+        bounds.y - padding,
+        bounds.width + padding * 2,
+        bounds.height + padding * 2
+      );
+    } else if (step.focusTarget === 'player') {
+      highlight.strokeCircle(this.player.x, this.player.y, GAME_CONFIG.PLAYER_RADIUS + 28);
+    }
+    highlight.setVisible(true);
+  }
+
   private startTutorialHelpHighlight() {
     if (!this.tutorialHelpHighlight) return;
     this.tutorialHelpHighlight.setAlpha(0.3);
     if (this.tutorialHelpHighlightTween) return;
     this.tutorialHelpHighlightTween = this.tweens.add({
       targets: this.tutorialHelpHighlight,
+      alpha: 1,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    if (!this.tutorialFocusHighlight) return;
+    this.tutorialFocusHighlight.setAlpha(0.3);
+    if (this.tutorialFocusHighlightTween) return;
+    this.tutorialFocusHighlightTween = this.tweens.add({
+      targets: this.tutorialFocusHighlight,
       alpha: 1,
       duration: 500,
       yoyo: true,
@@ -864,34 +934,36 @@ export class MainScene extends Phaser.Scene {
     const enemyBulletSlowPercent = Math.round(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER * 100);
     return [
       {
-        title: 'トリオン / トリガー',
+        title: 'トリオン / トリガーって何？',
         description: [
-          'トリオン=体力兼エネルギー',
+          'トリオン = 体力＆エネルギー',
           '撃つ/シールド/被弾で減る',
-          '0で敗北・時間で回復',
-          'トリガー=装備している弾種',
-          '画面右上の説明を読んで',
-          '画面タップ/クリックで次へ',
+          '0で敗北、時間で少し回復',
+          'トリガー = 装備中の弾の種類',
+          '画面をタップ/クリックで次へ',
         ],
         isCompleted: () => this.tutorialProgress.introAcknowledged,
+        focusTarget: 'trionMeter',
       },
       {
         title: 'Step2 移動',
         description: [
-          'キーボードの W/A/S/D で移動',
-          '（スマホは画面左のスティック）',
+          'W/A/S/D で動けるよ',
+          '（スマホは画面左スティック）',
           '1回だけ動いてみよう',
         ],
         isCompleted: () => this.tutorialProgress.moved,
+        focusTarget: 'player',
       },
       {
         title: 'Step3 射撃',
         description: [
-          'マウスの左ボタン（左クリック）で射撃',
+          '左クリックで撃てるよ',
           '（スマホは攻撃ボタン）',
-          '1発撃つと次へ',
+          '1発撃ってみよう',
         ],
         isCompleted: () => this.tutorialProgress.fired,
+        focusTarget: 'player',
       },
       {
         title: 'Step4 シールド',
@@ -902,37 +974,46 @@ export class MainScene extends Phaser.Scene {
           'シールドもトリオン消費',
         ],
         isCompleted: () => this.tutorialProgress.shielded,
+        focusTarget: 'player',
       },
       {
         title: 'Step5 弾切替',
         description: [
           'キーボードの E で弾種を切替',
           '（スマホは弾切替ボタン）',
-          '弾種を切り替えてみよう',
+          'Eで切り替えてみよう',
         ],
         isCompleted: () => this.tutorialProgress.switched,
+        focusTarget: 'triggerDisplay',
+        requiresSwitch: true,
       },
       {
         title: 'Step6 ASTEROID',
         description: [
           '低コスト・連射向き',
           `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
-          'ASTEROID を1発撃つと次へ',
+          'EでASTEROIDに切替',
+          'ASTEROIDで10発当てよう',
         ],
-        onEnter: () => this.setTutorialBulletType('asteroid'),
         requiredBulletType: 'asteroid',
-        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+        requiredHits: 10,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        focusTarget: 'triggerDisplay',
+        requiresSwitch: true,
       },
       {
         title: 'Step7 METEORA',
         description: [
           '爆発で範囲攻撃・コスト高め',
           `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
-          'METEORA を1発撃つと次へ',
+          'EでMETEORAに切替',
+          'METEORAで10発当てよう',
         ],
-        onEnter: () => this.setTutorialBulletType('meteora'),
         requiredBulletType: 'meteora',
-        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+        requiredHits: 10,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        focusTarget: 'triggerDisplay',
+        requiresSwitch: true,
       },
       {
         title: 'Step8 VIPER',
@@ -940,11 +1021,14 @@ export class MainScene extends Phaser.Scene {
           '誘導弾: マウス/指で誘導',
           '最も威力が高い',
           `コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
-          'VIPER を1発撃つと次へ',
+          'EでVIPERに切替',
+          'VIPERで10発当てよう',
         ],
-        onEnter: () => this.setTutorialBulletType('viper'),
         requiredBulletType: 'viper',
-        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+        requiredHits: 10,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        focusTarget: 'triggerDisplay',
+        requiresSwitch: true,
       },
       {
         title: 'Step9 RED',
@@ -953,11 +1037,14 @@ export class MainScene extends Phaser.Scene {
           `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
           `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続`,
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
-          'RED を1発撃つと次へ',
+          'EでREDに切替',
+          'REDで10発当てよう',
         ],
-        onEnter: () => this.setTutorialBulletType('red'),
         requiredBulletType: 'red',
-        isCompleted: () => this.tutorialProgress.requiredBulletFired,
+        requiredHits: 10,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        focusTarget: 'triggerDisplay',
+        requiresSwitch: true,
       },
       {
         title: 'Step10 トリオン勝敗',
@@ -968,6 +1055,7 @@ export class MainScene extends Phaser.Scene {
           '画面タップ/クリックで完了',
         ],
         isCompleted: () => this.tutorialProgress.summaryAcknowledged,
+        focusTarget: 'trionMeter',
       },
     ];
   }
@@ -977,9 +1065,6 @@ export class MainScene extends Phaser.Scene {
     const step = this.tutorialSteps[this.tutorialStepIndex];
     step?.onEnter?.();
     this.updateTutorialHelpText();
-    if (step?.requiredBulletType) {
-      this.tutorialRequiredBulletType = step.requiredBulletType;
-    }
   }
 
   private resetTutorialProgress() {
@@ -989,10 +1074,9 @@ export class MainScene extends Phaser.Scene {
       fired: false,
       shielded: false,
       switched: false,
-      requiredBulletFired: false,
+      requiredBulletHits: 0,
       summaryAcknowledged: false,
     };
-    this.tutorialRequiredBulletType = null;
   }
 
   private resetTutorialStepFlags() {
@@ -1001,18 +1085,13 @@ export class MainScene extends Phaser.Scene {
     this.tutorialProgress.fired = false;
     this.tutorialProgress.shielded = false;
     this.tutorialProgress.switched = false;
-    this.tutorialProgress.requiredBulletFired = false;
+    this.tutorialProgress.requiredBulletHits = 0;
     this.tutorialProgress.summaryAcknowledged = false;
-    this.tutorialRequiredBulletType = null;
-  }
-
-  private setTutorialBulletType(type: BulletType) {
-    this.tutorialRequiredBulletType = type;
-    this.gameState.currentBulletType = type;
   }
 
   private registerTutorialTap() {
     if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    if (!this.tutorialTapReady) return;
     if (this.tutorialStepIndex === 0) {
       this.tutorialProgress.introAcknowledged = true;
     }
@@ -1034,6 +1113,32 @@ export class MainScene extends Phaser.Scene {
     if (step?.isCompleted()) {
       this.advanceTutorialStep();
     }
+  }
+
+  private registerTutorialSwitch() {
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step?.requiresSwitch) return;
+    if (!step.requiredBulletType) {
+      this.tutorialProgress.switched = true;
+      return;
+    }
+    if (this.gameState.currentBulletType === step.requiredBulletType) {
+      this.tutorialProgress.switched = true;
+    }
+  }
+
+  private registerTutorialBulletHit(bulletType: BulletType) {
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step?.requiredBulletType || !step.requiredHits) return;
+    if (step.requiresSwitch && !this.tutorialProgress.switched) return;
+    if (bulletType !== step.requiredBulletType) return;
+    this.tutorialProgress.requiredBulletHits = Math.min(
+      step.requiredHits,
+      this.tutorialProgress.requiredBulletHits + 1
+    );
+    this.updateTutorialHelpText();
   }
 
   private registerTutorialMovement() {
@@ -1060,6 +1165,10 @@ export class MainScene extends Phaser.Scene {
     this.bossBullets.forEach(bullet => bullet.destroy());
     this.playerBullets = [];
     this.bossBullets = [];
+    if (this.playerShield) {
+      this.playerShield.destroy();
+    }
+    this.playerShield = null;
     this.extraEnemies.forEach(enemy => enemy.boss.destroy());
     this.extraEnemies = [];
 
@@ -1166,9 +1275,7 @@ export class MainScene extends Phaser.Scene {
       const currentIndex = types.indexOf(this.gameState.currentBulletType);
       if (types.length > 0) {
         this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
-        if (this.isTutorialMode) {
-          this.tutorialProgress.switched = true;
-        }
+        this.registerTutorialSwitch();
       }
     }
     
@@ -1278,9 +1385,6 @@ export class MainScene extends Phaser.Scene {
     this.trimBulletPool(this.playerBullets, this.maxPlayerBullets);
     if (this.isTutorialMode) {
       this.tutorialProgress.fired = true;
-      if (this.tutorialRequiredBulletType === bulletType) {
-        this.tutorialProgress.requiredBulletFired = true;
-      }
     }
     if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled) {
       this.scheduleDelayedRelease(bullet, () => this.getClosestEnemyPosition(), 3000);
@@ -1289,8 +1393,11 @@ export class MainScene extends Phaser.Scene {
 
   private tryDeployShield() {
     // Check cooldown (only one shield at a time)
-    if (this.playerShield && !this.playerShield.active) {
-      this.playerShield = null;
+    if (this.playerShield) {
+      const spriteActive = this.playerShield.sprite?.active ?? false;
+      if (!this.playerShield.active || !spriteActive) {
+        this.playerShield = null;
+      }
     }
     if (this.playerShield?.active) return;
     
@@ -1688,6 +1795,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private applyMeteoraExplosion(initialArea: Phaser.Geom.Circle) {
+    const shouldRegisterHits = false;
+    this.applyMeteoraExplosionWithTracking(initialArea, shouldRegisterHits);
+  }
+
+  private applyMeteoraExplosionWithTracking(initialArea: Phaser.Geom.Circle, registerHits: boolean) {
     const pendingExplosions: Phaser.Geom.Circle[] = [initialArea];
     const damageScale = this.getDamageScale();
 
@@ -1721,6 +1833,9 @@ export class MainScene extends Phaser.Scene {
         const bossBounds = new Phaser.Geom.Circle(boss.x, boss.y, boss.getRadius());
         if (Phaser.Geom.Intersects.CircleToCircle(area, bossBounds)) {
           target.setTrion(target.getTrion() - GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale);
+          if (registerHits) {
+            this.registerTutorialBulletHit('meteora');
+          }
         }
       }
     }
@@ -1733,7 +1848,7 @@ export class MainScene extends Phaser.Scene {
   private triggerMeteoraExplosion(bullet: Bullet) {
     const explosionArea = bullet.explode();
     if (explosionArea) {
-      this.applyMeteoraExplosion(explosionArea);
+      this.applyMeteoraExplosionWithTracking(explosionArea, bullet.isPlayerBullet);
     }
   }
 
@@ -1782,6 +1897,9 @@ export class MainScene extends Phaser.Scene {
                 GAME_CONFIG.RED_BULLET_SLOW_DURATION,
                 GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER
               );
+            }
+            if (bullet.isPlayerBullet) {
+              this.registerTutorialBulletHit(bullet.type);
             }
             bullet.destroy();
             break;
@@ -1924,6 +2042,10 @@ export class MainScene extends Phaser.Scene {
       text.setPosition(barX - 40, barY + 2);
       text.setVisible(true);
     });
+
+    if (this.isTutorialMode) {
+      this.updateTutorialFocusHighlight();
+    }
   }
 
   private checkGameOver() {
@@ -2011,9 +2133,7 @@ export class MainScene extends Phaser.Scene {
     const currentIndex = types.indexOf(this.gameState.currentBulletType);
     if (types.length > 0) {
       this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
-      if (this.isTutorialMode) {
-        this.tutorialProgress.switched = true;
-      }
+      this.registerTutorialSwitch();
     }
   }
 
