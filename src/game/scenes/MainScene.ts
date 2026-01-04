@@ -369,11 +369,14 @@ export class MainScene extends Phaser.Scene {
     const buttonHeight = this.isMobileMode ? 84 : 40;
     const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 150 : 110);
     const buttonSpacing = this.isMobileMode ? 104 : 45;
+    const easyButtonY = buttonY - buttonSpacing;
+    const middleButtonY = buttonY;
+    const hardButtonY = buttonY + buttonSpacing;
 
     // Easy button
     const easyBg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
-      this.isMobileMode ? buttonY - buttonSpacing : buttonY,
+      easyButtonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -383,7 +386,7 @@ export class MainScene extends Phaser.Scene {
     
     const easyText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      this.isMobileMode ? buttonY - buttonSpacing : buttonY,
+      easyButtonY,
       'EASY',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
@@ -393,10 +396,33 @@ export class MainScene extends Phaser.Scene {
     );
     easyText.setOrigin(0.5);
 
+    // Middle button
+    const middleBg = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      middleButtonY,
+      buttonWidth,
+      buttonHeight,
+      0x1a1a3a,
+      0.9
+    );
+    middleBg.setStrokeStyle(3, 0xffd166, 0.8);
+
+    const middleText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      middleButtonY,
+      'MIDDLE',
+      {
+        fontSize: this.isMobileMode ? '36px' : '20px',
+        color: this.difficulty === 'middle' ? '#ffd166' : '#aaaaaa',
+        fontFamily: 'monospace',
+      }
+    );
+    middleText.setOrigin(0.5);
+
     // Hard button
     const hardBg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
-      this.isMobileMode ? buttonY + buttonSpacing : buttonY,
+      hardButtonY,
       buttonWidth,
       buttonHeight,
       0x1a1a3a,
@@ -406,7 +432,7 @@ export class MainScene extends Phaser.Scene {
     
     const hardText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      this.isMobileMode ? buttonY + buttonSpacing : buttonY,
+      hardButtonY,
       'HARD',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
@@ -420,7 +446,7 @@ export class MainScene extends Phaser.Scene {
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
           GAME_CONFIG.HEIGHT / 2 + 150,
-          'CLICK EASY OR HARD TO START',
+          'CLICK EASY, MIDDLE, OR HARD TO START',
           {
             fontSize: '16px',
             color: '#ffffff',
@@ -433,8 +459,10 @@ export class MainScene extends Phaser.Scene {
     const updateDifficultySelection = (difficulty: Difficulty) => {
       this.difficulty = difficulty;
       easyText.setColor(difficulty === 'easy' ? '#00ffd5' : '#aaaaaa');
+      middleText.setColor(difficulty === 'middle' ? '#ffd166' : '#aaaaaa');
       hardText.setColor(difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa');
       easyBg.setStrokeStyle(3, difficulty === 'easy' ? GAME_CONFIG.BULLET_COLOR : 0x444444, 0.8);
+      middleBg.setStrokeStyle(3, difficulty === 'middle' ? 0xffd166 : 0x444444, 0.8);
       hardBg.setStrokeStyle(3, difficulty === 'hard' ? 0xff6b6b : 0x444444, 0.8);
     };
 
@@ -448,6 +476,15 @@ export class MainScene extends Phaser.Scene {
       this.startBattle();
     });
 
+    middleBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      updateDifficultySelection('middle');
+      this.startBattle();
+    });
+    middleText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      updateDifficultySelection('middle');
+      this.startBattle();
+    });
+
     hardBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       updateDifficultySelection('hard');
       this.startBattle();
@@ -457,7 +494,7 @@ export class MainScene extends Phaser.Scene {
       this.startBattle();
     });
 
-    instructionElements.push(difficultyLabel, easyBg, easyText, hardBg, hardText);
+    instructionElements.push(difficultyLabel, easyBg, easyText, middleBg, middleText, hardBg, hardText);
     if (promptText) {
       instructionElements.push(promptText);
     }

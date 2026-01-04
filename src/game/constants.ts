@@ -74,10 +74,11 @@ export const GAME_CONFIG = {
 
 export type BulletType = 'asteroid' | 'meteora' | 'viper';
 
-export type Difficulty = 'easy' | 'hard';
+export type Difficulty = 'easy' | 'middle' | 'hard';
 
 export const DIFFICULTY_DAMAGE_MULTIPLIER: Record<Difficulty, number> = {
   easy: 0.5,
+  middle: 0.75,
   hard: 1,
 };
 
