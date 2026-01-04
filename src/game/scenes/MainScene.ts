@@ -1510,7 +1510,13 @@ export class MainScene extends Phaser.Scene {
     this.lastFireTime = now;
     
     const aim = this.player.getAimDirection();
-    const baseAngle = Math.atan2(aim.y, aim.x);
+    const aimTarget = this.isMobileMode ? this.getClosestEnemyPosition() : null;
+    const baseAngle = aimTarget
+      ? Math.atan2(aimTarget.y - this.player.y, aimTarget.x - this.player.x)
+      : Math.atan2(aim.y, aim.x);
+    const fireDirection = aimTarget
+      ? { x: Math.cos(baseAngle), y: Math.sin(baseAngle) }
+      : aim;
     const bulletSpeedMultiplier = this.player.getBulletSpeedMultiplier(now);
     
     const damageScale = this.getDamageScale();
@@ -1518,8 +1524,8 @@ export class MainScene extends Phaser.Scene {
     if (bulletType === 'asteroid') {
       bullet = new Bullet(
         this,
-        this.player.x + aim.x * 20,
-        this.player.y + aim.y * 20,
+        this.player.x + fireDirection.x * 20,
+        this.player.y + fireDirection.y * 20,
         baseAngle,
         'asteroid',
         true,
@@ -1530,8 +1536,8 @@ export class MainScene extends Phaser.Scene {
     } else if (bulletType === 'meteora') {
       bullet = new Bullet(
         this,
-        this.player.x + aim.x * 20,
-        this.player.y + aim.y * 20,
+        this.player.x + fireDirection.x * 20,
+        this.player.y + fireDirection.y * 20,
         baseAngle,
         'meteora',
         true,
@@ -1543,8 +1549,8 @@ export class MainScene extends Phaser.Scene {
       // Viper - guided bullet
       bullet = new Bullet(
         this,
-        this.player.x + aim.x * 20,
-        this.player.y + aim.y * 20,
+        this.player.x + fireDirection.x * 20,
+        this.player.y + fireDirection.y * 20,
         baseAngle,
         'viper',
         true,
@@ -1555,8 +1561,8 @@ export class MainScene extends Phaser.Scene {
     } else {
       bullet = new Bullet(
         this,
-        this.player.x + aim.x * 20,
-        this.player.y + aim.y * 20,
+        this.player.x + fireDirection.x * 20,
+        this.player.y + fireDirection.y * 20,
         baseAngle,
         'red',
         true,
@@ -1827,8 +1833,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private updateBullets(delta: number) {
-    const mouseX = this.input.activePointer.worldX;
-    const mouseY = this.input.activePointer.worldY;
+    const targetPosition = this.isMobileMode ? this.getClosestEnemyPosition() : null;
+    const mouseX = targetPosition?.x ?? this.input.activePointer.worldX;
+    const mouseY = targetPosition?.y ?? this.input.activePointer.worldY;
     
     // Update and clean up player bullets
     this.playerBullets = this.playerBullets.filter(bullet => {
