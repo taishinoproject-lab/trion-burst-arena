@@ -31,24 +31,24 @@ export const MobileControls = ({
     if (!joystick || !knob) return;
 
     const joystickRadius = 50;
-    let centerX = 0;
-    let centerY = 0;
 
     const handleStart = (e: TouchEvent) => {
       e.preventDefault();
       const touch = e.changedTouches[0];
       if (!touch) return;
-      const rect = joystick.getBoundingClientRect();
-      centerX = rect.left + rect.width / 2;
-      centerY = rect.top + rect.height / 2;
       isDraggingRef.current = true;
       activeTouchIdRef.current = touch.identifier;
       handleMove(touch.clientX, touch.clientY);
     };
 
     const handleMove = (clientX: number, clientY: number) => {
-      let dx = clientX - centerX;
-      let dy = clientY - centerY;
+      const rect = joystick.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const clampedX = Math.min(Math.max(clientX, rect.left), rect.right);
+      const clampedY = Math.min(Math.max(clientY, rect.top), rect.bottom);
+      let dx = clampedX - centerX;
+      let dy = clampedY - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance > joystickRadius) {
