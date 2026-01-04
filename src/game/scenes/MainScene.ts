@@ -45,6 +45,7 @@ export class MainScene extends Phaser.Scene {
   private readonly maxBossBullets = 300;
   private isMobileMode = false;
   private selectedBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
+  private isTutorialMode = false;
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -82,6 +83,8 @@ export class MainScene extends Phaser.Scene {
   private delayedAsteroidText!: Phaser.GameObjects.Text;
   private gameOverText!: Phaser.GameObjects.Text;
   private instructionsOverlay!: Phaser.GameObjects.Container;
+  private tutorialOverlay?: Phaser.GameObjects.Container;
+  private tutorialHelpText?: Phaser.GameObjects.Text;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
@@ -95,6 +98,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
+    this.isTutorialMode = false;
+    this.tutorialOverlay = undefined;
     // Background
     this.cameras.main.setBackgroundColor(GAME_CONFIG.BACKGROUND_COLOR);
     
@@ -258,6 +263,22 @@ export class MainScene extends Phaser.Scene {
     });
     this.gameOverText.setOrigin(0.5);
     this.gameOverText.setVisible(false);
+
+    this.tutorialHelpText = this.add.text(
+      GAME_CONFIG.WIDTH - 20,
+      uiY + 70,
+      '',
+      {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'right',
+        lineSpacing: 6,
+      }
+    );
+    this.tutorialHelpText.setOrigin(1, 0);
+    this.tutorialHelpText.setVisible(false);
+    this.tutorialHelpText.setDepth(90);
   }
 
   private showInstructions() {
@@ -569,6 +590,29 @@ export class MainScene extends Phaser.Scene {
     startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
     startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
     instructionElements.push(startButton, startText);
+
+    const tutorialButtonY = startButtonY + (this.isMobileMode ? 110 : 70);
+    const tutorialButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      tutorialButtonY,
+      startButtonWidth,
+      startButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    tutorialButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const tutorialText = this.add.text(GAME_CONFIG.WIDTH / 2, tutorialButtonY, 'TUTORIAL', {
+      fontSize: this.isMobileMode ? '28px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    tutorialText.setOrigin(0.5);
+    const handleTutorial = () => {
+      this.startTutorial();
+    };
+    tutorialButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
+    tutorialText.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
+    instructionElements.push(tutorialButton, tutorialText);
     updateWeaponButtons();
     
     this.instructionsOverlay = this.add.container(0, 0, instructionElements);
@@ -585,12 +629,90 @@ export class MainScene extends Phaser.Scene {
     this.instructionsOverlay.destroy(true);
   }
 
+  private startTutorial() {
+    this.isTutorialMode = true;
+    this.difficulty = 'easy';
+    this.selectedBulletTypes = [...AVAILABLE_BULLET_TYPES];
+    this.resetGameState();
+    this.gameState.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
+    this.gameState.currentBulletType = 'asteroid';
+    this.gameStarted = true;
+    this.gameStartTime = this.time.now;
+    this.battleStartTime = this.time.now;
+    this.gameOverText.setVisible(false);
+    this.instructionsOverlay.destroy(true);
+    this.boss.deactivateShield();
+    this.showTutorialOverlay();
+  }
+
+  private showTutorialOverlay() {
+    if (!this.tutorialHelpText) return;
+    this.tutorialHelpText.setText(this.getTutorialHelpText());
+    this.tutorialHelpText.setVisible(true);
+
+    const buttonX = this.isMobileMode ? 140 : 120;
+    const buttonY = this.isMobileMode ? 70 : 60;
+    const buttonWidth = this.isMobileMode ? 220 : 180;
+    const buttonHeight = this.isMobileMode ? 64 : 48;
+
+    const backButton = this.add.rectangle(
+      buttonX,
+      buttonY,
+      buttonWidth,
+      buttonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(buttonX, buttonY, 'BACK', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    backText.setOrigin(0.5);
+
+    const handleBack = () => {
+      this.scene.restart();
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+
+    this.tutorialOverlay = this.add.container(0, 0, [backButton, backText]);
+    this.tutorialOverlay.setDepth(100);
+  }
+
+  private getTutorialHelpText() {
+    return [
+      '操作方法',
+      'MOVE: WASD',
+      'AIM: MOUSE',
+      'LMB/HOLD: FIRE',
+      'E: 武器切替',
+      'Q: アステロイド遅延',
+      'SPACE: シールド',
+      'SHIFT+SPACE: ワイドシールド',
+      '',
+      '弾の種類 (コスト/ダメージ)',
+      `ASTEROID: ${GAME_CONFIG.ASTEROID_COST}/${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
+      `METEORA: ${GAME_CONFIG.METEORA_COST}/${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
+      `VIPER: ${GAME_CONFIG.VIPER_COST}/${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
+      `RED: ${GAME_CONFIG.RED_BULLET_COST}/${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
+    ].join('\n');
+  }
+
   private canFire(time: number = this.time.now) {
     if (!this.gameStarted) return false;
     return time - this.battleStartTime >= this.fireDelayMs;
   }
 
   private resetGameState() {
+    this.playerBullets.forEach(bullet => bullet.destroy());
+    this.bossBullets.forEach(bullet => bullet.destroy());
+    this.playerBullets = [];
+    this.bossBullets = [];
+    this.extraEnemies.forEach(enemy => enemy.boss.destroy());
+    this.extraEnemies = [];
+
     this.gameState = {
       playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
       bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
@@ -600,7 +722,6 @@ export class MainScene extends Phaser.Scene {
       playerWon: false,
       availableBulletTypes: [...this.selectedBulletTypes],
     };
-    this.extraEnemies = [];
     this.spawnedShieldedEnemy = false;
     this.spawnedRapidEnemy = false;
 
@@ -632,20 +753,27 @@ export class MainScene extends Phaser.Scene {
     this.regenerateTrion(delta);
 
     // Spawn timed enemies
-    this.spawnTimedEnemies(time);
+    if (!this.isTutorialMode) {
+      this.spawnTimedEnemies(time);
+    }
     
     // Update entities
     this.player.update(delta, this.mobileInput);
-    if (this.gameState.bossTrion > 0) {
+    if (!this.isTutorialMode && this.gameState.bossTrion > 0) {
       this.boss.update(delta, this.player.x, this.player.y, time);
       // Boss firing
-      this.fireEnemy({ boss: this.boss, trion: this.gameState.bossTrion, maxTrion: GAME_CONFIG.BOSS_TRION_MAX, behavior: this.getPrimaryBossBehavior() }, time);
+      this.fireEnemy(
+        { boss: this.boss, trion: this.gameState.bossTrion, maxTrion: GAME_CONFIG.BOSS_TRION_MAX, behavior: this.getPrimaryBossBehavior() },
+        time
+      );
     }
 
-    for (const enemy of this.extraEnemies) {
-      if (enemy.trion <= 0) continue;
-      enemy.boss.update(delta, this.player.x, this.player.y, time);
-      this.fireEnemy(enemy, time);
+    if (!this.isTutorialMode) {
+      for (const enemy of this.extraEnemies) {
+        if (enemy.trion <= 0) continue;
+        enemy.boss.update(delta, this.player.x, this.player.y, time);
+        this.fireEnemy(enemy, time);
+      }
     }
     
     // Update bullets
@@ -659,13 +787,17 @@ export class MainScene extends Phaser.Scene {
     // Check collisions
     this.checkCollisions();
 
-    this.cleanupDefeatedEnemies();
+    if (!this.isTutorialMode) {
+      this.cleanupDefeatedEnemies();
+    }
     
     // Update UI
     this.updateUI();
     
     // Check win/lose conditions
-    this.checkGameOver();
+    if (!this.isTutorialMode) {
+      this.checkGameOver();
+    }
   }
 
   private handleInput() {
@@ -887,12 +1019,12 @@ export class MainScene extends Phaser.Scene {
 
   private getEnemyTargets(): EnemyTarget[] {
     const targets: EnemyTarget[] = [];
-    if (this.gameState.bossTrion > 0) {
+    if (this.gameState.bossTrion > 0 || this.isTutorialMode) {
       targets.push({
         boss: this.boss,
         getTrion: () => this.gameState.bossTrion,
         setTrion: (value: number) => {
-          this.gameState.bossTrion = value;
+          this.gameState.bossTrion = Math.max(0, value);
         },
         maxTrion: GAME_CONFIG.BOSS_TRION_MAX,
       });
@@ -904,7 +1036,7 @@ export class MainScene extends Phaser.Scene {
         boss: enemy.boss,
         getTrion: () => enemy.trion,
         setTrion: (value: number) => {
-          enemy.trion = value;
+          enemy.trion = Math.max(0, value);
         },
         maxTrion: enemy.maxTrion,
       });
@@ -1327,7 +1459,7 @@ export class MainScene extends Phaser.Scene {
       this.gameState.playerTrion + regenAmount
     );
     
-    if (this.gameState.bossTrion > 0) {
+    if (this.gameState.bossTrion > 0 || this.isTutorialMode) {
       this.gameState.bossTrion = Math.min(
         GAME_CONFIG.BOSS_TRION_MAX,
         this.gameState.bossTrion + regenAmount
