@@ -34,7 +34,7 @@ interface TutorialStep {
   isCompleted: () => boolean;
   requiredBulletType?: BulletType;
   requiredHits?: number;
-  focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player';
+  focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player' | 'backButton';
   requiresSwitch?: boolean;
 }
 
@@ -105,6 +105,9 @@ export class MainScene extends Phaser.Scene {
   private tutorialHelpHighlightTween?: Phaser.Tweens.Tween;
   private tutorialFocusHighlight?: Phaser.GameObjects.Graphics;
   private tutorialFocusHighlightTween?: Phaser.Tweens.Tween;
+  private tutorialBackButton?: Phaser.GameObjects.Rectangle;
+  private tutorialBackText?: Phaser.GameObjects.Text;
+  private tutorialBackButtonTween?: Phaser.Tweens.Tween;
   private tutorialTapReady = false;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
@@ -816,13 +819,17 @@ export class MainScene extends Phaser.Scene {
     backText.setOrigin(0.5);
 
     const handleBack = () => {
+      this.tutorialProgress.summaryAcknowledged = true;
       this.scene.restart();
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
+    this.tutorialBackButton = backButton;
+    this.tutorialBackText = backText;
     this.tutorialOverlay = this.add.container(0, 0, [backButton, backText]);
     this.tutorialOverlay.setDepth(100);
+    this.updateTutorialFocusHighlight();
   }
 
   private updateTutorialHelpText() {
@@ -873,6 +880,7 @@ export class MainScene extends Phaser.Scene {
     const step = this.tutorialSteps[this.tutorialStepIndex];
     if (!step?.focusTarget) {
       this.tutorialFocusHighlight.setVisible(false);
+      this.updateTutorialBackButtonGlow();
       return;
     }
 
@@ -899,8 +907,49 @@ export class MainScene extends Phaser.Scene {
       );
     } else if (step.focusTarget === 'player') {
       highlight.strokeCircle(this.player.x, this.player.y, GAME_CONFIG.PLAYER_RADIUS + 28);
+    } else if (step.focusTarget === 'backButton' && this.tutorialBackButton) {
+      const bounds = this.tutorialBackButton.getBounds();
+      highlight.strokeRect(
+        bounds.x - padding,
+        bounds.y - padding,
+        bounds.width + padding * 2,
+        bounds.height + padding * 2
+      );
     }
     highlight.setVisible(true);
+    this.updateTutorialBackButtonGlow(step);
+  }
+
+  private updateTutorialBackButtonGlow(step?: TutorialStep) {
+    if (!this.tutorialBackButton || !this.tutorialBackText) return;
+    const shouldGlow = step?.focusTarget === 'backButton';
+
+    if (!shouldGlow) {
+      if (this.tutorialBackButtonTween) {
+        this.tutorialBackButtonTween.stop();
+        this.tutorialBackButtonTween = undefined;
+      }
+      this.tutorialBackButton.setAlpha(1);
+      this.tutorialBackText.setAlpha(1);
+      this.tutorialBackButton.setScale(1);
+      this.tutorialBackText.setScale(1);
+      return;
+    }
+
+    if (this.tutorialBackButtonTween) return;
+    this.tutorialBackButton.setScale(1);
+    this.tutorialBackText.setScale(1);
+    this.tutorialBackButton.setAlpha(0.4);
+    this.tutorialBackText.setAlpha(0.4);
+    this.tutorialBackButtonTween = this.tweens.add({
+      targets: [this.tutorialBackButton, this.tutorialBackText],
+      alpha: 1,
+      scale: 1.06,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private startTutorialHelpHighlight() {
@@ -1052,10 +1101,10 @@ export class MainScene extends Phaser.Scene {
           'トリオン0で敗北',
           '撃つ/守る/被弾で減る',
           '時間で回復する',
-          '画面タップ/クリックで完了',
+          '左上のBACKボタンを押して終了',
         ],
         isCompleted: () => this.tutorialProgress.summaryAcknowledged,
-        focusTarget: 'trionMeter',
+        focusTarget: 'backButton',
       },
     ];
   }
@@ -1096,6 +1145,10 @@ export class MainScene extends Phaser.Scene {
       this.tutorialProgress.introAcknowledged = true;
     }
     if (this.tutorialStepIndex === this.tutorialSteps.length - 1) {
+      const step = this.tutorialSteps[this.tutorialStepIndex];
+      if (step?.focusTarget === 'backButton') {
+        return;
+      }
       this.tutorialProgress.summaryAcknowledged = true;
     }
   }
@@ -1676,6 +1729,7 @@ export class MainScene extends Phaser.Scene {
   private resolveBulletInterceptions() {
     for (const playerBullet of this.playerBullets) {
       if (!playerBullet.active) continue;
+      if (playerBullet.type === 'red') continue;
       const playerBounds = playerBullet.getBounds();
 
       for (const bossBullet of this.bossBullets) {
