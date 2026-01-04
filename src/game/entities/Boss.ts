@@ -151,6 +151,10 @@ export class Boss {
     };
   }
 
+  setFireRate(fireRate: number) {
+    this.config.fireRate = fireRate;
+  }
+
   activateShield(currentTime: number) {
     if (this.shieldActive) return;
     

@@ -645,6 +645,7 @@ export class MainScene extends Phaser.Scene {
     this.battleStartTime = this.time.now;
     this.gameState.availableBulletTypes = [...this.selectedBulletTypes];
     this.gameState.currentBulletType = this.gameState.availableBulletTypes[0] ?? 'asteroid';
+    this.applyDifficultySettings();
     this.destroyInstructionsOverlay();
   }
 
@@ -658,10 +659,16 @@ export class MainScene extends Phaser.Scene {
     this.gameStarted = true;
     this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
+    this.applyDifficultySettings();
     this.gameOverText.setVisible(false);
     this.destroyInstructionsOverlay();
     this.boss.deactivateShield();
     this.showTutorialOverlay();
+  }
+
+  private applyDifficultySettings() {
+    const fireRateMultiplier = this.difficulty === 'easy' ? 0.5 : 1;
+    this.boss.setFireRate(GAME_CONFIG.BOSS_FIRE_RATE * fireRateMultiplier);
   }
 
   private enableInstructionScroll(
