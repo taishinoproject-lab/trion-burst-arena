@@ -295,7 +295,12 @@ export class MainScene extends Phaser.Scene {
     bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     
     const isCompactLayout = this.isMobileMode && this.scale.displaySize.height < 600;
-    const layoutCenterY = GAME_CONFIG.HEIGHT / 2 + (isCompactLayout ? -120 : 0);
+    const isLandscapeMobile =
+      this.isMobileMode && this.scale.displaySize.width > this.scale.displaySize.height;
+    const layoutOffsetY = this.isMobileMode
+      ? (isCompactLayout ? -180 : -100) + (isLandscapeMobile ? -80 : 0)
+      : 0;
+    const layoutCenterY = GAME_CONFIG.HEIGHT / 2 + layoutOffsetY;
     const titleY = layoutCenterY - 180;
     const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 120 : 140);
     const instructionTextY = layoutCenterY - (this.isMobileMode ? 40 : 100);
@@ -664,8 +669,10 @@ export class MainScene extends Phaser.Scene {
     content: Phaser.GameObjects.Container
   ) {
     const contentBounds = content.getBounds();
-    const bottomPadding = this.isMobileMode ? 160 : 0;
-    const topPadding = this.isMobileMode ? 20 : 0;
+    const isLandscapeMobile =
+      this.isMobileMode && this.scale.displaySize.width > this.scale.displaySize.height;
+    const bottomPadding = this.isMobileMode ? (isLandscapeMobile ? 220 : 160) : 0;
+    const topPadding = this.isMobileMode ? (isLandscapeMobile ? 40 : 20) : 0;
     const minScrollY = Math.min(0, GAME_CONFIG.HEIGHT - (contentBounds.bottom + bottomPadding));
     const maxScrollY = Math.max(0, -contentBounds.top + topPadding);
 
