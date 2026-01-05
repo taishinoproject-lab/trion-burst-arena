@@ -514,7 +514,7 @@ export class MainScene extends Phaser.Scene {
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       overviewTextY,
-      '━━━ SYSTEM OVERVIEW ━━━\n\n\n' +
+      '\n\n━━━ SYSTEM OVERVIEW ━━━\n' +
         '► トリオン = 生体エネルギー\n' +
         '► 攻撃・防御・被弾で減少 → 0で敗北\n' +
         '► トリガー = 武器 (3つ選択して戦闘)\n\n' +
