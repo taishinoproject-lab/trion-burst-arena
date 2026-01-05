@@ -2224,40 +2224,50 @@ export class MainScene extends Phaser.Scene {
     const uiY = 42;
     
     // Player Trion Bar
-    this.playerTrionBar.clear();
-    this.playerTrionBar.fillStyle(0x1a1a2e, 1);
-    this.playerTrionBar.fillRect(20, uiY, barWidth, barHeight);
+    if (this.isRenderableObject(this.playerTrionBar)) {
+      this.playerTrionBar.clear();
+      this.playerTrionBar.fillStyle(0x1a1a2e, 1);
+      this.playerTrionBar.fillRect(20, uiY, barWidth, barHeight);
+    }
     
     const playerRatio = Math.max(0, this.gameState.playerTrion / GAME_CONFIG.PLAYER_TRION_MAX);
-    this.playerTrionBar.fillStyle(GAME_CONFIG.BULLET_COLOR, 1);
-    this.playerTrionBar.fillRect(20, uiY, barWidth * playerRatio, barHeight);
+    if (this.isRenderableObject(this.playerTrionBar)) {
+      this.playerTrionBar.fillStyle(GAME_CONFIG.BULLET_COLOR, 1);
+      this.playerTrionBar.fillRect(20, uiY, barWidth * playerRatio, barHeight);
+      
+      this.playerTrionBar.lineStyle(2, 0x00ffd5, 0.5);
+      this.playerTrionBar.strokeRect(20, uiY, barWidth, barHeight);
+    }
     
-    this.playerTrionBar.lineStyle(2, 0x00ffd5, 0.5);
-    this.playerTrionBar.strokeRect(20, uiY, barWidth, barHeight);
-    
-    this.playerTrionText.setText(`${Math.floor(this.gameState.playerTrion)}`);
+    this.safeSetText(this.playerTrionText, `${Math.floor(this.gameState.playerTrion)}`);
     
     // Boss Trion Bar
-    this.bossTrionBar.clear();
-    this.bossTrionBar.fillStyle(0x1a1a2e, 1);
-    this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
+    if (this.isRenderableObject(this.bossTrionBar)) {
+      this.bossTrionBar.clear();
+      this.bossTrionBar.fillStyle(0x1a1a2e, 1);
+      this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
+    }
     
     const bossRatio = Math.max(0, this.gameState.bossTrion / this.getBossMaxTrion());
-    this.bossTrionBar.fillStyle(GAME_CONFIG.BOSS_COLOR, 1);
-    this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth * bossRatio, barHeight);
+    if (this.isRenderableObject(this.bossTrionBar)) {
+      this.bossTrionBar.fillStyle(GAME_CONFIG.BOSS_COLOR, 1);
+      this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth * bossRatio, barHeight);
+      
+      this.bossTrionBar.lineStyle(2, 0xff6b6b, 0.5);
+      this.bossTrionBar.strokeRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
+    }
     
-    this.bossTrionBar.lineStyle(2, 0xff6b6b, 0.5);
-    this.bossTrionBar.strokeRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
-    
-    this.bossTrionText.setText(`${Math.floor(this.gameState.bossTrion)}`);
+    this.safeSetText(this.bossTrionText, `${Math.floor(this.gameState.bossTrion)}`);
     
     // Bullet type display
     const bulletName = this.gameState.currentBulletType.toUpperCase();
-    this.bulletTypeText.setText(`TRIGGER: ${bulletName}`);
+    this.safeSetText(this.bulletTypeText, `TRIGGER: ${bulletName}`);
 
     const delayStatus = this.gameState.delayedAsteroidEnabled ? 'ON' : 'OFF';
-    this.delayedAsteroidText.setText(`DELAY: ${delayStatus}`);
-    this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
+    this.safeSetText(this.delayedAsteroidText, `DELAY: ${delayStatus}`);
+    if (this.isRenderableObject(this.delayedAsteroidText)) {
+      this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
+    }
     
     const enemyBarWidth = 160;
     const enemyBarHeight = 12;
@@ -2269,6 +2279,9 @@ export class MainScene extends Phaser.Scene {
       const enemy = activeEnemies[index];
       const label = this.enemyLabels[index];
       const text = this.enemyTexts[index];
+      if (!this.isRenderableObject(bar) || !this.isRenderableObject(label) || !this.isRenderableObject(text)) {
+        return;
+      }
       if (!enemy) {
         bar.clear();
         bar.setVisible(false);
@@ -2299,6 +2312,16 @@ export class MainScene extends Phaser.Scene {
 
     if (this.isTutorialMode) {
       this.updateTutorialFocusHighlight();
+    }
+  }
+
+  private isRenderableObject<T extends Phaser.GameObjects.GameObject>(object?: T | null): object is T {
+    return Boolean(object && object.active && object.scene);
+  }
+
+  private safeSetText(text: Phaser.GameObjects.Text | undefined, value: string) {
+    if (this.isRenderableObject(text)) {
+      text.setText(value);
     }
   }
 
