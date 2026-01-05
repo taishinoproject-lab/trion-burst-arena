@@ -99,4 +99,5 @@ export interface GameState {
   delayedAsteroidEnabled: boolean;
   isGameOver: boolean;
   playerWon: boolean;
+  availableBulletTypes: BulletType[];
 }

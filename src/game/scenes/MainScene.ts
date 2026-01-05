@@ -115,6 +115,7 @@ export class MainScene extends Phaser.Scene {
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
+  private damageTexts: Phaser.GameObjects.Text[] = [];
   private instructionScrollCleanup?: () => void;
   private tutorialSteps: TutorialStep[] = [];
   private tutorialStepIndex = 0;
@@ -2033,7 +2034,9 @@ export class MainScene extends Phaser.Scene {
 
         const bossBounds = new Phaser.Geom.Circle(boss.x, boss.y, boss.getRadius());
         if (Phaser.Geom.Intersects.CircleToCircle(area, bossBounds)) {
-          target.setTrion(target.getTrion() - GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale);
+          const damage = GAME_CONFIG.METEORA_TRION_DAMAGE * damageScale;
+          target.setTrion(target.getTrion() - damage);
+          this.showDamageNumber(boss.x, boss.y, damage, false);
           if (registerHits) {
             this.registerTutorialBulletHit('meteora');
           }
@@ -2044,6 +2047,40 @@ export class MainScene extends Phaser.Scene {
 
   private getDamageScale() {
     return DIFFICULTY_DAMAGE_MULTIPLIER[this.difficulty];
+  }
+
+  private showDamageNumber(x: number, y: number, damage: number, isPlayerDamage: boolean) {
+    const color = isPlayerDamage ? '#ff6b6b' : '#00ffd5';
+    const offsetX = Phaser.Math.Between(-20, 20);
+    const offsetY = Phaser.Math.Between(-10, 10);
+    
+    const damageText = this.add.text(x + offsetX, y + offsetY, `-${Math.round(damage)}`, {
+      fontSize: isPlayerDamage ? '24px' : '20px',
+      fontFamily: 'monospace',
+      color: color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    damageText.setOrigin(0.5, 0.5);
+    damageText.setDepth(90);
+    this.damageTexts.push(damageText);
+    
+    this.tweens.add({
+      targets: damageText,
+      y: damageText.y - 50,
+      alpha: 0,
+      scale: isPlayerDamage ? 1.3 : 1.1,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        const index = this.damageTexts.indexOf(damageText);
+        if (index > -1) {
+          this.damageTexts.splice(index, 1);
+        }
+        damageText.destroy();
+      }
+    });
   }
 
   private triggerMeteoraExplosion(bullet: Bullet) {
@@ -2093,6 +2130,7 @@ export class MainScene extends Phaser.Scene {
           // Asteroid direct hit
           if (dist < bossRadius + bulletRadius) {
             target.setTrion(target.getTrion() - bullet.trionDamage);
+            this.showDamageNumber(target.boss.x, target.boss.y, bullet.trionDamage, false);
             if (bullet.type === 'red') {
               target.boss.applySlow(
                 GAME_CONFIG.RED_BULLET_SLOW_DURATION,
@@ -2138,6 +2176,7 @@ export class MainScene extends Phaser.Scene {
       const bulletRadius = bullet.getBounds().radius;
       if (dist < playerRadius + bulletRadius) {
         this.gameState.playerTrion -= bullet.trionDamage;
+        this.showDamageNumber(this.player.x, this.player.y, bullet.trionDamage, true);
         if (bullet.type === 'red') {
           this.player.applySlow(
             GAME_CONFIG.RED_BULLET_SLOW_DURATION,
