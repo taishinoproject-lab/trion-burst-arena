@@ -17,6 +17,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [activeSceneKey, setActiveSceneKey] = useState('MainScene');
+  const [isBattleActive, setIsBattleActive] = useState(false);
 
   useEffect(() => {
     // Detect mobile/touch device
@@ -38,6 +39,10 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     setCanFullscreen(Boolean(document.fullscreenEnabled));
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const handleBattleStateChange = useCallback((active: boolean) => {
+    setIsBattleActive(active);
   }, []);
 
   useEffect(() => {
@@ -66,9 +71,16 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       setActiveSceneKey(scene.scene.key);
       if (scene.scene.key === 'MainScene') {
         const mainScene = scene as MainScene;
+        mainScene.events.off('battle-state-changed', handleBattleStateChange);
+        mainScene.events.on('battle-state-changed', handleBattleStateChange);
+        setIsBattleActive(mainScene.isBattleActive());
         sceneRef.current = mainScene;
         mainScene.setMobileMode(isMobile);
       } else {
+        if (sceneRef.current) {
+          sceneRef.current.events.off('battle-state-changed', handleBattleStateChange);
+        }
+        setIsBattleActive(false);
         sceneRef.current = null;
       }
     };
@@ -95,7 +107,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         sceneRef.current = null;
       }
     };
-  }, [isMobile]);
+  }, [handleBattleStateChange, isMobile]);
 
   const handleFullscreenToggle = useCallback(async () => {
     if (!gameContainerRef.current || !canFullscreen) return;
@@ -147,6 +159,11 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
               position: 'fixed',
               top: 0,
               left: 0,
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingRight: 'env(safe-area-inset-right)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+              paddingLeft: 'env(safe-area-inset-left)',
+              boxSizing: 'border-box',
               background: 'radial-gradient(circle at top, rgba(0, 255, 213, 0.08), transparent 55%)',
             }
           : undefined
@@ -182,7 +199,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         </button>
       )}
       <MobileControls
-        visible={isMobile && activeSceneKey === 'MainScene'}
+        visible={isMobile && activeSceneKey === 'MainScene' && isBattleActive}
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}

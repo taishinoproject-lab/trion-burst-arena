@@ -63,8 +63,8 @@ export const MobileControls = ({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
       if (!isDraggingRef.current || activeTouchIdRef.current === null) return;
+      e.preventDefault();
       const touch = Array.from(e.touches).find(
         (item) => item.identifier === activeTouchIdRef.current,
       );
