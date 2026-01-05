@@ -73,9 +73,11 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       }
     };
     const bindSceneStart = () => {
-      gameInstance.scene?.events?.on(Phaser.Scenes.Events.START, handleSceneStart);
+      gameInstance.scene.scenes.forEach((scene) => {
+        scene.events.on(Phaser.Scenes.Events.START, () => handleSceneStart(scene));
+      });
     };
-    if (gameInstance.scene?.events) {
+    if (gameInstance.scene && gameInstance.scene.scenes.length > 0) {
       bindSceneStart();
     } else {
       gameInstance.events.once(Phaser.Core.Events.READY, bindSceneStart);
@@ -85,7 +87,9 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       gameContainerRef.current?.removeEventListener('contextmenu', handleContextMenu);
       if (gameRef.current) {
         gameInstance.events.off(Phaser.Core.Events.READY, bindSceneStart);
-        gameInstance.scene?.events?.off(Phaser.Scenes.Events.START, handleSceneStart);
+        gameInstance.scene?.scenes?.forEach((scene) => {
+          scene.events.off(Phaser.Scenes.Events.START);
+        });
         gameInstance.destroy(true);
         gameRef.current = null;
         sceneRef.current = null;

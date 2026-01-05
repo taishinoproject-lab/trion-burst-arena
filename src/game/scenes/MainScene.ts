@@ -327,19 +327,22 @@ export class MainScene extends Phaser.Scene {
     this.gameOverText.setOrigin(0.5);
     this.gameOverText.setVisible(false);
 
+    // Tutorial text positioned at top center for better visibility
     this.tutorialHelpText = this.add.text(
-      GAME_CONFIG.WIDTH - 20,
-      uiY + 70,
+      GAME_CONFIG.WIDTH / 2,
+      this.isMobileMode ? 90 : 70,
       '',
       {
-        fontSize: this.isMobileMode ? '18px' : '14px',
+        fontSize: this.isMobileMode ? '16px' : '15px',
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: 'right',
-        lineSpacing: 6,
+        align: 'center',
+        lineSpacing: this.isMobileMode ? 4 : 6,
+        backgroundColor: '#0a0a12',
+        padding: { x: 16, y: 12 },
       }
     );
-    this.tutorialHelpText.setOrigin(1, 0);
+    this.tutorialHelpText.setOrigin(0.5, 0);
     this.tutorialHelpText.setVisible(false);
     this.tutorialHelpText.setDepth(90);
 
@@ -1137,15 +1140,45 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     const step = this.tutorialSteps[this.tutorialStepIndex];
-    const header = `STEP ${this.tutorialStepIndex + 1}/${this.tutorialSteps.length}`;
-    const description = [...step.description];
+    const stepNum = this.tutorialStepIndex + 1;
+    const totalSteps = this.tutorialSteps.length;
+    
+    // Build formatted text with better visual hierarchy
+    const progressBar = this.buildProgressBar(stepNum, totalSteps);
+    const stepLabel = `━━ STEP ${stepNum} / ${totalSteps} ━━`;
+    
+    // Format description with bullet points for clarity
+    const description = step.description.map((line, idx) => {
+      // First line is usually the main instruction - make it stand out
+      if (idx === 0) return `▶ ${line}`;
+      // Last line is often the action prompt
+      if (idx === step.description.length - 1) return `→ ${line}`;
+      return `  ${line}`;
+    });
+    
     if (step.requiredHits) {
-      description.push(`命中数: ${this.tutorialProgress.requiredBulletHits}/${step.requiredHits}`);
+      const filled = '●'.repeat(Math.min(this.tutorialProgress.requiredBulletHits, step.requiredHits));
+      const empty = '○'.repeat(Math.max(0, step.requiredHits - this.tutorialProgress.requiredBulletHits));
+      description.push(`命中: ${filled}${empty}`);
     }
-    const textLines = [header, step.title, ...description];
+    
+    const textLines = [
+      progressBar,
+      '',
+      stepLabel,
+      step.title,
+      '',
+      ...description,
+    ];
     this.tutorialHelpText.setText(textLines.join('\n'));
     this.updateTutorialHelpHighlight();
     this.updateTutorialFocusHighlight();
+  }
+  
+  private buildProgressBar(current: number, total: number): string {
+    const filled = '█'.repeat(current);
+    const empty = '░'.repeat(total - current);
+    return `[${filled}${empty}]`;
   }
 
   private updateTutorialHelpHighlight() {
