@@ -56,6 +56,7 @@ export class MainScene extends Phaser.Scene {
   private readonly maxBossBullets = 300;
   private isMobileMode = false;
   private selectedBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
+  private availableBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
   private isTutorialMode = false;
   
   private gameState: GameState = {
@@ -65,7 +66,6 @@ export class MainScene extends Phaser.Scene {
     delayedAsteroidEnabled: false,
     isGameOver: false,
     playerWon: false,
-    availableBulletTypes: ['asteroid', 'meteora', 'viper'],
   };
   
   // Input
@@ -184,7 +184,9 @@ export class MainScene extends Phaser.Scene {
     this.showInstructions();
     
     // Reset game state
-    this.resetGameState();
+    this.availableBulletTypes = [...this.selectedBulletTypes];
+    this.clearCombatEntities();
+    this.resetState();
     this.gameStarted = false;
     this.battleStartTime = 0;
   }
@@ -968,8 +970,8 @@ export class MainScene extends Phaser.Scene {
     this.gameStarted = true;
     this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
-    this.gameState.availableBulletTypes = [...this.selectedBulletTypes];
-    this.gameState.currentBulletType = this.gameState.availableBulletTypes[0] ?? 'asteroid';
+    this.availableBulletTypes = [...this.selectedBulletTypes];
+    this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
     this.applyDifficultySettings();
     this.destroyInstructionsOverlay();
   }
@@ -978,13 +980,14 @@ export class MainScene extends Phaser.Scene {
     this.isTutorialMode = true;
     this.difficulty = 'easy';
     this.selectedBulletTypes = [...AVAILABLE_BULLET_TYPES];
-    this.resetGameState();
+    this.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
+    this.clearCombatEntities();
+    this.resetState();
     this.resetTutorialProgress();
     this.tutorialSteps = this.buildTutorialSteps();
     this.tutorialStepIndex = 0;
     this.applyTutorialStep();
-    this.gameState.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
-    this.gameState.currentBulletType = 'asteroid';
+    this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
     this.gameStarted = true;
     this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
@@ -1491,29 +1494,29 @@ export class MainScene extends Phaser.Scene {
     return time - this.battleStartTime >= this.fireDelayMs;
   }
 
-  private resetGameState() {
+  private clearCombatEntities() {
     this.playerBullets.forEach(bullet => bullet.destroy());
     this.bossBullets.forEach(bullet => bullet.destroy());
-    this.playerBullets = [];
-    this.bossBullets = [];
+    this.playerBullets.length = 0;
+    this.bossBullets.length = 0;
     if (this.playerShield) {
       this.playerShield.destroy();
     }
     this.playerShield = null;
     this.extraEnemies.forEach(enemy => enemy.boss.destroy());
-    this.extraEnemies = [];
+    this.extraEnemies.length = 0;
+  }
 
-    this.gameState = {
-      playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
-      bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
-      currentBulletType: 'asteroid',
-      delayedAsteroidEnabled: false,
-      isGameOver: false,
-      playerWon: false,
-      availableBulletTypes: [...this.selectedBulletTypes],
-    };
+  private resetState() {
+    this.gameState.playerTrion = GAME_CONFIG.PLAYER_TRION_MAX;
+    this.gameState.bossTrion = GAME_CONFIG.BOSS_TRION_MAX;
+    this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
+    this.gameState.delayedAsteroidEnabled = false;
+    this.gameState.isGameOver = false;
+    this.gameState.playerWon = false;
     this.spawnedShieldedEnemy = false;
     this.spawnedRapidEnemy = false;
+    this.lastFireTime = 0;
 
     this.gameOverText.setVisible(false);
   }
@@ -1602,7 +1605,7 @@ export class MainScene extends Phaser.Scene {
     
     // Switch bullet type (cycle through selected types)
     if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
-      const types = this.gameState.availableBulletTypes;
+      const types = this.availableBulletTypes;
       const currentIndex = types.indexOf(this.gameState.currentBulletType);
       if (types.length > 0) {
         this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
@@ -2461,7 +2464,7 @@ export class MainScene extends Phaser.Scene {
 
   public triggerCycleBullet() {
     if (this.gameState.isGameOver || !this.gameStarted) return;
-    const types = this.gameState.availableBulletTypes;
+    const types = this.availableBulletTypes;
     const currentIndex = types.indexOf(this.gameState.currentBulletType);
     if (types.length > 0) {
       this.gameState.currentBulletType = types[(currentIndex + 1) % types.length];
