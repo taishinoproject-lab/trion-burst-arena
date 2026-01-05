@@ -411,8 +411,8 @@ export class MainScene extends Phaser.Scene {
 
   private showModeSelectInstructions() {
     const { layoutCenterY, actionButtonHeight } = this.getInstructionLayout();
-    const titleY = layoutCenterY - 220;
-    const overviewTextY = layoutCenterY - (this.isMobileMode ? 120 : 150);
+    const titleY = layoutCenterY - 230;
+    const overviewTextY = layoutCenterY - (this.isMobileMode ? 120 : 130);
     const modeLabelY = layoutCenterY + (this.isMobileMode ? 40 : 10);
     const buttonY = layoutCenterY + (this.isMobileMode ? 140 : 90);
     const buttonSpacing = this.isMobileMode ? 24 : 20;
@@ -432,10 +432,10 @@ export class MainScene extends Phaser.Scene {
       GAME_CONFIG.WIDTH / 2,
       overviewTextY,
       'トリオンバトルの概要\n' +
-        'トリオンは体力とエネルギー。攻撃・防御・被弾で減少し、0で敗北。\n' +
-        'トリガーは装備する武器。3つ選んで切り替えながら戦う。\n' +
-        'このゲームはパソコン推奨です。\n' +
-        '初めての人はBOSS MODEのチュートリアルから始めるのがオススメ。\n' +
+        'トリオンとは生体エネルギーであり、攻撃・防御・被弾で減少し、0で敗北。\n' +
+        'トリガーはトリオンを使って起動する武器。3つ選んで切り替えながら戦う。\n' +
+        '※このゲームはパソコン推奨\n' +
+        '初めての人はBOSS MODEから始めるのがオススメ！\n' +
         'モードを選んでスタート。',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
