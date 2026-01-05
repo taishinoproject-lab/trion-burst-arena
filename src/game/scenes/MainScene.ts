@@ -501,15 +501,6 @@ export class MainScene extends Phaser.Scene {
     });
 
 
-    // Horizontal divider lines
-    const dividerTop = this.add.graphics();
-    dividerTop.lineStyle(1, GAME_CONFIG.BULLET_COLOR, 0.5);
-    const dividerY = titleY + (this.isMobileMode ? 80 : 65);
-    dividerTop.moveTo(GAME_CONFIG.WIDTH / 2 - 200, dividerY);
-    dividerTop.lineTo(GAME_CONFIG.WIDTH / 2 + 200, dividerY);
-    dividerTop.strokePath();
-    instructionElements.push(dividerTop);
-
     // Overview text with better styling
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
