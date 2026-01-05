@@ -146,6 +146,24 @@ export class PvpScene extends Phaser.Scene {
   private player2LastFireTime = 0;
   private player2CyclePrev = false;
   private player2CycleNext = false;
+  private mobileInput = {
+    p1: {
+      moveX: 0,
+      moveY: 0,
+      attacking: false,
+      shieldQueued: false,
+      wideShieldQueued: false,
+      cycleQueued: false,
+    },
+    p2: {
+      moveX: 0,
+      moveY: 0,
+      attacking: false,
+      shieldQueued: false,
+      wideShieldQueued: false,
+      cycleQueued: false,
+    },
+  };
   private static readonly TWO_PLAYER_RED_SLOW_DURATION = 10000;
   private static readonly TWO_PLAYER_RED_FREEZE_DURATION = 4000;
   private static readonly TWO_PLAYER_VIPER_GUIDANCE_DURATION = 1000;
@@ -199,6 +217,27 @@ export class PvpScene extends Phaser.Scene {
     this.checkCollisions();
     this.regenerateTrion(delta);
     this.updateUI();
+  }
+
+  public setMobileMove(player: 'p1' | 'p2', x: number, y: number) {
+    this.mobileInput[player].moveX = x;
+    this.mobileInput[player].moveY = y;
+  }
+
+  public setMobileAttack(player: 'p1' | 'p2', pressed: boolean) {
+    this.mobileInput[player].attacking = pressed;
+  }
+
+  public triggerMobileShield(player: 'p1' | 'p2', wide: boolean) {
+    if (wide) {
+      this.mobileInput[player].wideShieldQueued = true;
+      return;
+    }
+    this.mobileInput[player].shieldQueued = true;
+  }
+
+  public triggerMobileCycleBullet(player: 'p1' | 'p2') {
+    this.mobileInput[player].cycleQueued = true;
   }
 
   private setupInput() {
@@ -330,6 +369,10 @@ export class PvpScene extends Phaser.Scene {
     if (this.dKey.isDown) moveX += 1;
     if (this.wKey.isDown) moveY -= 1;
     if (this.sKey.isDown) moveY += 1;
+    if (moveX === 0 && moveY === 0) {
+      moveX = this.mobileInput.p1.moveX;
+      moveY = this.mobileInput.p1.moveY;
+    }
     return { x: moveX, y: moveY };
   }
 
@@ -340,6 +383,10 @@ export class PvpScene extends Phaser.Scene {
     if (this.cursorKeys.right?.isDown) moveX += 1;
     if (this.cursorKeys.up?.isDown) moveY -= 1;
     if (this.cursorKeys.down?.isDown) moveY += 1;
+    if (moveX === 0 && moveY === 0) {
+      moveX = this.mobileInput.p2.moveX;
+      moveY = this.mobileInput.p2.moveY;
+    }
     return { x: moveX, y: moveY };
   }
 
@@ -350,12 +397,20 @@ export class PvpScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
       this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
     }
+    if (this.mobileInput.p1.cycleQueued) {
+      this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
+      this.mobileInput.p1.cycleQueued = false;
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.oKey)) {
       this.player2CyclePrev = true;
     }
     if (Phaser.Input.Keyboard.JustDown(this.pKey)) {
       this.player2CycleNext = true;
+    }
+    if (this.mobileInput.p2.cycleQueued) {
+      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex);
+      this.mobileInput.p2.cycleQueued = false;
     }
 
     if (this.player2CyclePrev) {
@@ -371,6 +426,14 @@ export class PvpScene extends Phaser.Scene {
       const shieldType: ShieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
       this.tryDeployShield('p1', shieldType);
     }
+    if (this.mobileInput.p1.shieldQueued) {
+      this.tryDeployShield('p1', 'narrow');
+      this.mobileInput.p1.shieldQueued = false;
+    }
+    if (this.mobileInput.p1.wideShieldQueued) {
+      this.tryDeployShield('p1', 'wide');
+      this.mobileInput.p1.wideShieldQueued = false;
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
       this.tryDeployShield('p2', 'narrow');
@@ -378,11 +441,25 @@ export class PvpScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
       this.tryDeployShield('p2', 'wide');
     }
+    if (this.mobileInput.p2.shieldQueued) {
+      this.tryDeployShield('p2', 'narrow');
+      this.mobileInput.p2.shieldQueued = false;
+    }
+    if (this.mobileInput.p2.wideShieldQueued) {
+      this.tryDeployShield('p2', 'wide');
+      this.mobileInput.p2.wideShieldQueued = false;
+    }
 
     if (this.fKey.isDown) {
       this.tryFireBullet('p1');
     }
     if (this.enterKey.isDown) {
+      this.tryFireBullet('p2');
+    }
+    if (this.mobileInput.p1.attacking) {
+      this.tryFireBullet('p1');
+    }
+    if (this.mobileInput.p2.attacking) {
       this.tryFireBullet('p2');
     }
   }

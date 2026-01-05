@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import Phaser from 'phaser';
 import { createGameConfig } from '../game/config';
 import { MobileControls } from './MobileControls';
+import { MobilePvpControls } from './MobilePvpControls';
 import { MainScene } from '../game/scenes/MainScene';
 import { PvpScene } from '../game/scenes/PvpScene';
 
@@ -13,11 +14,13 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<MainScene | null>(null);
+  const pvpSceneRef = useRef<PvpScene | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [activeSceneKey, setActiveSceneKey] = useState('MainScene');
   const [isBattleActive, setIsBattleActive] = useState(false);
+  const [isTutorialActive, setIsTutorialActive] = useState(false);
 
   useEffect(() => {
     // Detect mobile/touch device
@@ -73,15 +76,22 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         const mainScene = scene as MainScene;
         mainScene.events.off('battle-state-changed', handleBattleStateChange);
         mainScene.events.on('battle-state-changed', handleBattleStateChange);
+        mainScene.events.off('tutorial-state-changed');
+        mainScene.events.on('tutorial-state-changed', setIsTutorialActive);
         setIsBattleActive(mainScene.isBattleActive());
+        setIsTutorialActive(mainScene.isTutorialActive());
         sceneRef.current = mainScene;
+        pvpSceneRef.current = null;
         mainScene.setMobileMode(isMobile);
       } else {
         if (sceneRef.current) {
           sceneRef.current.events.off('battle-state-changed', handleBattleStateChange);
+          sceneRef.current.events.off('tutorial-state-changed');
         }
         setIsBattleActive(false);
+        setIsTutorialActive(false);
         sceneRef.current = null;
+        pvpSceneRef.current = scene.scene.key === 'PvpScene' ? (scene as PvpScene) : null;
       }
     };
     const bindSceneStart = () => {
@@ -154,6 +164,30 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     }
   }, []);
 
+  const handlePvpMove = useCallback((player: 'p1' | 'p2', x: number, y: number) => {
+    if (pvpSceneRef.current) {
+      pvpSceneRef.current.setMobileMove(player, x, y);
+    }
+  }, []);
+
+  const handlePvpAttack = useCallback((player: 'p1' | 'p2', pressed: boolean) => {
+    if (pvpSceneRef.current) {
+      pvpSceneRef.current.setMobileAttack(player, pressed);
+    }
+  }, []);
+
+  const handlePvpShield = useCallback((player: 'p1' | 'p2', wide: boolean) => {
+    if (pvpSceneRef.current) {
+      pvpSceneRef.current.triggerMobileShield(player, wide);
+    }
+  }, []);
+
+  const handlePvpCycle = useCallback((player: 'p1' | 'p2') => {
+    if (pvpSceneRef.current) {
+      pvpSceneRef.current.triggerMobileCycleBullet(player);
+    }
+  }, []);
+
   return (
     <div
       className={className}
@@ -205,13 +239,20 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         </button>
       )}
       <MobileControls
-        visible={isMobile && activeSceneKey === 'MainScene' && isBattleActive}
+        visible={isMobile && activeSceneKey === 'MainScene' && (isBattleActive || isTutorialActive)}
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}
         onDelayToggle={handleDelayToggle}
         onShield={handleShield}
         onWideShield={handleWideShield}
+      />
+      <MobilePvpControls
+        visible={isMobile && activeSceneKey === 'PvpScene'}
+        onMove={handlePvpMove}
+        onAttack={handlePvpAttack}
+        onShield={handlePvpShield}
+        onCycleBullet={handlePvpCycle}
       />
     </div>
   );
