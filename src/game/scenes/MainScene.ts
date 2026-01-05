@@ -714,9 +714,9 @@ export class MainScene extends Phaser.Scene {
     const { isCompactLayout, layoutCenterY, actionButtonWidth, actionButtonHeight } =
       this.getInstructionLayout();
     const titleY = layoutCenterY - 180;
-    const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 120 : 140);
-    const instructionTextY = layoutCenterY - (this.isMobileMode ? 40 : 100);
-    const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 40 : 70) : 10);
+    const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 150 : 160);
+    const detailButtonY = tutorialButtonY + (this.isMobileMode ? 90 : 70);
+    const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 10 : 40) : -20);
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
       fontSize: this.isMobileMode ? '42px' : '28px',
@@ -774,47 +774,33 @@ export class MainScene extends Phaser.Scene {
     tutorialButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
     tutorialText.setInteractive({ useHandCursor: true }).on('pointerdown', handleTutorial);
     instructionElements.push(tutorialButton, tutorialText);
-    
-    // Only show keyboard instructions on desktop
-    if (!this.isMobileMode) {
-      const leftText = this.add.text(GAME_CONFIG.WIDTH / 2 - 210, instructionTextY, 'MOVE: WASD\nAIM: MOUSE\nHOLD LMB: FIRE\nCLICK LMB: FIRE', {
-        fontSize: '16px',
+
+    const detailButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      detailButtonY,
+      actionButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    detailButton.setStrokeStyle(2, 0x4ad6ff, 0.9);
+    const detailText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      detailButtonY,
+      'コマンド・トリガーの詳細',
+      {
+        fontSize: this.isMobileMode ? '24px' : '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: 'left',
-        lineSpacing: 6,
-      });
-
-      const rightText = this.add.text(
-        GAME_CONFIG.WIDTH / 2 + 30,
-        instructionTextY,
-        'E: CYCLE TRIGGER\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
-        {
-          fontSize: '16px',
-          color: '#ffffff',
-          fontFamily: 'monospace',
-          align: 'left',
-          lineSpacing: 6,
-        }
-      );
-      instructionElements.push(leftText, rightText);
-    } else {
-      // Mobile instructions: omit key-specific details
-      const mobileInstructions = this.add.text(
-        GAME_CONFIG.WIDTH / 2,
-        instructionTextY,
-        'トリオンを使って戦うゲーム。\n「弾を打つ」「シールドを張る」「攻撃を受ける」と\nトリオンが減る。\nトリオンが0になったら死ぬ。',
-        {
-          fontSize: '26px',
-          color: '#ffffff',
-          fontFamily: 'monospace',
-          align: 'center',
-          lineSpacing: 10,
-        }
-      );
-      mobileInstructions.setOrigin(0.5);
-      instructionElements.push(mobileInstructions);
-    }
+      }
+    );
+    detailText.setOrigin(0.5);
+    const handleDetail = () => {
+      this.showCommandDetailInstructions();
+    };
+    detailButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
+    detailText.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
+    instructionElements.push(detailButton, detailText);
 
     const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, 'SELECT DIFFICULTY', {
       fontSize: this.isMobileMode ? '30px' : '18px',
@@ -1055,6 +1041,93 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(startButton, startText);
 
     updateWeaponButtons();
+
+    this.setInstructionsContent(instructionElements, true);
+  }
+
+  private showCommandDetailInstructions() {
+    const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
+    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 210);
+    const contentY = titleY + (this.isMobileMode ? 60 : 50);
+
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, 'コマンド・トリガーの詳細', {
+      fontSize: this.isMobileMode ? '32px' : '22px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+    });
+    title.setOrigin(0.5);
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [title];
+
+    const backButtonX = this.isMobileMode ? 120 : 110;
+    const backButtonY = this.isMobileMode ? 70 : 60;
+    const backButtonWidth = this.isMobileMode ? 200 : 150;
+    const backButtonHeight = this.isMobileMode ? 60 : 44;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.showBossSetupInstructions();
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    instructionElements.push(backButton, backText);
+
+    const commandText = [
+      '━━ コマンド解説 ━━',
+      '・移動（WASD）：弾を避ける基本操作。',
+      '・エイム（マウス）：狙いたい方向へ照準。',
+      '・射撃（左クリック長押し/クリック）：弾を発射。',
+      '・弾種切替（E）：選んだ3種を順に切替。',
+      '・遅延弾（Q）：ASTEROIDを遅らせて置き撃ち。',
+      '・シールド（SPACE）：正面を守る高耐久シールド。',
+      '・前方位シールド（SHIFT+SPACE）：周囲を守るが耐久は低め。',
+      '',
+      '━━ 弾の種類と特徴 ━━',
+      `ASTEROID（コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE} / 対シールド${GAME_CONFIG.ASTEROID_SHIELD_DAMAGE}）`,
+      '  標準弾。低コストで数を出せる。遅延設置で進路を制限。',
+      `METEORA（コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE} / 対シールド${GAME_CONFIG.METEORA_SHIELD_DAMAGE}）`,
+      '  爆風で範囲攻撃。シールド崩しが得意で近距離戦に強い。',
+      `VIPER（コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE} / 対シールド${GAME_CONFIG.VIPER_SHIELD_DAMAGE}）`,
+      '  誘導弾で高威力。シールド削りは苦手なので隙を狙う。',
+      `RED BULLET（コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}）`,
+      `  命中で移動と弾速を減速。最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}回まで重ね掛け可能。`,
+      '',
+      '━━ シールドの耐久値 ━━',
+      `ナローシールド：耐久${GAME_CONFIG.SHIELD_NARROW_STRENGTH}。正面だけ守るが強い。`,
+      `ワイドシールド：耐久${GAME_CONFIG.SHIELD_WIDE_STRENGTH}。全周囲を守るが削れやすい。`,
+      '',
+      '━━ 初心者向け 戦略メモ ━━',
+      '・VIPERは最大火力で主力。固定シールドの背後を狙うと強い。',
+      '・METEORAはシールド破壊が得意。強い弾が来たら前方位シールドで防ぐ。',
+      '・RED BULLETは2回当てると大きく減速し、当てるほど行動を封じられる。',
+      '・固定シールドは向きが変わらない。横や背後から攻撃して崩そう。',
+      '',
+      `※数値は基準値。戦況に合わせて弾を使い分けよう。`,
+    ].join('\n');
+
+    const commandDetail = this.add.text(GAME_CONFIG.WIDTH / 2, contentY, commandText, {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      align: 'left',
+      lineSpacing: this.isMobileMode ? 10 : 6,
+      wordWrap: { width: this.isMobileMode ? 560 : 860 },
+    });
+    commandDetail.setOrigin(0.5, 0);
+    instructionElements.push(commandDetail);
 
     this.setInstructionsContent(instructionElements, true);
   }
