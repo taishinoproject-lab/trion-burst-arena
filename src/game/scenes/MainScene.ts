@@ -450,23 +450,6 @@ export class MainScene extends Phaser.Scene {
     corners.strokePath();
     instructionElements.push(corners);
 
-    // Animated scan line effect
-    const scanLine = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2,
-      0,
-      GAME_CONFIG.WIDTH - 100,
-      2,
-      GAME_CONFIG.BULLET_COLOR,
-      0.3
-    );
-    this.tweens.add({
-      targets: scanLine,
-      y: GAME_CONFIG.HEIGHT,
-      duration: 5000,
-      repeat: -1,
-      ease: 'Linear',
-    });
-    instructionElements.push(scanLine);
 
     // Glowing title with shadow effect
     const titleGlow = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ TRION BATTLE ◆', {
@@ -924,7 +907,7 @@ export class MainScene extends Phaser.Scene {
       ? this.add.text(
           GAME_CONFIG.WIDTH / 2,
           layoutCenterY + 140,
-          '難易度とトリガーを選んでから開始',
+          '難易度と3種のトリガーを選んでから開始',
           {
             fontSize: '16px',
             color: '#ffffff',
