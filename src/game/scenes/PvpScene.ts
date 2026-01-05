@@ -115,7 +115,7 @@ export class PvpScene extends Phaser.Scene {
   private fKey!: Phaser.Input.Keyboard.Key;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
-  private ctrlKey!: Phaser.Input.Keyboard.Key;
+  private slashKey!: Phaser.Input.Keyboard.Key;
 
   private cursorKeys!: Phaser.Types.Input.Keyboard.CursorKeys;
   private enterKey!: Phaser.Input.Keyboard.Key;
@@ -127,7 +127,6 @@ export class PvpScene extends Phaser.Scene {
   private player2LastFireTime = 0;
   private player2CyclePrev = false;
   private player2CycleNext = false;
-  private keyboardHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super({ key: 'PvpScene' });
@@ -190,32 +189,13 @@ export class PvpScene extends Phaser.Scene {
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.ctrlKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
+    this.slashKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SLASH);
 
     this.cursorKeys = this.input.keyboard!.createCursorKeys();
     this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     this.oKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.O);
     this.pKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-
-    this.keyboardHandler = (event: KeyboardEvent) => {
-      if (event.repeat) return;
-      const isSlash = event.code === 'Slash' || event.key === '/' || event.key === '?';
-      const isIntlRo = event.code === 'IntlRo' || event.key === 'ろ' || event.key === '\\';
-      if (isSlash) {
-        this.player2CyclePrev = true;
-      }
-      if (isIntlRo) {
-        this.player2CycleNext = true;
-      }
-    };
-    this.input.keyboard?.on('keydown', this.keyboardHandler);
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      if (this.keyboardHandler) {
-        this.input.keyboard?.off('keydown', this.keyboardHandler);
-      }
-    });
   }
 
   private createUI() {
@@ -341,7 +321,7 @@ export class PvpScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
       this.tryDeployShield('p2', 'narrow');
     }
-    if (Phaser.Input.Keyboard.JustDown(this.ctrlKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.slashKey)) {
       this.tryDeployShield('p2', 'wide');
     }
 
