@@ -4,6 +4,7 @@ interface MobileControlsProps {
   onMove: (x: number, y: number) => void;
   onAttack: (pressed: boolean) => void;
   onCycleBullet: () => void;
+  onDelayToggle: () => void;
   onShield: () => void;
   onWideShield: () => void;
   visible: boolean;
@@ -13,6 +14,7 @@ export const MobileControls = ({
   onMove,
   onAttack,
   onCycleBullet,
+  onDelayToggle,
   onShield,
   onWideShield,
   visible,
@@ -217,6 +219,24 @@ export const MobileControls = ({
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <span>SHIELD</span>
+          </button>
+
+          {/* Delay Toggle */}
+          <button
+            onTouchStart={(e) => { e.preventDefault(); onDelayToggle(); }}
+            className="col-span-2 h-10 rounded-lg font-mono text-[9px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center gap-2 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.08) 0%, rgba(10, 10, 18, 0.95) 100%)',
+              border: '2px solid rgba(0, 255, 213, 0.35)',
+              boxShadow: '0 0 10px rgba(0, 255, 213, 0.12)',
+              color: '#00ffd5',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 3" />
+            </svg>
+            <span>DELAY</span>
           </button>
 
           {/* Wide Shield */}

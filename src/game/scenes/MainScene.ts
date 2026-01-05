@@ -333,20 +333,19 @@ export class MainScene extends Phaser.Scene {
     this.gameOverText.setVisible(false);
 
     // Tutorial text positioned away from the center for better visibility
-    this.tutorialHelpText = this.add.text(
-      GAME_CONFIG.WIDTH - (this.isMobileMode ? 20 : 32),
-      this.isMobileMode ? 20 : 24,
-      '',
-      {
-        fontSize: this.isMobileMode ? '16px' : '15px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        align: 'right',
-        lineSpacing: this.isMobileMode ? 4 : 6,
-        backgroundColor: '#0a0a12',
-        padding: { x: 16, y: 12 },
-      }
-    );
+    const tutorialTextX = GAME_CONFIG.WIDTH - (this.isMobileMode ? 16 : 32);
+    const tutorialTextY = this.isMobileMode ? 20 : 24;
+    const tutorialWrapWidth = this.isMobileMode ? Math.round(GAME_CONFIG.WIDTH * 0.46) : undefined;
+    this.tutorialHelpText = this.add.text(tutorialTextX, tutorialTextY, '', {
+      fontSize: this.isMobileMode ? '20px' : '15px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      align: 'right',
+      lineSpacing: this.isMobileMode ? 8 : 6,
+      backgroundColor: '#0a0a12',
+      padding: this.isMobileMode ? { x: 20, y: 16 } : { x: 16, y: 12 },
+      wordWrap: tutorialWrapWidth ? { width: tutorialWrapWidth, useAdvancedWrap: true } : undefined,
+    });
     this.tutorialHelpText.setOrigin(1, 0);
     this.tutorialHelpText.setVisible(false);
     this.tutorialHelpText.setDepth(90);
@@ -1327,6 +1326,7 @@ export class MainScene extends Phaser.Scene {
     this.gameOverText.setVisible(false);
     this.destroyInstructionsOverlay();
     this.boss.deactivateShield();
+    this.applyMobileTutorialLayout();
     this.showTutorialOverlay();
     this.tutorialTapReady = false;
     this.time.delayedCall(200, () => {
@@ -1701,6 +1701,7 @@ focusTarget: 'player',
         title: 'Step7 ASTEROID 遅延弾',
         description: [
           'Qで遅延弾（3秒遅れて発射される）モードに切替',
+          '（スマホはDELAYボタン）',
           'アステロイドのみ遅延弾が使用可能',
           'DELAY: ON を確認',
           '遅延ASTEROIDで1発当てよう',
@@ -2079,14 +2080,7 @@ focusTarget: 'player',
   private handleInput() {
     // Toggle asteroid delay mode
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
-      this.gameState.delayedAsteroidEnabled = !this.gameState.delayedAsteroidEnabled;
-      if (this.isTutorialMode) {
-        const step = this.tutorialSteps[this.tutorialStepIndex];
-        if (step?.requiresDelayToggle && this.gameState.delayedAsteroidEnabled) {
-          this.tutorialProgress.delayedAsteroidToggled = true;
-          this.updateTutorialHelpText();
-        }
-      }
+      this.toggleDelayedAsteroidMode();
     }
     
     // Switch bullet type (cycle through selected types)
@@ -2247,6 +2241,26 @@ focusTarget: 'player',
         this.updateTutorialHelpText();
       }
     }
+  }
+
+  private toggleDelayedAsteroidMode() {
+    this.gameState.delayedAsteroidEnabled = !this.gameState.delayedAsteroidEnabled;
+    if (this.isTutorialMode) {
+      const step = this.tutorialSteps[this.tutorialStepIndex];
+      if (step?.requiresDelayToggle && this.gameState.delayedAsteroidEnabled) {
+        this.tutorialProgress.delayedAsteroidToggled = true;
+        this.updateTutorialHelpText();
+      }
+    }
+  }
+
+  private applyMobileTutorialLayout() {
+    if (!this.isMobileMode) return;
+    const tutorialX = GAME_CONFIG.WIDTH * 0.34;
+    this.player.x = tutorialX;
+    this.player.sprite.setPosition(this.player.x, this.player.y);
+    this.boss.x = tutorialX;
+    this.boss.sprite.setPosition(this.boss.x, this.boss.y);
   }
 
   private scheduleDelayedRelease(
@@ -3067,6 +3081,9 @@ focusTarget: 'player',
   public setMobileMove(x: number, y: number) {
     this.mobileInput.moveX = x;
     this.mobileInput.moveY = y;
+    if (x !== 0 || y !== 0) {
+      this.registerTutorialTap();
+    }
     // Update aim direction based on movement for mobile
     if (x !== 0 || y !== 0) {
       this.mobileInput.aimX = this.player.x + x * 200;
@@ -3076,10 +3093,14 @@ focusTarget: 'player',
 
   public setMobileAttack(attacking: boolean) {
     this.mobileInput.attacking = attacking;
+    if (attacking) {
+      this.registerTutorialTap();
+    }
   }
 
   public triggerCycleBullet() {
     if (this.gameState.isGameOver || !this.gameStarted) return;
+    this.registerTutorialTap();
     const types = this.availableBulletTypes;
     const currentIndex = types.indexOf(this.gameState.currentBulletType);
     if (types.length > 0) {
@@ -3088,8 +3109,15 @@ focusTarget: 'player',
     }
   }
 
+  public triggerDelayToggle() {
+    if (this.gameState.isGameOver || !this.gameStarted) return;
+    this.registerTutorialTap();
+    this.toggleDelayedAsteroidMode();
+  }
+
   public triggerShield(wide: boolean = false) {
     if (this.gameState.isGameOver || !this.gameStarted) return;
+    this.registerTutorialTap();
     if (wide) {
       // Temporarily set shift key state for wide shield
       const originalShift = this.shiftKey?.isDown;
