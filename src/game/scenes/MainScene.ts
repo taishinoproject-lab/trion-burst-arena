@@ -1317,29 +1317,30 @@ export class MainScene extends Phaser.Scene {
           'シールドもトリオン消費',
         ],
         requiredShieldType: 'narrow',
+        
         requiresShieldBreak: true,
-        isCompleted: () => this.tutorialProgress.shieldBroken,
-        focusTarget: 'player',
-      },
-      {
-        title: 'Step5 前方位シールド',
-        description: [
-          'SHIFT + SPACE で前方位シールド',
-          '（スマホは前方位シールドボタン）',
-          '前方位シールドで弾を受けよう',
-          '弾を受けて消えたら次へ',
-        ],
-        requiredShieldType: 'wide',
-        requiresShieldBreak: true,
-        isCompleted: () => this.tutorialProgress.wideShieldBroken,
-        focusTarget: 'player',
-      },
-      {
-        title: 'Step6 弾切替',
-        description: [
-          'キーボードの E で弾種を切替',
-          '（スマホは弾切替ボタン）',
-          'Eで切り替えてみよう',
+isCompleted: () => this.tutorialProgress.shieldBroken,
+focusTarget: 'player',
+},
+{
+  title: 'Step5 前方位シールド',
+  description: [
+    'SHIFT + SPACE で前方位シールド',
+    '（スマホは前方位シールドボタン）',
+    '前方位シールドで弾を受けよう',
+    '弾を受けて消えたら次へ',
+  ],
+  requiredShieldType: 'wide',
+  requiresShieldBreak: true,
+  isCompleted: () => this.tutorialProgress.wideShieldBroken,
+  focusTarget: 'player',
+},
+{
+  title: 'Step6 弾切替',
+  description: [
+    'キーボードの E で弾種を切替',
+    '（スマホは弾切替ボタン）',
+    'Eで切り替えてみよう',
         ],
         isCompleted: () => this.tutorialProgress.switched,
         focusTarget: 'triggerDisplay',
@@ -1648,7 +1649,9 @@ export class MainScene extends Phaser.Scene {
     this.gameState = {
       playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
       bossTrion: this.getBossMaxTrion(),
+
       currentBulletType: this.availableBulletTypes[0] ?? 'asteroid',
+
       delayedAsteroidEnabled: false,
       isGameOver: false,
       playerWon: false,
