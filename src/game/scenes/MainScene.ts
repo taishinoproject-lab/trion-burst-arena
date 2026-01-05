@@ -113,6 +113,7 @@ export class MainScene extends Phaser.Scene {
   private enemyTexts: Phaser.GameObjects.Text[] = [];
   private enemyLabels: Phaser.GameObjects.Text[] = [];
   private instructionScrollCleanup?: () => void;
+  private instructionsBackground?: Phaser.GameObjects.Rectangle;
   private tutorialSteps: TutorialStep[] = [];
   private tutorialStepIndex = 0;
   private tutorialProgress = {
@@ -340,7 +341,13 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    
+    this.instructionsBackground = bg;
+    this.instructionsOverlay = this.add.container(0, 0, [bg]);
+    this.instructionsOverlay.setDepth(100);
+    this.showModeSelectInstructions();
+  }
+
+  private getInstructionLayout() {
     const isCompactLayout = this.isMobileMode && this.scale.displaySize.height < 600;
     const isLandscapeMobile =
       this.isMobileMode && this.scale.displaySize.width > this.scale.displaySize.height;
@@ -348,12 +355,142 @@ export class MainScene extends Phaser.Scene {
       ? (isCompactLayout ? -180 : -100) + (isLandscapeMobile ? -80 : 0)
       : 0;
     const layoutCenterY = GAME_CONFIG.HEIGHT / 2 + layoutOffsetY;
+    const actionButtonWidth = this.isMobileMode ? 320 : 180;
+    const actionButtonHeight = this.isMobileMode ? (isCompactLayout ? 64 : 80) : 50;
+
+    return {
+      isCompactLayout,
+      isLandscapeMobile,
+      layoutCenterY,
+      actionButtonWidth,
+      actionButtonHeight,
+    };
+  }
+
+  private setInstructionsContent(
+    elements: Phaser.GameObjects.GameObject[],
+    enableScroll = false
+  ) {
+    this.instructionScrollCleanup?.();
+    if (this.instructionsContent) {
+      this.instructionsOverlay.remove(this.instructionsContent, true);
+      this.instructionsContent.destroy(true);
+    }
+    this.instructionsContent = this.add.container(0, 0, elements);
+    this.instructionsOverlay.add(this.instructionsContent);
+
+    if (this.isMobileMode && enableScroll && this.instructionsBackground) {
+      this.enableInstructionScroll(this.instructionsBackground, this.instructionsContent);
+    }
+  }
+
+  private showModeSelectInstructions() {
+    const { layoutCenterY, actionButtonHeight } = this.getInstructionLayout();
+    const titleY = layoutCenterY - 220;
+    const overviewTextY = layoutCenterY - (this.isMobileMode ? 120 : 150);
+    const modeLabelY = layoutCenterY + (this.isMobileMode ? 40 : 10);
+    const buttonY = layoutCenterY + (this.isMobileMode ? 140 : 90);
+    const buttonSpacing = this.isMobileMode ? 24 : 20;
+    const buttonWidth = this.isMobileMode ? 320 : 180;
+    const totalButtonWidth = buttonWidth * 2 + buttonSpacing;
+    const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
+    const secondButtonX = firstButtonX + buttonWidth + buttonSpacing;
+
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
+      fontSize: this.isMobileMode ? '42px' : '28px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+    });
+    title.setOrigin(0.5);
+
+    const overviewText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      overviewTextY,
+      'トリオンバトルの概要\n' +
+        'トリオンは体力とエネルギー。攻撃・防御・被弾で減少し、0で敗北。\n' +
+        'トリガーは装備する武器。3つ選んで切り替えながら戦う。\n' +
+        'モードを選んでスタート。',
+      {
+        fontSize: this.isMobileMode ? '22px' : '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: this.isMobileMode ? 12 : 8,
+      }
+    );
+    overviewText.setOrigin(0.5);
+
+    const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, 'MODE SELECT', {
+      fontSize: this.isMobileMode ? '30px' : '18px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+    });
+    modeLabel.setOrigin(0.5);
+
+    const bossButton = this.add.rectangle(
+      firstButtonX,
+      buttonY,
+      buttonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    bossButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const bossText = this.add.text(firstButtonX, buttonY, 'BOSS MODE', {
+      fontSize: this.isMobileMode ? '26px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    bossText.setOrigin(0.5);
+
+    const twoPlayerButton = this.add.rectangle(
+      secondButtonX,
+      buttonY,
+      buttonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    twoPlayerButton.setStrokeStyle(3, 0xffd166, 0.9);
+    const twoPlayerText = this.add.text(secondButtonX, buttonY, '2P MODE', {
+      fontSize: this.isMobileMode ? '26px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    twoPlayerText.setOrigin(0.5);
+
+    const handleBossMode = () => {
+      this.showBossSetupInstructions();
+    };
+    bossButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBossMode);
+    bossText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBossMode);
+
+    const handleTwoPlayerMode = () => {
+      this.showTwoPlayerInstructions();
+    };
+    twoPlayerButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleTwoPlayerMode);
+    twoPlayerText.setInteractive({ useHandCursor: true }).on('pointerdown', handleTwoPlayerMode);
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [
+      title,
+      overviewText,
+      modeLabel,
+      bossButton,
+      bossText,
+      twoPlayerButton,
+      twoPlayerText,
+    ];
+
+    this.setInstructionsContent(instructionElements, true);
+  }
+
+  private showBossSetupInstructions() {
+    const { isCompactLayout, layoutCenterY, actionButtonWidth, actionButtonHeight } =
+      this.getInstructionLayout();
     const titleY = layoutCenterY - 180;
     const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 120 : 140);
     const instructionTextY = layoutCenterY - (this.isMobileMode ? 40 : 100);
     const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 40 : 70) : 10);
-    const actionButtonWidth = this.isMobileMode ? 320 : 180;
-    const actionButtonHeight = this.isMobileMode ? (isCompactLayout ? 64 : 80) : 50;
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
       fontSize: this.isMobileMode ? '42px' : '28px',
@@ -363,6 +500,32 @@ export class MainScene extends Phaser.Scene {
     title.setOrigin(0.5);
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [title];
+
+    const backButtonX = this.isMobileMode ? 120 : 110;
+    const backButtonY = this.isMobileMode ? 70 : 60;
+    const backButtonWidth = this.isMobileMode ? 200 : 150;
+    const backButtonHeight = this.isMobileMode ? 60 : 44;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.showModeSelectInstructions();
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    instructionElements.push(backButton, backText);
 
     const tutorialButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
@@ -666,14 +829,129 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(startButton, startText);
 
     updateWeaponButtons();
-    
-    this.instructionsContent = this.add.container(0, 0, instructionElements);
-    this.instructionsOverlay = this.add.container(0, 0, [bg, this.instructionsContent]);
-    this.instructionsOverlay.setDepth(100);
 
-    if (this.isMobileMode) {
-      this.enableInstructionScroll(bg, this.instructionsContent);
-    }
+    this.setInstructionsContent(instructionElements, true);
+  }
+
+  private showTwoPlayerInstructions() {
+    const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
+    const titleY = layoutCenterY - 180;
+    const instructionTopY = layoutCenterY - (this.isMobileMode ? 90 : 110);
+    const instructionGapY = this.isMobileMode ? 170 : 0;
+    const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 - 220;
+    const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 + 220;
+    const startButtonY = layoutCenterY + (this.isMobileMode ? 200 : 180);
+
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '2P MODE', {
+      fontSize: this.isMobileMode ? '42px' : '28px',
+      color: '#ffd166',
+      fontFamily: 'monospace',
+    });
+    title.setOrigin(0.5);
+
+    const description = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      layoutCenterY - (this.isMobileMode ? 140 : 140),
+      '2人で役割分担してボスに挑むモード。\nP1は移動担当 / P2は攻撃・防御担当',
+      {
+        fontSize: this.isMobileMode ? '22px' : '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: this.isMobileMode ? 10 : 6,
+      }
+    );
+    description.setOrigin(0.5);
+
+    const playerOneText = this.add.text(
+      leftX,
+      instructionTopY,
+      'PLAYER 1\nMOVE: WASD',
+      {
+        fontSize: this.isMobileMode ? '22px' : '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: this.isMobileMode ? 'center' : 'left',
+        lineSpacing: 6,
+      }
+    );
+    playerOneText.setOrigin(this.isMobileMode ? 0.5 : 0, 0);
+
+    const playerTwoText = this.add.text(
+      rightX,
+      instructionTopY + instructionGapY,
+      'PLAYER 2\nAIM: MOUSE\nLMB: FIRE\nE: CYCLE TRIGGER\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+      {
+        fontSize: this.isMobileMode ? '22px' : '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: this.isMobileMode ? 'center' : 'left',
+        lineSpacing: 6,
+      }
+    );
+    playerTwoText.setOrigin(this.isMobileMode ? 0.5 : 0, 0);
+
+    const backButtonX = this.isMobileMode ? 120 : 110;
+    const backButtonY = this.isMobileMode ? 70 : 60;
+    const backButtonWidth = this.isMobileMode ? 200 : 150;
+    const backButtonHeight = this.isMobileMode ? 60 : 44;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.showModeSelectInstructions();
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+
+    const startButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      startButtonY,
+      actionButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'START', {
+      fontSize: this.isMobileMode ? '26px' : '20px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    startText.setOrigin(0.5);
+
+    const handleStart = () => {
+      this.difficulty = 'easy';
+      this.selectedBulletTypes = ['asteroid', 'meteora', 'viper'];
+      this.startBattle();
+    };
+    startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
+    startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [
+      title,
+      description,
+      playerOneText,
+      playerTwoText,
+      backButton,
+      backText,
+      startButton,
+      startText,
+    ];
+
+    this.setInstructionsContent(instructionElements, true);
   }
 
   private startBattle() {
