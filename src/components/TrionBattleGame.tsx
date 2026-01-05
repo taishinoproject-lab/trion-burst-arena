@@ -136,6 +136,12 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     }
   }, []);
 
+  const handleDelayToggle = useCallback(() => {
+    if (sceneRef.current) {
+      sceneRef.current.triggerDelayToggle();
+    }
+  }, []);
+
   const handleShield = useCallback(() => {
     if (sceneRef.current) {
       sceneRef.current.triggerShield(false);
@@ -203,6 +209,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}
+        onDelayToggle={handleDelayToggle}
         onShield={handleShield}
         onWideShield={handleWideShield}
       />
