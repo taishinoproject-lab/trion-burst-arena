@@ -2248,16 +2248,28 @@ export class MainScene extends Phaser.Scene {
       this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
     }
     
-    const bossRatio = Math.max(0, this.gameState.bossTrion / this.getBossMaxTrion());
+    let primaryTrion = this.gameState.bossTrion;
+    let primaryMaxTrion = this.getBossMaxTrion();
+    let primaryColor = GAME_CONFIG.BOSS_COLOR;
+    let primaryExtraIndex = -1;
+    if (this.gameState.bossTrion <= 0 && !this.isTutorialMode && this.extraEnemies.length > 0) {
+      primaryExtraIndex = 0;
+      const primaryExtra = this.extraEnemies[primaryExtraIndex];
+      primaryTrion = primaryExtra.trion;
+      primaryMaxTrion = primaryExtra.maxTrion;
+      primaryColor = primaryExtraIndex === 0 ? 0xffa94d : 0xff6bf0;
+    }
+
+    const bossRatio = Math.max(0, primaryTrion / primaryMaxTrion);
     if (this.isRenderableObject(this.bossTrionBar)) {
-      this.bossTrionBar.fillStyle(GAME_CONFIG.BOSS_COLOR, 1);
+      this.bossTrionBar.fillStyle(primaryColor, 1);
       this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth * bossRatio, barHeight);
       
-      this.bossTrionBar.lineStyle(2, 0xff6b6b, 0.5);
+      this.bossTrionBar.lineStyle(2, primaryColor, 0.6);
       this.bossTrionBar.strokeRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
     }
     
-    this.safeSetText(this.bossTrionText, `${Math.floor(this.gameState.bossTrion)}`);
+    this.safeSetText(this.bossTrionText, `${Math.floor(primaryTrion)}`);
     
     // Bullet type display
     const bulletName = this.gameState.currentBulletType.toUpperCase();
@@ -2274,7 +2286,9 @@ export class MainScene extends Phaser.Scene {
     const enemyStartY = uiY + 44;
     const enemySpacing = 26;
 
-    const activeEnemies = this.extraEnemies.filter(enemy => enemy.trion > 0);
+    const secondaryEnemies = primaryExtraIndex === -1 ? this.extraEnemies : this.extraEnemies.slice(1);
+    const activeEnemies = secondaryEnemies.filter(enemy => enemy.trion > 0);
+    const labelOffset = primaryExtraIndex === -1 ? 1 : primaryExtraIndex + 2;
     this.enemyBars.forEach((bar, index) => {
       const enemy = activeEnemies[index];
       const label = this.enemyLabels[index];
@@ -2293,16 +2307,19 @@ export class MainScene extends Phaser.Scene {
       const barX = GAME_CONFIG.WIDTH - 20 - enemyBarWidth;
       const barY = enemyStartY + index * enemySpacing;
       const ratio = Math.max(0, enemy.trion / enemy.maxTrion);
+      const enemyIndex = this.extraEnemies.indexOf(enemy);
+      const barColor = enemyIndex === 0 ? 0xffa94d : 0xff6bf0;
       bar.clear();
       bar.fillStyle(0x1a1a2e, 1);
       bar.fillRect(barX, barY, enemyBarWidth, enemyBarHeight);
-      bar.fillStyle(enemy.boss === this.extraEnemies[0]?.boss ? 0xffa94d : 0xff6bf0, 1);
+      bar.fillStyle(barColor, 1);
       bar.fillRect(barX, barY, enemyBarWidth * ratio, enemyBarHeight);
       bar.lineStyle(1, 0xffffff, 0.4);
       bar.strokeRect(barX, barY, enemyBarWidth, enemyBarHeight);
       bar.setVisible(true);
 
       label.setPosition(barX, barY - 10);
+      label.setText(`ENEMY ${index + labelOffset}`);
       label.setVisible(true);
 
       text.setText(`${Math.floor(enemy.trion)}`);
