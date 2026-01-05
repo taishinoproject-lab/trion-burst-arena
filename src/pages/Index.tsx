@@ -15,10 +15,6 @@ const Index = () => {
       <main className="flex justify-center w-full">
         <TrionBattleGame />
       </main>
-      
-      <footer className="mt-4 text-xs text-muted-foreground text-center hidden md:block">
-        <p>WASD: Move | Mouse: Aim | Left Click: Fire | E: Cycle Weapon | Q: Delay Asteroid | Space: Shield | R: Restart</p>
-      </footer>
     </div>
   );
 };

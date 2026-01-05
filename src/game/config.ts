@@ -2,7 +2,11 @@ import Phaser from 'phaser';
 import { MainScene } from './scenes/MainScene';
 import { GAME_CONFIG } from './constants';
 
-export const createGameConfig = (parent: string, isMobile: boolean = false): Phaser.Types.Core.GameConfig => ({
+export const createGameConfig = (
+  parent: string,
+  isMobile: boolean = false,
+  scenes: Phaser.Types.Scenes.SceneType[] = [MainScene]
+): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
   width: GAME_CONFIG.WIDTH,
   height: GAME_CONFIG.HEIGHT,
@@ -14,7 +18,7 @@ export const createGameConfig = (parent: string, isMobile: boolean = false): Pha
       debug: false,
     },
   },
-  scene: [MainScene],
+  scene: scenes,
   input: {
     mouse: {
       target: undefined,

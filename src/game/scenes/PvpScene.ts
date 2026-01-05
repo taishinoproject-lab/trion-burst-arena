@@ -1,0 +1,712 @@
+import Phaser from 'phaser';
+import { AVAILABLE_BULLET_TYPES, BulletType, GAME_CONFIG } from '../constants';
+import { Bullet } from '../entities/Bullet';
+import { Shield, ShieldType } from '../entities/Shield';
+
+class PvpFighter {
+  private scene: Phaser.Scene;
+  public sprite: Phaser.GameObjects.Container;
+  private body: Phaser.GameObjects.Arc;
+  private aimIndicator: Phaser.GameObjects.Line;
+  public x: number;
+  public y: number;
+  public angle: number = 0;
+  private slowUntil = 0;
+  private slowStacks = 0;
+  private slowStackMultiplier = 1;
+  private freezeUntil = 0;
+
+  constructor(scene: Phaser.Scene, x: number, y: number, color: number) {
+    this.scene = scene;
+    this.x = x;
+    this.y = y;
+
+    this.body = scene.add.circle(0, 0, GAME_CONFIG.PLAYER_RADIUS, color);
+    this.body.setStrokeStyle(2, 0xffffff, 0.5);
+
+    this.aimIndicator = scene.add.line(0, 0, 0, 0, 40, 0, GAME_CONFIG.BULLET_COLOR, 0.6);
+    this.aimIndicator.setLineWidth(2);
+
+    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator]);
+  }
+
+  updateMovement(delta: number, moveX: number, moveY: number) {
+    const now = this.scene.time.now;
+    if (now >= this.slowUntil && this.slowStacks > 0) {
+      this.slowStacks = 0;
+    }
+    if (now < this.freezeUntil) {
+      this.sprite.setPosition(this.x, this.y);
+      return;
+    }
+    const speedMultiplier = this.getSpeedMultiplier(now);
+    const speed = GAME_CONFIG.PLAYER_SPEED * speedMultiplier * (delta / 1000);
+
+    this.x += moveX * speed;
+    this.y += moveY * speed;
+
+    const padding = GAME_CONFIG.PLAYER_RADIUS;
+    this.x = Phaser.Math.Clamp(this.x, padding, GAME_CONFIG.WIDTH - padding);
+    this.y = Phaser.Math.Clamp(this.y, padding + 80, GAME_CONFIG.HEIGHT - padding - 60);
+
+    this.sprite.setPosition(this.x, this.y);
+  }
+
+  updateAim(targetX: number, targetY: number) {
+    this.angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+    this.aimIndicator.setTo(0, 0, Math.cos(this.angle) * 40, Math.sin(this.angle) * 40);
+  }
+
+  applySlow(durationMs: number, multiplier: number) {
+    const now = this.scene.time.now;
+    if (multiplier >= 1) {
+      this.slowStacks = 0;
+      this.slowUntil = 0;
+      this.slowStackMultiplier = 1;
+      return;
+    }
+    const isActive = now < this.slowUntil;
+    this.slowStacks = isActive ? Math.min(this.slowStacks + 1, GAME_CONFIG.RED_BULLET_MAX_STACKS) : 1;
+    this.slowUntil = now + durationMs;
+    this.slowStackMultiplier = multiplier;
+  }
+
+  applyRedBulletHit(slowDurationMs: number, slowMultiplier: number, freezeDurationMs: number) {
+    const now = this.scene.time.now;
+    const slowActive = now < this.slowUntil && this.slowStacks > 0;
+    if (slowActive) {
+      this.freezeUntil = Math.max(this.freezeUntil, now + freezeDurationMs);
+      return;
+    }
+
+    this.slowStacks = 1;
+    this.slowUntil = now + slowDurationMs;
+    this.slowStackMultiplier = slowMultiplier;
+  }
+
+  getBulletSpeedMultiplier(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    if (stacks === 0) return 1;
+    return Math.pow(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER, stacks);
+  }
+
+  private getSlowStacks(currentTime: number) {
+    return currentTime < this.slowUntil ? this.slowStacks : 0;
+  }
+
+  private getSpeedMultiplier(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    if (stacks === 0) return 1;
+    return Math.pow(this.slowStackMultiplier, stacks);
+  }
+
+  destroy() {
+    this.sprite.destroy();
+  }
+}
+
+export class PvpScene extends Phaser.Scene {
+  private player1!: PvpFighter;
+  private player2!: PvpFighter;
+  private player1Bullets: Bullet[] = [];
+  private player2Bullets: Bullet[] = [];
+  private player1Shield: Shield | null = null;
+  private player2Shield: Shield | null = null;
+  private player1Trion = GAME_CONFIG.PLAYER_TRION_MAX;
+  private player2Trion = GAME_CONFIG.PLAYER_TRION_MAX;
+  private player1BulletIndex = 0;
+  private player2BulletIndex = 0;
+  private gameOver = false;
+  private winnerText!: Phaser.GameObjects.Text;
+  private player1TrionBar!: Phaser.GameObjects.Graphics;
+  private player2TrionBar!: Phaser.GameObjects.Graphics;
+  private player1BulletText!: Phaser.GameObjects.Text;
+  private player2BulletText!: Phaser.GameObjects.Text;
+  private instructionText!: Phaser.GameObjects.Text;
+
+  private wKey!: Phaser.Input.Keyboard.Key;
+  private aKey!: Phaser.Input.Keyboard.Key;
+  private sKey!: Phaser.Input.Keyboard.Key;
+  private dKey!: Phaser.Input.Keyboard.Key;
+  private qKey!: Phaser.Input.Keyboard.Key;
+  private eKey!: Phaser.Input.Keyboard.Key;
+  private fKey!: Phaser.Input.Keyboard.Key;
+  private spaceKey!: Phaser.Input.Keyboard.Key;
+  private shiftKey!: Phaser.Input.Keyboard.Key;
+  private lKey!: Phaser.Input.Keyboard.Key;
+
+  private cursorKeys!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private enterKey!: Phaser.Input.Keyboard.Key;
+  private oKey!: Phaser.Input.Keyboard.Key;
+  private pKey!: Phaser.Input.Keyboard.Key;
+  private rKey!: Phaser.Input.Keyboard.Key;
+
+  private player1LastFireTime = 0;
+  private player2LastFireTime = 0;
+  private player2CyclePrev = false;
+  private player2CycleNext = false;
+  private static readonly TWO_PLAYER_RED_SLOW_DURATION = 10000;
+  private static readonly TWO_PLAYER_RED_FREEZE_DURATION = 4000;
+  private static readonly TWO_PLAYER_VIPER_GUIDANCE_DURATION = 1000;
+
+  constructor() {
+    super({ key: 'PvpScene' });
+  }
+
+  create() {
+    this.cameras.main.setBackgroundColor(GAME_CONFIG.BACKGROUND_COLOR);
+    this.createBackgroundGrid();
+
+    this.player1 = new PvpFighter(this, GAME_CONFIG.WIDTH * 0.3, GAME_CONFIG.HEIGHT * 0.7, GAME_CONFIG.PLAYER_COLOR);
+    this.player2 = new PvpFighter(this, GAME_CONFIG.WIDTH * 0.7, GAME_CONFIG.HEIGHT * 0.3, GAME_CONFIG.BOSS_COLOR);
+
+    this.player1Trion = GAME_CONFIG.PLAYER_TRION_MAX;
+    this.player2Trion = GAME_CONFIG.PLAYER_TRION_MAX;
+    this.player1BulletIndex = 0;
+    this.player2BulletIndex = 0;
+    this.player1Bullets = [];
+    this.player2Bullets = [];
+    this.player1Shield = null;
+    this.player2Shield = null;
+    this.gameOver = false;
+    this.player1LastFireTime = 0;
+    this.player2LastFireTime = 0;
+
+    this.setupInput();
+    this.createUI();
+  }
+
+  update(_time: number, delta: number) {
+    if (this.gameOver) {
+      if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
+        this.scene.restart();
+      }
+      return;
+    }
+
+    const player1Move = this.getPlayer1Movement();
+    const player2Move = this.getPlayer2Movement();
+    this.player1.updateMovement(delta, player1Move.x, player1Move.y);
+    this.player2.updateMovement(delta, player2Move.x, player2Move.y);
+
+    this.player1.updateAim(this.player2.x, this.player2.y);
+    this.player2.updateAim(this.player1.x, this.player1.y);
+
+    this.updateShields();
+    this.handleInput();
+    this.updateBullets(delta);
+    this.checkCollisions();
+    this.regenerateTrion(delta);
+    this.updateUI();
+  }
+
+  private setupInput() {
+    this.wKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    this.aKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    this.sKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    this.dKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    this.qKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.lKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+
+    this.cursorKeys = this.input.keyboard!.createCursorKeys();
+    this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    this.oKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.O);
+    this.pKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+    this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+  }
+
+  private createUI() {
+    const barWidth = 220;
+    const barHeight = 16;
+    const barY = 24;
+    const barMarginX = 24;
+    const backButtonX = GAME_CONFIG.WIDTH / 2;
+    const backButtonY = 32;
+    const backButtonWidth = 120;
+    const backButtonHeight = 36;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#ffffff',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.scene.start('MainScene', { instructionStartMode: 'twoPlayer' });
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+
+    this.add.text(barMarginX, barY - 18, 'P1 TRION', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#00ffd5',
+    });
+    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - 18, 'P2 TRION', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#ff6b6b',
+    });
+
+    this.player1TrionBar = this.add.graphics();
+    this.player2TrionBar = this.add.graphics();
+
+    this.player1BulletText = this.add.text(24, 48, '', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#b6fff0',
+    });
+    this.player2BulletText = this.add.text(GAME_CONFIG.WIDTH - 24, 48, '', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#ffd0d0',
+    }).setOrigin(1, 0);
+
+    this.winnerText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2, '', {
+      fontFamily: 'Arial',
+      fontSize: '48px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    this.instructionText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 32, 'R: Restart', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#6b7280',
+    }).setOrigin(0.5);
+
+    this.updateUI();
+  }
+
+  private updateUI() {
+    const barWidth = 220;
+    const barHeight = 16;
+    const barY = 24;
+    const barMarginX = 24;
+    const player1Ratio = Math.max(0, this.player1Trion / GAME_CONFIG.PLAYER_TRION_MAX);
+    const player2Ratio = Math.max(0, this.player2Trion / GAME_CONFIG.PLAYER_TRION_MAX);
+    this.player1TrionBar.clear();
+    this.player1TrionBar.fillStyle(0x222233, 0.9);
+    this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
+    this.player1TrionBar.fillStyle(0x00ffd5, 0.9);
+    this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth * player1Ratio, barHeight, 6);
+    this.player1TrionBar.lineStyle(2, 0x00ffd5, 0.6);
+    this.player1TrionBar.strokeRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
+
+    this.player2TrionBar.clear();
+    this.player2TrionBar.fillStyle(0x222233, 0.9);
+    this.player2TrionBar.fillRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
+    this.player2TrionBar.fillStyle(0xff6b6b, 0.9);
+    this.player2TrionBar.fillRoundedRect(
+      GAME_CONFIG.WIDTH - barMarginX - barWidth,
+      barY,
+      barWidth * player2Ratio,
+      barHeight,
+      6
+    );
+    this.player2TrionBar.lineStyle(2, 0xff6b6b, 0.6);
+    this.player2TrionBar.strokeRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
+    this.player1BulletText.setText(`P1 Bullet: ${AVAILABLE_BULLET_TYPES[this.player1BulletIndex]}`);
+    this.player2BulletText.setText(`P2 Bullet: ${AVAILABLE_BULLET_TYPES[this.player2BulletIndex]}`);
+  }
+
+  private getPlayer1Movement() {
+    let moveX = 0;
+    let moveY = 0;
+    if (this.aKey.isDown) moveX -= 1;
+    if (this.dKey.isDown) moveX += 1;
+    if (this.wKey.isDown) moveY -= 1;
+    if (this.sKey.isDown) moveY += 1;
+    return { x: moveX, y: moveY };
+  }
+
+  private getPlayer2Movement() {
+    let moveX = 0;
+    let moveY = 0;
+    if (this.cursorKeys.left?.isDown) moveX -= 1;
+    if (this.cursorKeys.right?.isDown) moveX += 1;
+    if (this.cursorKeys.up?.isDown) moveY -= 1;
+    if (this.cursorKeys.down?.isDown) moveY += 1;
+    return { x: moveX, y: moveY };
+  }
+
+  private handleInput() {
+    if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
+      this.player1BulletIndex = this.getPrevBulletIndex(this.player1BulletIndex);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+      this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.oKey)) {
+      this.player2CyclePrev = true;
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.pKey)) {
+      this.player2CycleNext = true;
+    }
+
+    if (this.player2CyclePrev) {
+      this.player2BulletIndex = this.getPrevBulletIndex(this.player2BulletIndex);
+      this.player2CyclePrev = false;
+    }
+    if (this.player2CycleNext) {
+      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex);
+      this.player2CycleNext = false;
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+      const shieldType: ShieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
+      this.tryDeployShield('p1', shieldType);
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
+      this.tryDeployShield('p2', 'narrow');
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
+      this.tryDeployShield('p2', 'wide');
+    }
+
+    if (this.fKey.isDown) {
+      this.tryFireBullet('p1');
+    }
+    if (this.enterKey.isDown) {
+      this.tryFireBullet('p2');
+    }
+  }
+
+  private tryDeployShield(player: 'p1' | 'p2', shieldType: ShieldType) {
+    const shieldRef = player === 'p1' ? this.player1Shield : this.player2Shield;
+    if (shieldRef?.active) return;
+
+    if (player === 'p1') {
+      if (this.player1Trion < GAME_CONFIG.SHIELD_COST) return;
+      this.player1Trion -= GAME_CONFIG.SHIELD_COST;
+      this.player1Shield = new Shield(this, this.player1.x, this.player1.y, this.player1.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
+    } else {
+      if (this.player2Trion < GAME_CONFIG.SHIELD_COST) return;
+      this.player2Trion -= GAME_CONFIG.SHIELD_COST;
+      this.player2Shield = new Shield(this, this.player2.x, this.player2.y, this.player2.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
+    }
+  }
+
+  private updateShields() {
+    if (this.player1Shield) {
+      if (!this.player1Shield.active || !this.player1Shield.sprite.active) {
+        this.player1Shield = null;
+      } else {
+        this.player1Shield.update(this.player1.x, this.player1.y, this.player1.angle);
+      }
+    }
+    if (this.player2Shield) {
+      if (!this.player2Shield.active || !this.player2Shield.sprite.active) {
+        this.player2Shield = null;
+      } else {
+        this.player2Shield.update(this.player2.x, this.player2.y, this.player2.angle);
+      }
+    }
+  }
+
+  private tryFireBullet(player: 'p1' | 'p2') {
+    const now = this.time.now;
+    const fireInterval = 1000 / GAME_CONFIG.FIRE_RATE;
+    const isPlayer1 = player === 'p1';
+    const lastFireTime = isPlayer1 ? this.player1LastFireTime : this.player2LastFireTime;
+    if (now - lastFireTime < fireInterval) return;
+
+    const bulletIndex = isPlayer1 ? this.player1BulletIndex : this.player2BulletIndex;
+    const bulletType = AVAILABLE_BULLET_TYPES[bulletIndex];
+    const cost = this.getBulletCost(bulletType);
+    const trion = isPlayer1 ? this.player1Trion : this.player2Trion;
+
+    if (trion < cost) return;
+
+    if (isPlayer1) {
+      this.player1Trion -= cost;
+      this.player1LastFireTime = now;
+    } else {
+      this.player2Trion -= cost;
+      this.player2LastFireTime = now;
+    }
+
+    const shooter = isPlayer1 ? this.player1 : this.player2;
+    const target = isPlayer1 ? this.player2 : this.player1;
+    const angle = Phaser.Math.Angle.Between(shooter.x, shooter.y, target.x, target.y);
+    const aimX = Math.cos(angle);
+    const aimY = Math.sin(angle);
+    const bulletSpeedMultiplier = shooter.getBulletSpeedMultiplier(now);
+
+    const { trionDamage, shieldDamage, speed } = this.getBulletStats(bulletType, bulletSpeedMultiplier);
+    const bullet = new Bullet(
+      this,
+      shooter.x + aimX * 20,
+      shooter.y + aimY * 20,
+      angle,
+      bulletType,
+      isPlayer1,
+      trionDamage,
+      shieldDamage,
+      speed,
+      bulletType === 'viper' ? PvpScene.TWO_PLAYER_VIPER_GUIDANCE_DURATION : undefined
+    );
+
+    if (isPlayer1) {
+      this.player1Bullets.push(bullet);
+    } else {
+      this.player2Bullets.push(bullet);
+    }
+  }
+
+  private updateBullets(delta: number) {
+    this.player1Bullets = this.player1Bullets.filter(bullet => {
+      bullet.update(delta, this.player2.x, this.player2.y);
+      return bullet.active;
+    });
+    this.player2Bullets = this.player2Bullets.filter(bullet => {
+      bullet.update(delta, this.player1.x, this.player1.y);
+      return bullet.active;
+    });
+  }
+
+  private checkCollisions() {
+    this.resolveBulletInterceptions();
+    this.handleBulletHits(this.player1Bullets, this.player2, 'p2');
+    this.handleBulletHits(this.player2Bullets, this.player1, 'p1');
+
+    if (this.player1Trion <= 0 || this.player2Trion <= 0) {
+      this.gameOver = true;
+      const winner = this.player1Trion <= 0 ? 'P2 WIN' : 'P1 WIN';
+      this.winnerText.setText(winner);
+    }
+  }
+
+  private handleBulletHits(bullets: Bullet[], target: PvpFighter, targetId: 'p1' | 'p2') {
+    const targetShield = targetId === 'p1' ? this.player1Shield : this.player2Shield;
+    for (const bullet of bullets) {
+      if (!bullet.active) continue;
+
+      if (targetShield?.active && this.bulletHitsShield(bullet, targetShield)) {
+        if (bullet.type === 'meteora') {
+          this.triggerMeteoraExplosion(bullet, target, targetShield, targetId);
+        } else {
+          bullet.destroy();
+          targetShield.applyDamage(bullet.shieldDamage);
+        }
+        continue;
+      }
+
+      const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, target.x, target.y);
+      const bulletRadius = bullet.getBounds().radius;
+      if (dist < GAME_CONFIG.PLAYER_RADIUS + bulletRadius) {
+        if (bullet.type === 'meteora') {
+          this.triggerMeteoraExplosion(bullet, target, targetShield, targetId);
+        } else {
+          this.applyBulletDamage(targetId, bullet);
+          bullet.destroy();
+        }
+      }
+    }
+  }
+
+  private triggerMeteoraExplosion(bullet: Bullet, target: PvpFighter, targetShield: Shield | null, targetId: 'p1' | 'p2') {
+    const area = bullet.explode();
+    if (!area) return;
+
+    if (targetShield?.active && this.circleHitsShield(area, targetShield)) {
+      targetShield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+      return;
+    }
+
+    const targetBounds = new Phaser.Geom.Circle(target.x, target.y, GAME_CONFIG.PLAYER_RADIUS);
+    if (Phaser.Geom.Intersects.CircleToCircle(area, targetBounds)) {
+      this.applyBulletDamage(targetId, bullet, true);
+    }
+  }
+
+  private applyBulletDamage(targetId: 'p1' | 'p2', bullet: Bullet, isExplosion = false) {
+    const damage = isExplosion ? GAME_CONFIG.METEORA_TRION_DAMAGE : bullet.trionDamage;
+    if (targetId === 'p1') {
+      this.player1Trion -= damage;
+      if (bullet.type === 'red') {
+        this.player1.applyRedBulletHit(
+          PvpScene.TWO_PLAYER_RED_SLOW_DURATION,
+          GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER,
+          PvpScene.TWO_PLAYER_RED_FREEZE_DURATION
+        );
+      }
+    } else {
+      this.player2Trion -= damage;
+      if (bullet.type === 'red') {
+        this.player2.applyRedBulletHit(
+          PvpScene.TWO_PLAYER_RED_SLOW_DURATION,
+          GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER,
+          PvpScene.TWO_PLAYER_RED_FREEZE_DURATION
+        );
+      }
+    }
+  }
+
+  private resolveBulletInterceptions() {
+    for (const player1Bullet of this.player1Bullets) {
+      if (!player1Bullet.active) continue;
+      if (player1Bullet.type === 'red') continue;
+      const player1Bounds = player1Bullet.getBounds();
+
+      for (const player2Bullet of this.player2Bullets) {
+        if (!player2Bullet.active) continue;
+        if (player2Bullet.type === 'red') continue;
+        const player2Bounds = player2Bullet.getBounds();
+
+        if (!Phaser.Geom.Intersects.CircleToCircle(player1Bounds, player2Bounds)) continue;
+
+        if (player1Bullet.type === 'meteora') {
+          const area = player1Bullet.explode();
+          if (area) {
+            this.applyMeteoraExplosionArea(area);
+          }
+        } else {
+          player1Bullet.destroy();
+        }
+
+        if (player2Bullet.type === 'meteora') {
+          const area = player2Bullet.explode();
+          if (area) {
+            this.applyMeteoraExplosionArea(area);
+          }
+        } else {
+          player2Bullet.destroy();
+        }
+        break;
+      }
+    }
+  }
+
+  private applyMeteoraExplosionArea(area: Phaser.Geom.Circle) {
+    const player1Shield = this.player1Shield;
+    const player2Shield = this.player2Shield;
+
+    if (player1Shield?.active && this.circleHitsShield(area, player1Shield)) {
+      player1Shield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+    } else {
+      const player1Bounds = new Phaser.Geom.Circle(this.player1.x, this.player1.y, GAME_CONFIG.PLAYER_RADIUS);
+      if (Phaser.Geom.Intersects.CircleToCircle(area, player1Bounds)) {
+        this.player1Trion -= GAME_CONFIG.METEORA_TRION_DAMAGE;
+      }
+    }
+
+    if (player2Shield?.active && this.circleHitsShield(area, player2Shield)) {
+      player2Shield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+    } else {
+      const player2Bounds = new Phaser.Geom.Circle(this.player2.x, this.player2.y, GAME_CONFIG.PLAYER_RADIUS);
+      if (Phaser.Geom.Intersects.CircleToCircle(area, player2Bounds)) {
+        this.player2Trion -= GAME_CONFIG.METEORA_TRION_DAMAGE;
+      }
+    }
+  }
+
+  private regenerateTrion(delta: number) {
+    const regenAmount = GAME_CONFIG.TRION_REGEN_RATE * (delta / 1000);
+    this.player1Trion = Math.min(GAME_CONFIG.PLAYER_TRION_MAX, this.player1Trion + regenAmount);
+    this.player2Trion = Math.min(GAME_CONFIG.PLAYER_TRION_MAX, this.player2Trion + regenAmount);
+  }
+
+  private getBulletCost(bulletType: BulletType) {
+    if (bulletType === 'asteroid') {
+      return GAME_CONFIG.ASTEROID_COST;
+    }
+    if (bulletType === 'meteora') {
+      return GAME_CONFIG.METEORA_COST;
+    }
+    if (bulletType === 'viper') {
+      return GAME_CONFIG.VIPER_COST;
+    }
+    return GAME_CONFIG.RED_BULLET_COST;
+  }
+
+  private getBulletStats(bulletType: BulletType, bulletSpeedMultiplier: number) {
+    if (bulletType === 'asteroid') {
+      return {
+        trionDamage: GAME_CONFIG.ASTEROID_TRION_DAMAGE,
+        shieldDamage: GAME_CONFIG.ASTEROID_SHIELD_DAMAGE,
+        speed: GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier,
+      };
+    }
+    if (bulletType === 'meteora') {
+      return {
+        trionDamage: GAME_CONFIG.METEORA_TRION_DAMAGE,
+        shieldDamage: GAME_CONFIG.METEORA_SHIELD_DAMAGE,
+        speed: GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier,
+      };
+    }
+    if (bulletType === 'viper') {
+      return {
+        trionDamage: GAME_CONFIG.VIPER_TRION_DAMAGE,
+        shieldDamage: GAME_CONFIG.VIPER_SHIELD_DAMAGE,
+        speed: GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier,
+      };
+    }
+    return {
+      trionDamage: GAME_CONFIG.RED_BULLET_TRION_DAMAGE,
+      shieldDamage: GAME_CONFIG.RED_BULLET_SHIELD_DAMAGE,
+      speed: GAME_CONFIG.RED_BULLET_SPEED * bulletSpeedMultiplier,
+    };
+  }
+
+  private getNextBulletIndex(index: number) {
+    return (index + 1) % AVAILABLE_BULLET_TYPES.length;
+  }
+
+  private getPrevBulletIndex(index: number) {
+    return (index - 1 + AVAILABLE_BULLET_TYPES.length) % AVAILABLE_BULLET_TYPES.length;
+  }
+
+  private bulletHitsShield(bullet: Bullet, shield: Shield): boolean {
+    if (bullet.ignoreShield) return false;
+    const bulletBounds = bullet.getBounds();
+    const shieldBounds = shield.getBounds();
+
+    if (shieldBounds instanceof Phaser.Geom.Rectangle) {
+      return Phaser.Geom.Intersects.CircleToRectangle(bulletBounds, shieldBounds);
+    }
+
+    return Phaser.Geom.Intersects.CircleToCircle(bulletBounds, shieldBounds);
+  }
+
+  private circleHitsShield(area: Phaser.Geom.Circle, shield: Shield): boolean {
+    const shieldBounds = shield.getBounds();
+
+    if (shieldBounds instanceof Phaser.Geom.Rectangle) {
+      return Phaser.Geom.Intersects.CircleToRectangle(area, shieldBounds);
+    }
+
+    return Phaser.Geom.Intersects.CircleToCircle(area, shieldBounds);
+  }
+
+  private createBackgroundGrid() {
+    const graphics = this.add.graphics();
+    graphics.lineStyle(1, 0x1a1a3a, 0.3);
+
+    const gridSize = 60;
+    for (let x = 0; x < GAME_CONFIG.WIDTH; x += gridSize) {
+      graphics.moveTo(x, 0);
+      graphics.lineTo(x, GAME_CONFIG.HEIGHT);
+    }
+    for (let y = 0; y < GAME_CONFIG.HEIGHT; y += gridSize) {
+      graphics.moveTo(0, y);
+      graphics.lineTo(GAME_CONFIG.WIDTH, y);
+    }
+    graphics.strokePath();
+    graphics.setDepth(-10);
+  }
+}
