@@ -48,7 +48,6 @@ export class MainScene extends Phaser.Scene {
   private playerBullets: Bullet[] = [];
   private bossBullets: Bullet[] = [];
   private playerShield: Shield | null = null;
-  private gameStartTime: number = 0;
   private spawnedShieldedEnemy = false;
   private spawnedRapidEnemy = false;
   private difficulty: Difficulty = 'easy';
@@ -693,7 +692,6 @@ export class MainScene extends Phaser.Scene {
   private startBattle() {
     if (this.gameStarted) return;
     this.gameStarted = true;
-    this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
     this.gameState.availableBulletTypes = [...this.selectedBulletTypes];
     this.gameState.currentBulletType = this.gameState.availableBulletTypes[0] ?? 'asteroid';
@@ -713,7 +711,6 @@ export class MainScene extends Phaser.Scene {
     this.gameState.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
     this.gameState.currentBulletType = 'asteroid';
     this.gameStarted = true;
-    this.gameStartTime = this.time.now;
     this.battleStartTime = this.time.now;
     this.applyDifficultySettings();
     this.gameOverText.setVisible(false);
@@ -1398,11 +1395,6 @@ export class MainScene extends Phaser.Scene {
     // Regenerate Trion
     this.regenerateTrion(delta);
 
-    // Spawn timed enemies
-    if (!this.isTutorialMode) {
-      this.spawnTimedEnemies(time);
-    }
-    
     // Update entities
     this.player.update(delta, this.mobileInput);
     if (!this.isTutorialMode && this.gameState.bossTrion > 0) {
@@ -1435,6 +1427,7 @@ export class MainScene extends Phaser.Scene {
 
     if (!this.isTutorialMode) {
       this.cleanupDefeatedEnemies();
+      this.handleBossProgression();
     }
     
     // Update UI
@@ -1644,17 +1637,16 @@ export class MainScene extends Phaser.Scene {
   }
 
 
-  private spawnTimedEnemies(time: number) {
+  private handleBossProgression() {
     if (this.difficulty === 'easy') {
       return;
     }
-    const elapsed = time - this.gameStartTime;
-    if (!this.spawnedShieldedEnemy && elapsed >= 30000) {
+    if (!this.spawnedShieldedEnemy && this.gameState.bossTrion <= 0) {
       this.spawnedShieldedEnemy = true;
       this.spawnShieldedEnemy();
+      return;
     }
-
-    if (!this.spawnedRapidEnemy && elapsed >= 60000) {
+    if (this.spawnedShieldedEnemy && !this.spawnedRapidEnemy && this.extraEnemies.length === 0) {
       this.spawnedRapidEnemy = true;
       this.spawnRapidEnemy();
     }
