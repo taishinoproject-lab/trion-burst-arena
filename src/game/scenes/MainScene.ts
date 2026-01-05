@@ -889,7 +889,7 @@ export class MainScene extends Phaser.Scene {
     const playerTwoText = this.add.text(
       rightX,
       instructionTopY + instructionGapY,
-      'PLAYER 2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P または / と \\\nシールド(正面): SHIFT\n全方位シールド: CTRL',
+      'PLAYER 2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: /',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
