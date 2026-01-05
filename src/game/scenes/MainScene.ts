@@ -713,7 +713,7 @@ export class MainScene extends Phaser.Scene {
   private showBossSetupInstructions() {
     const { isCompactLayout, layoutCenterY, actionButtonWidth, actionButtonHeight } =
       this.getInstructionLayout();
-    const titleY = layoutCenterY - 180;
+    const titleY = layoutCenterY - 220;
     const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 150 : 160);
     const detailButtonY = tutorialButtonY + (this.isMobileMode ? 90 : 70);
     const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 10 : 40) : -20);
@@ -787,7 +787,7 @@ export class MainScene extends Phaser.Scene {
     const detailText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       detailButtonY,
-      'コマンド・トリガーの詳細',
+      'トリガーの詳細',
       {
         fontSize: this.isMobileMode ? '24px' : '16px',
         color: '#ffffff',
