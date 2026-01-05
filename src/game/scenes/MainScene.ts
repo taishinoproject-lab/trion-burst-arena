@@ -542,7 +542,7 @@ export class MainScene extends Phaser.Scene {
     );
     instructionElements.push(modeLabelBg);
 
-    const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, '▼ SELECT MODE ▼', {
+    const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, '▼ モード選択 ▼', {
       fontSize: this.isMobileMode ? '28px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -575,7 +575,7 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(bossButton);
 
     // Boss button icon and text
-    const bossIcon = this.add.text(firstButtonX, buttonY - 10, '⬡', {
+    const bossIcon = this.add.text(firstButtonX, buttonY - 15, '⬡', {
       fontSize: this.isMobileMode ? '24px' : '20px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -583,7 +583,7 @@ export class MainScene extends Phaser.Scene {
     bossIcon.setOrigin(0.5);
     instructionElements.push(bossIcon);
 
-    const bossText = this.add.text(firstButtonX, buttonY + 8, 'ボスモード', {
+    const bossText = this.add.text(firstButtonX, buttonY + 5, 'ボスモード', {
       fontSize: this.isMobileMode ? '24px' : '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -592,7 +592,7 @@ export class MainScene extends Phaser.Scene {
     bossText.setOrigin(0.5);
     instructionElements.push(bossText);
 
-    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 38 : 32), '[ SINGLE PLAYER ]', {
+    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 32 : 26), '[ SINGLE PLAYER ]', {
       fontSize: this.isMobileMode ? '14px' : '11px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -624,7 +624,7 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(twoPlayerButton);
 
     // 2P button icon and text
-    const twoPlayerIcon = this.add.text(secondButtonX, buttonY - 10, '⬡⬡', {
+    const twoPlayerIcon = this.add.text(secondButtonX, buttonY - 15, '⬡⬡', {
       fontSize: this.isMobileMode ? '20px' : '16px',
       color: '#ffd166',
       fontFamily: 'monospace',
@@ -632,7 +632,7 @@ export class MainScene extends Phaser.Scene {
     twoPlayerIcon.setOrigin(0.5);
     instructionElements.push(twoPlayerIcon);
 
-    const twoPlayerText = this.add.text(secondButtonX, buttonY + 8, '対戦モード', {
+    const twoPlayerText = this.add.text(secondButtonX, buttonY + 5, '対戦モード', {
       fontSize: this.isMobileMode ? '24px' : '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -641,7 +641,7 @@ export class MainScene extends Phaser.Scene {
     twoPlayerText.setOrigin(0.5);
     instructionElements.push(twoPlayerText);
 
-    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 38 : 32), '[ LOCAL VERSUS ]', {
+    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 32 : 26), '[ LOCAL VERSUS ]', {
       fontSize: this.isMobileMode ? '14px' : '11px',
       color: '#ffd166',
       fontFamily: 'monospace',
