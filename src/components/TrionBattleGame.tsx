@@ -59,7 +59,8 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     // Create Phaser game instance with mobile scaling
     const scenes = [MainScene, PvpScene];
     const config = createGameConfig('game-container', isMobile, scenes);
-    gameRef.current = new Phaser.Game(config);
+    const gameInstance = new Phaser.Game(config);
+    gameRef.current = gameInstance;
 
     const handleSceneStart = (scene: Phaser.Scene) => {
       setActiveSceneKey(scene.scene.key);
@@ -71,13 +72,21 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         sceneRef.current = null;
       }
     };
-    gameRef.current.scene.events.on(Phaser.Scenes.Events.START, handleSceneStart);
+    const bindSceneStart = () => {
+      gameInstance.scene?.events?.on(Phaser.Scenes.Events.START, handleSceneStart);
+    };
+    if (gameInstance.scene?.events) {
+      bindSceneStart();
+    } else {
+      gameInstance.events.once(Phaser.Core.Events.READY, bindSceneStart);
+    }
 
     return () => {
       gameContainerRef.current?.removeEventListener('contextmenu', handleContextMenu);
       if (gameRef.current) {
-        gameRef.current.scene.events.off(Phaser.Scenes.Events.START, handleSceneStart);
-        gameRef.current.destroy(true);
+        gameInstance.events.off(Phaser.Core.Events.READY, bindSceneStart);
+        gameInstance.scene?.events?.off(Phaser.Scenes.Events.START, handleSceneStart);
+        gameInstance.destroy(true);
         gameRef.current = null;
         sceneRef.current = null;
       }
