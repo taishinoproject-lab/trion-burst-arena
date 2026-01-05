@@ -64,11 +64,12 @@ export class MainScene extends Phaser.Scene {
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
-    bossTrion: GAME_CONFIG.BOSS_TRION_MAX,
+    bossTrion: this.getBossMaxTrion(),
     currentBulletType: 'asteroid',
     delayedAsteroidEnabled: false,
     isGameOver: false,
     playerWon: false,
+    availableBulletTypes: [...this.availableBulletTypes],
   };
   
   // Input
@@ -136,6 +137,10 @@ export class MainScene extends Phaser.Scene {
     delayedAsteroidToggled: false,
     summaryAcknowledged: false,
   };
+
+  private getBossMaxTrion() {
+    return this.difficulty === 'hard' ? GAME_CONFIG.BOSS_TRION_MAX * 2 : GAME_CONFIG.BOSS_TRION_MAX;
+  }
 
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
@@ -1013,8 +1018,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private applyDifficultySettings() {
-    const fireRateMultiplier = this.difficulty === 'easy' ? 0.5 : 1;
+    const fireRateMultiplier = this.difficulty === 'easy' ? 0.5 : this.difficulty === 'hard' ? 2 : 1;
     this.boss.setFireRate(GAME_CONFIG.BOSS_FIRE_RATE * fireRateMultiplier);
+    this.gameState.bossTrion = this.getBossMaxTrion();
   }
 
   private enableInstructionScroll(
@@ -1642,12 +1648,15 @@ export class MainScene extends Phaser.Scene {
   }
 
   private resetState() {
-    this.gameState.playerTrion = GAME_CONFIG.PLAYER_TRION_MAX;
-    this.gameState.bossTrion = GAME_CONFIG.BOSS_TRION_MAX;
-    this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
-    this.gameState.delayedAsteroidEnabled = false;
-    this.gameState.isGameOver = false;
-    this.gameState.playerWon = false;
+    this.gameState = {
+      playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
+      bossTrion: this.getBossMaxTrion(),
+      currentBulletType: this.availableBulletTypes[0] ?? 'asteroid',
+      delayedAsteroidEnabled: false,
+      isGameOver: false,
+      playerWon: false,
+      availableBulletTypes: [...this.availableBulletTypes],
+    };
     this.spawnedShieldedEnemy = false;
     this.spawnedRapidEnemy = false;
     this.lastFireTime = 0;
@@ -1694,7 +1703,7 @@ export class MainScene extends Phaser.Scene {
       this.boss.update(delta, this.player.x, this.player.y, time);
       // Boss firing
       this.fireEnemy(
-        { boss: this.boss, trion: this.gameState.bossTrion, maxTrion: GAME_CONFIG.BOSS_TRION_MAX, behavior: this.getPrimaryBossBehavior() },
+        { boss: this.boss, trion: this.gameState.bossTrion, maxTrion: this.getBossMaxTrion(), behavior: this.getPrimaryBossBehavior() },
         time
       );
     }
@@ -1994,7 +2003,7 @@ export class MainScene extends Phaser.Scene {
         setTrion: (value: number) => {
           this.gameState.bossTrion = Math.max(0, value);
         },
-        maxTrion: GAME_CONFIG.BOSS_TRION_MAX,
+        maxTrion: this.getBossMaxTrion(),
       });
     }
 
@@ -2488,7 +2497,7 @@ export class MainScene extends Phaser.Scene {
     
     if (this.gameState.bossTrion > 0 || this.isTutorialMode) {
       this.gameState.bossTrion = Math.min(
-        GAME_CONFIG.BOSS_TRION_MAX,
+        this.getBossMaxTrion(),
         this.gameState.bossTrion + regenAmount
       );
     }
@@ -2523,7 +2532,7 @@ export class MainScene extends Phaser.Scene {
     this.bossTrionBar.fillStyle(0x1a1a2e, 1);
     this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth, barHeight);
     
-    const bossRatio = Math.max(0, this.gameState.bossTrion / GAME_CONFIG.BOSS_TRION_MAX);
+    const bossRatio = Math.max(0, this.gameState.bossTrion / this.getBossMaxTrion());
     this.bossTrionBar.fillStyle(GAME_CONFIG.BOSS_COLOR, 1);
     this.bossTrionBar.fillRect(GAME_CONFIG.WIDTH - 20 - barWidth, uiY, barWidth * bossRatio, barHeight);
     
