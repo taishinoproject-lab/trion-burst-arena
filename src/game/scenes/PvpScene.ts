@@ -115,6 +115,7 @@ export class PvpScene extends Phaser.Scene {
   private fKey!: Phaser.Input.Keyboard.Key;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
+  private ctrlKey!: Phaser.Input.Keyboard.Key;
 
   private cursorKeys!: Phaser.Types.Input.Keyboard.CursorKeys;
   private enterKey!: Phaser.Input.Keyboard.Key;
@@ -189,6 +190,7 @@ export class PvpScene extends Phaser.Scene {
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.ctrlKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
 
     this.cursorKeys = this.input.keyboard!.createCursorKeys();
     this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
@@ -338,6 +340,9 @@ export class PvpScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
       this.tryDeployShield('p2', 'narrow');
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.ctrlKey)) {
+      this.tryDeployShield('p2', 'wide');
     }
 
     if (this.fKey.isDown) {

@@ -861,7 +861,7 @@ export class MainScene extends Phaser.Scene {
     const description = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       layoutCenterY - (this.isMobileMode ? 140 : 140),
-      '2人対戦モード。\n相手のトリオンを0にしたら勝利。',
+      '2人対戦モード。\n相手のトリオン(体力)を0にすると勝利。\n攻撃やシールドでトリオンを消費するので、\n動きながらうまく管理しよう。',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -875,7 +875,7 @@ export class MainScene extends Phaser.Scene {
     const playerOneText = this.add.text(
       leftX,
       instructionTopY,
-      'PLAYER 1\nMOVE: WASD\nFIRE: F\nQ/E: CYCLE\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+      'PLAYER 1\n移動: WASD\n攻撃: F\n武器切替: Q/E\nシールド(正面): SPACE\n全方位シールド: SHIFT + SPACE',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -889,7 +889,7 @@ export class MainScene extends Phaser.Scene {
     const playerTwoText = this.add.text(
       rightX,
       instructionTopY + instructionGapY,
-      'PLAYER 2\nMOVE: ARROWS\nFIRE: ENTER\nO/P: CYCLE\n/ or \\: CYCLE\nSHIFT: SHIELD',
+      'PLAYER 2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P または / と \\\nシールド(正面): SHIFT\n全方位シールド: CTRL',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
