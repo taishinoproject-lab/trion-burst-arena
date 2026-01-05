@@ -118,7 +118,6 @@ export class PvpScene extends Phaser.Scene {
 
   private cursorKeys!: Phaser.Types.Input.Keyboard.CursorKeys;
   private enterKey!: Phaser.Input.Keyboard.Key;
-  private ctrlKey!: Phaser.Input.Keyboard.Key;
   private oKey!: Phaser.Input.Keyboard.Key;
   private pKey!: Phaser.Input.Keyboard.Key;
   private rKey!: Phaser.Input.Keyboard.Key;
@@ -193,7 +192,6 @@ export class PvpScene extends Phaser.Scene {
 
     this.cursorKeys = this.input.keyboard!.createCursorKeys();
     this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    this.ctrlKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
     this.oKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.O);
     this.pKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
@@ -219,6 +217,31 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private createUI() {
+    const backButtonX = GAME_CONFIG.WIDTH / 2;
+    const backButtonY = 32;
+    const backButtonWidth = 120;
+    const backButtonHeight = 36;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#ffffff',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.scene.start('MainScene', { instructionStartMode: 'twoPlayer' });
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+
     this.player1TrionText = this.add.text(24, 20, '', {
       fontFamily: 'Arial',
       fontSize: '18px',
@@ -308,18 +331,13 @@ export class PvpScene extends Phaser.Scene {
       this.player2CycleNext = false;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown && !this.ctrlKey.isDown) {
-      this.tryDeployShield('p1', 'narrow');
-    }
-
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       const shieldType: ShieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
       this.tryDeployShield('p1', shieldType);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.ctrlKey)) {
-      const shieldType: ShieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
-      this.tryDeployShield('p2', shieldType);
+    if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
+      this.tryDeployShield('p2', 'narrow');
     }
 
     if (this.fKey.isDown) {

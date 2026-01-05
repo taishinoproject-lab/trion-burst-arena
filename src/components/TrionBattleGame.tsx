@@ -7,16 +7,16 @@ import { PvpScene } from '../game/scenes/PvpScene';
 
 interface TrionBattleGameProps {
   className?: string;
-  mode?: 'boss' | 'pvp';
 }
 
-export const TrionBattleGame = ({ className, mode = 'boss' }: TrionBattleGameProps) => {
+export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<MainScene | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
+  const [activeSceneKey, setActiveSceneKey] = useState('MainScene');
 
   useEffect(() => {
     // Detect mobile/touch device
@@ -57,30 +57,32 @@ export const TrionBattleGame = ({ className, mode = 'boss' }: TrionBattleGamePro
     gameContainerRef.current.addEventListener('contextmenu', handleContextMenu);
 
     // Create Phaser game instance with mobile scaling
-    const scenes = mode === 'boss' ? [MainScene] : [PvpScene];
+    const scenes = [MainScene, PvpScene];
     const config = createGameConfig('game-container', isMobile, scenes);
     gameRef.current = new Phaser.Game(config);
 
-    // Get reference to MainScene when it's ready
-    gameRef.current.events.on('ready', () => {
-      if (mode === 'boss') {
-        const scene = gameRef.current?.scene.getScene('MainScene') as MainScene;
-        if (scene) {
-          sceneRef.current = scene;
-          scene.setMobileMode(isMobile);
-        }
+    const handleSceneStart = (scene: Phaser.Scene) => {
+      setActiveSceneKey(scene.scene.key);
+      if (scene.scene.key === 'MainScene') {
+        const mainScene = scene as MainScene;
+        sceneRef.current = mainScene;
+        mainScene.setMobileMode(isMobile);
+      } else {
+        sceneRef.current = null;
       }
-    });
+    };
+    gameRef.current.scene.events.on(Phaser.Scenes.Events.START, handleSceneStart);
 
     return () => {
       gameContainerRef.current?.removeEventListener('contextmenu', handleContextMenu);
       if (gameRef.current) {
+        gameRef.current.scene.events.off(Phaser.Scenes.Events.START, handleSceneStart);
         gameRef.current.destroy(true);
         gameRef.current = null;
         sceneRef.current = null;
       }
     };
-  }, [isMobile, mode]);
+  }, [isMobile]);
 
   const handleFullscreenToggle = useCallback(async () => {
     if (!gameContainerRef.current || !canFullscreen) return;
@@ -167,7 +169,7 @@ export const TrionBattleGame = ({ className, mode = 'boss' }: TrionBattleGamePro
         </button>
       )}
       <MobileControls
-        visible={isMobile && mode === 'boss'}
+        visible={isMobile && activeSceneKey === 'MainScene'}
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}

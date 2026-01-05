@@ -116,6 +116,7 @@ export class MainScene extends Phaser.Scene {
   private instructionsBackground?: Phaser.GameObjects.Rectangle;
   private tutorialSteps: TutorialStep[] = [];
   private tutorialStepIndex = 0;
+  private instructionStartMode: 'modeSelect' | 'twoPlayer' = 'modeSelect';
   private tutorialProgress = {
     introAcknowledged: false,
     moved: false,
@@ -132,6 +133,10 @@ export class MainScene extends Phaser.Scene {
 
   constructor() {
     super({ key: 'MainScene' });
+  }
+
+  init(data?: { instructionStartMode?: 'modeSelect' | 'twoPlayer' }) {
+    this.instructionStartMode = data?.instructionStartMode ?? 'modeSelect';
   }
 
   create() {
@@ -344,6 +349,10 @@ export class MainScene extends Phaser.Scene {
     this.instructionsBackground = bg;
     this.instructionsOverlay = this.add.container(0, 0, [bg]);
     this.instructionsOverlay.setDepth(100);
+    if (this.instructionStartMode === 'twoPlayer') {
+      this.showTwoPlayerInstructions();
+      return;
+    }
     this.showModeSelectInstructions();
   }
 
@@ -852,7 +861,7 @@ export class MainScene extends Phaser.Scene {
     const description = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       layoutCenterY - (this.isMobileMode ? 140 : 140),
-      '2人で役割分担してボスに挑むモード。\nP1は移動担当 / P2は攻撃・防御担当',
+      '2人対戦モード。\n相手のトリオンを0にしたら勝利。',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -866,7 +875,7 @@ export class MainScene extends Phaser.Scene {
     const playerOneText = this.add.text(
       leftX,
       instructionTopY,
-      'PLAYER 1\nMOVE: WASD',
+      'PLAYER 1\nMOVE: WASD\nFIRE: F\nQ/E: CYCLE\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -880,7 +889,7 @@ export class MainScene extends Phaser.Scene {
     const playerTwoText = this.add.text(
       rightX,
       instructionTopY + instructionGapY,
-      'PLAYER 2\nAIM: MOUSE\nLMB: FIRE\nE: CYCLE TRIGGER\nQ: DELAY ASTEROID\nSPACE: SHIELD\nSHIFT + SPACE: WIDE SHIELD',
+      'PLAYER 2\nMOVE: ARROWS\nFIRE: ENTER\nO/P: CYCLE\n/ or \\: CYCLE\nSHIFT: SHIELD',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -933,9 +942,7 @@ export class MainScene extends Phaser.Scene {
     startText.setOrigin(0.5);
 
     const handleStart = () => {
-      this.difficulty = 'easy';
-      this.selectedBulletTypes = ['asteroid', 'meteora', 'viper'];
-      this.startBattle();
+      this.scene.start('PvpScene');
     };
     startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
     startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
