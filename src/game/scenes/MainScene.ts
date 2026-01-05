@@ -844,7 +844,7 @@ export class MainScene extends Phaser.Scene {
 
   private showTwoPlayerInstructions() {
     const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
-    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 190);
+    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 140);
     const instructionGapY = this.isMobileMode ? 170 : 0;
     const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 - 220;
     const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 + 220;
