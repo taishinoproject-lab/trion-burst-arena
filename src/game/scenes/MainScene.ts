@@ -844,8 +844,8 @@ export class MainScene extends Phaser.Scene {
 
   private showTwoPlayerInstructions() {
     const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
-    const titleY = layoutCenterY - 180;
-    const instructionTopY = layoutCenterY - (this.isMobileMode ? 90 : 110);
+    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 190);
+    const instructionTopY = layoutCenterY - (this.isMobileMode ? 80 : 110);
     const instructionGapY = this.isMobileMode ? 170 : 0;
     const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 - 220;
     const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 + 220;
@@ -860,7 +860,7 @@ export class MainScene extends Phaser.Scene {
 
     const description = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      layoutCenterY - (this.isMobileMode ? 140 : 140),
+      layoutCenterY - (this.isMobileMode ? 130 : 140),
       '2人対戦モード。\n相手のトリオン(体力)を0にすると勝利。\n攻撃やシールドでトリオンを消費するので、\n動きながらうまく管理しよう。',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
@@ -889,7 +889,7 @@ export class MainScene extends Phaser.Scene {
     const playerTwoText = this.add.text(
       rightX,
       instructionTopY + instructionGapY,
-      'PLAYER 2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: /',
+      'PLAYER 2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: L',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',

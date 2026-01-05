@@ -118,8 +118,8 @@ export class PvpScene extends Phaser.Scene {
   private player2BulletIndex = 0;
   private gameOver = false;
   private winnerText!: Phaser.GameObjects.Text;
-  private player1TrionText!: Phaser.GameObjects.Text;
-  private player2TrionText!: Phaser.GameObjects.Text;
+  private player1TrionBar!: Phaser.GameObjects.Graphics;
+  private player2TrionBar!: Phaser.GameObjects.Graphics;
   private player1BulletText!: Phaser.GameObjects.Text;
   private player2BulletText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
@@ -133,7 +133,7 @@ export class PvpScene extends Phaser.Scene {
   private fKey!: Phaser.Input.Keyboard.Key;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
-  private slashKey!: Phaser.Input.Keyboard.Key;
+  private lKey!: Phaser.Input.Keyboard.Key;
 
   private cursorKeys!: Phaser.Types.Input.Keyboard.CursorKeys;
   private enterKey!: Phaser.Input.Keyboard.Key;
@@ -210,7 +210,7 @@ export class PvpScene extends Phaser.Scene {
     this.fKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.slashKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SLASH);
+    this.lKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.L);
 
     this.cursorKeys = this.input.keyboard!.createCursorKeys();
     this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
@@ -220,6 +220,10 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private createUI() {
+    const barWidth = 220;
+    const barHeight = 16;
+    const barY = 24;
+    const barMarginX = 24;
     const backButtonX = GAME_CONFIG.WIDTH / 2;
     const backButtonY = 32;
     const backButtonWidth = 120;
@@ -245,23 +249,26 @@ export class PvpScene extends Phaser.Scene {
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
-    this.player1TrionText = this.add.text(24, 20, '', {
+    this.add.text(barMarginX, barY - 18, 'P1 TRION', {
       fontFamily: 'Arial',
-      fontSize: '18px',
+      fontSize: '14px',
       color: '#00ffd5',
     });
-    this.player2TrionText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', {
+    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - 18, 'P2 TRION', {
       fontFamily: 'Arial',
-      fontSize: '18px',
+      fontSize: '14px',
       color: '#ff6b6b',
-    }).setOrigin(1, 0);
+    });
 
-    this.player1BulletText = this.add.text(24, 44, '', {
+    this.player1TrionBar = this.add.graphics();
+    this.player2TrionBar = this.add.graphics();
+
+    this.player1BulletText = this.add.text(24, 48, '', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#b6fff0',
     });
-    this.player2BulletText = this.add.text(GAME_CONFIG.WIDTH - 24, 44, '', {
+    this.player2BulletText = this.add.text(GAME_CONFIG.WIDTH - 24, 48, '', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#ffd0d0',
@@ -284,8 +291,33 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private updateUI() {
-    this.player1TrionText.setText(`P1 HP: ${Math.max(0, Math.round(this.player1Trion))}`);
-    this.player2TrionText.setText(`P2 HP: ${Math.max(0, Math.round(this.player2Trion))}`);
+    const barWidth = 220;
+    const barHeight = 16;
+    const barY = 24;
+    const barMarginX = 24;
+    const player1Ratio = Math.max(0, this.player1Trion / GAME_CONFIG.PLAYER_TRION_MAX);
+    const player2Ratio = Math.max(0, this.player2Trion / GAME_CONFIG.PLAYER_TRION_MAX);
+    this.player1TrionBar.clear();
+    this.player1TrionBar.fillStyle(0x222233, 0.9);
+    this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
+    this.player1TrionBar.fillStyle(0x00ffd5, 0.9);
+    this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth * player1Ratio, barHeight, 6);
+    this.player1TrionBar.lineStyle(2, 0x00ffd5, 0.6);
+    this.player1TrionBar.strokeRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
+
+    this.player2TrionBar.clear();
+    this.player2TrionBar.fillStyle(0x222233, 0.9);
+    this.player2TrionBar.fillRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
+    this.player2TrionBar.fillStyle(0xff6b6b, 0.9);
+    this.player2TrionBar.fillRoundedRect(
+      GAME_CONFIG.WIDTH - barMarginX - barWidth,
+      barY,
+      barWidth * player2Ratio,
+      barHeight,
+      6
+    );
+    this.player2TrionBar.lineStyle(2, 0xff6b6b, 0.6);
+    this.player2TrionBar.strokeRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
     this.player1BulletText.setText(`P1 Bullet: ${AVAILABLE_BULLET_TYPES[this.player1BulletIndex]}`);
     this.player2BulletText.setText(`P2 Bullet: ${AVAILABLE_BULLET_TYPES[this.player2BulletIndex]}`);
   }
@@ -342,7 +374,7 @@ export class PvpScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
       this.tryDeployShield('p2', 'narrow');
     }
-    if (Phaser.Input.Keyboard.JustDown(this.slashKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
       this.tryDeployShield('p2', 'wide');
     }
 
