@@ -350,7 +350,7 @@ export class MainScene extends Phaser.Scene {
     const layoutCenterY = GAME_CONFIG.HEIGHT / 2 + layoutOffsetY;
     const titleY = layoutCenterY - 180;
     const tutorialButtonY = layoutCenterY - (this.isMobileMode ? 120 : 140);
-    const instructionTextY = layoutCenterY - (this.isMobileMode ? 40 : 100);
+    const instructionTextY = layoutCenterY - (this.isMobileMode ? 40 : 120);
     const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 40 : 70) : 10);
     const actionButtonWidth = this.isMobileMode ? 320 : 180;
     const actionButtonHeight = this.isMobileMode ? (isCompactLayout ? 64 : 80) : 50;
@@ -408,7 +408,20 @@ export class MainScene extends Phaser.Scene {
           lineSpacing: 6,
         }
       );
-      instructionElements.push(leftText, rightText);
+      const twoPlayerText = this.add.text(
+        GAME_CONFIG.WIDTH / 2,
+        instructionTextY + 86,
+        '2Pモード（キーボード共有）\nP1: WASD + マウス\nP2: 矢印キー移動 / 右Ctrl: 攻撃 / 右Shift: シールド\nP2: Enterで弾切替 / Shift + Enterでワイドシールド',
+        {
+          fontSize: '13px',
+          color: '#b8b8b8',
+          fontFamily: 'monospace',
+          align: 'center',
+          lineSpacing: 4,
+        }
+      );
+      twoPlayerText.setOrigin(0.5, 0);
+      instructionElements.push(leftText, rightText, twoPlayerText);
     } else {
       // Mobile instructions: omit key-specific details
       const mobileInstructions = this.add.text(
