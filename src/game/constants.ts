@@ -37,28 +37,28 @@ export const GAME_CONFIG = {
   FIRE_RATE: 7, // shots per second
   
   // Asteroid bullet
-  ASTEROID_COST: 5,
+  ASTEROID_COST: 3,
   ASTEROID_TRION_DAMAGE: 10,
-  ASTEROID_SHIELD_DAMAGE: 9,
+  ASTEROID_SHIELD_DAMAGE: 5,
   
   // Meteora bullet
   METEORA_COST: 10,
   METEORA_TRION_DAMAGE: 30,
-  METEORA_SHIELD_DAMAGE: 20,
+  METEORA_SHIELD_DAMAGE: 30,
   METEORA_EXPLOSION_RADIUS: 70,
   METEORA_EXPLOSION_DURATION: 200, // ms
   
   // Viper bullet (guided)
   VIPER_COST: 7,
-  VIPER_TRION_DAMAGE: 60,
-  VIPER_SHIELD_DAMAGE: 4,
+  VIPER_TRION_DAMAGE: 50,
+  VIPER_SHIELD_DAMAGE: 2,
   VIPER_SPEED: 400,
   VIPER_TURN_RATE: 4.5, // radians per second
   VIPER_LIFETIME: 2500, // ms before auto-destroy
   VIPER_COLOR: 0x00e5ff, // slightly different cyan for viper
 
   // Red bullet (slow)
-  RED_BULLET_COST: 20,
+  RED_BULLET_COST: 15,
   RED_BULLET_TRION_DAMAGE: 5,
   RED_BULLET_SHIELD_DAMAGE: 0,
   RED_BULLET_SPEED: 160,
@@ -71,9 +71,9 @@ export const GAME_CONFIG = {
   RED_BULLET_STROKE_COLOR: 0x4a0046,
   
   // Shield
-  SHIELD_COST: 8,
-  SHIELD_NARROW_STRENGTH: 18,
-  SHIELD_WIDE_STRENGTH: 10,
+  SHIELD_COST: 10,
+  SHIELD_NARROW_STRENGTH: 40,
+  SHIELD_WIDE_STRENGTH: 20,
   SHIELD_NARROW_WIDTH: 3.5, // multiplier of bullet diameter
   SHIELD_THICKNESS: 8,
   SHIELD_DISTANCE: 40, // distance from player/boss center (narrow)
