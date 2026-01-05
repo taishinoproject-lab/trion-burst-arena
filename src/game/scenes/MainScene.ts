@@ -145,6 +145,10 @@ export class MainScene extends Phaser.Scene {
     this.isMobileMode = mobile;
   }
 
+  public isBattleActive() {
+    return this.gameStarted;
+  }
+
   constructor() {
     super({ key: 'MainScene' });
   }
@@ -203,6 +207,7 @@ export class MainScene extends Phaser.Scene {
     this.resetState();
     this.gameStarted = false;
     this.battleStartTime = 0;
+    this.events.emit('battle-state-changed', this.gameStarted);
   }
 
   private createBackgroundGrid() {
@@ -1296,6 +1301,7 @@ export class MainScene extends Phaser.Scene {
     if (this.gameStarted) return;
     this.gameStarted = true;
     this.battleStartTime = this.time.now;
+    this.events.emit('battle-state-changed', this.gameStarted);
     this.availableBulletTypes = [...this.selectedBulletTypes];
     this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
     this.applyDifficultySettings();
@@ -1316,6 +1322,7 @@ export class MainScene extends Phaser.Scene {
     this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
     this.gameStarted = true;
     this.battleStartTime = this.time.now;
+    this.events.emit('battle-state-changed', this.gameStarted);
     this.applyDifficultySettings();
     this.gameOverText.setVisible(false);
     this.destroyInstructionsOverlay();
