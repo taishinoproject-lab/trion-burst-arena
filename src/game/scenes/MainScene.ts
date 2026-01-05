@@ -2874,13 +2874,18 @@ focusTarget: 'player',
 
   private showGameOver(message: string) {
     const restartMessage = this.isMobileMode ? 'TAP RESTART BUTTON' : 'Press R to Restart';
+    const shouldShowAdvice = !this.gameState.playerWon && !this.isTutorialMode && this.gameState.bossTrion > 0;
     this.gameOverText.setText(`${message}\n\n${restartMessage}`);
+    const gameOverTextY = shouldShowAdvice
+      ? GAME_CONFIG.HEIGHT / 2 - (this.isMobileMode ? 130 : 95)
+      : GAME_CONFIG.HEIGHT / 2;
+    this.gameOverText.setPosition(GAME_CONFIG.WIDTH / 2, gameOverTextY);
     this.gameOverText.setVisible(true);
     this.gameOverText.setColor(this.gameState.playerWon ? '#00ffd5' : '#ff6b6b');
     
     // Add background
-    const backgroundHeight = this.isMobileMode ? 360 : 300;
-    const backgroundWidth = this.isMobileMode ? 440 : 400;
+    const backgroundHeight = this.isMobileMode ? (shouldShowAdvice ? 520 : 360) : (shouldShowAdvice ? 420 : 300);
+    const backgroundWidth = this.isMobileMode ? 460 : 420;
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       GAME_CONFIG.HEIGHT / 2,
@@ -2895,7 +2900,7 @@ focusTarget: 'player',
 
     const buttonWidth = this.isMobileMode ? 260 : 200;
     const buttonHeight = this.isMobileMode ? 90 : 55;
-    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 140 : 120);
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? (shouldShowAdvice ? 220 : 140) : (shouldShowAdvice ? 170 : 120));
 
     const restartButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
@@ -2915,6 +2920,21 @@ focusTarget: 'player',
     });
     restartText.setOrigin(0.5);
     restartText.setDepth(102);
+
+    if (shouldShowAdvice) {
+      const adviceMessage = this.isMobileMode
+        ? '攻略ヒント:\nバイパーは高威力だがシールドに弱い。\nメテオラでシールドを割ろう。\nバイパーが多い時は全方位シールド(Shift+Space)\n→ Eでバイパーに切替えて連射すると有利。'
+        : '攻略ヒント:\nバイパーは高威力だがシールドに弱い。\nメテオラでシールドを割ろう。\nバイパーが多い時は全方位シールド(Shift+Space)を装備し、\nEでバイパーに切替えて連射すると比較的勝ちやすい。';
+      const adviceText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 10 : 20), adviceMessage, {
+        fontSize: this.isMobileMode ? '16px' : '18px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: this.isMobileMode ? 6 : 8,
+      });
+      adviceText.setOrigin(0.5);
+      adviceText.setDepth(100);
+    }
 
     const handleRestart = () => {
       this.scene.restart();
