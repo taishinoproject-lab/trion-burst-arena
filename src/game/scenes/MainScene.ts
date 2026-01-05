@@ -462,7 +462,7 @@ export class MainScene extends Phaser.Scene {
     this.tweens.add({
       targets: scanLine,
       y: GAME_CONFIG.HEIGHT,
-      duration: 3000,
+      duration: 5000,
       repeat: -1,
       ease: 'Linear',
     });
