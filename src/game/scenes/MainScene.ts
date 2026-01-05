@@ -592,7 +592,7 @@ export class MainScene extends Phaser.Scene {
     bossText.setOrigin(0.5);
     instructionElements.push(bossText);
 
-    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 32 : 26), '[ SINGLE PLAYER ]', {
+    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 28 : 22), '[ SINGLE PLAYER ]', {
       fontSize: this.isMobileMode ? '14px' : '11px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -641,7 +641,7 @@ export class MainScene extends Phaser.Scene {
     twoPlayerText.setOrigin(0.5);
     instructionElements.push(twoPlayerText);
 
-    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 32 : 26), '[ LOCAL VERSUS ]', {
+    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 28 : 22), '[ LOCAL VERSUS ]', {
       fontSize: this.isMobileMode ? '14px' : '11px',
       color: '#ffd166',
       fontFamily: 'monospace',
