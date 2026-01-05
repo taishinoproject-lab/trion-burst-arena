@@ -418,98 +418,333 @@ export class MainScene extends Phaser.Scene {
     const overviewTextY = layoutCenterY - (this.isMobileMode ? 120 : 130);
     const modeLabelY = layoutCenterY + (this.isMobileMode ? 40 : 10);
     const buttonY = layoutCenterY + (this.isMobileMode ? 140 : 90);
-    const buttonSpacing = this.isMobileMode ? 24 : 20;
-    const buttonWidth = this.isMobileMode ? 320 : 180;
+    const buttonSpacing = this.isMobileMode ? 24 : 30;
+    const buttonWidth = this.isMobileMode ? 320 : 200;
+    const buttonHeight = this.isMobileMode ? actionButtonHeight : 60;
     const totalButtonWidth = buttonWidth * 2 + buttonSpacing;
     const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
     const secondButtonX = firstButtonX + buttonWidth + buttonSpacing;
 
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
-      fontSize: this.isMobileMode ? '42px' : '28px',
+    const instructionElements: Phaser.GameObjects.GameObject[] = [];
+
+    // Decorative corner brackets
+    const cornerSize = 20;
+    const corners = this.add.graphics();
+    corners.lineStyle(2, GAME_CONFIG.BULLET_COLOR, 0.6);
+    // Top-left
+    corners.moveTo(60, 40);
+    corners.lineTo(40, 40);
+    corners.lineTo(40, 60);
+    // Top-right
+    corners.moveTo(GAME_CONFIG.WIDTH - 60, 40);
+    corners.lineTo(GAME_CONFIG.WIDTH - 40, 40);
+    corners.lineTo(GAME_CONFIG.WIDTH - 40, 60);
+    // Bottom-left
+    corners.moveTo(60, GAME_CONFIG.HEIGHT - 40);
+    corners.lineTo(40, GAME_CONFIG.HEIGHT - 40);
+    corners.lineTo(40, GAME_CONFIG.HEIGHT - 60);
+    // Bottom-right
+    corners.moveTo(GAME_CONFIG.WIDTH - 60, GAME_CONFIG.HEIGHT - 40);
+    corners.lineTo(GAME_CONFIG.WIDTH - 40, GAME_CONFIG.HEIGHT - 40);
+    corners.lineTo(GAME_CONFIG.WIDTH - 40, GAME_CONFIG.HEIGHT - 60);
+    corners.strokePath();
+    instructionElements.push(corners);
+
+    // Animated scan line effect
+    const scanLine = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      0,
+      GAME_CONFIG.WIDTH - 100,
+      2,
+      GAME_CONFIG.BULLET_COLOR,
+      0.3
+    );
+    this.tweens.add({
+      targets: scanLine,
+      y: GAME_CONFIG.HEIGHT,
+      duration: 3000,
+      repeat: -1,
+      ease: 'Linear',
+    });
+    instructionElements.push(scanLine);
+
+    // Glowing title with shadow effect
+    const titleGlow = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ TRION BATTLE ◆', {
+      fontSize: this.isMobileMode ? '48px' : '36px',
       color: '#00ffd5',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    titleGlow.setOrigin(0.5);
+    titleGlow.setAlpha(0.3);
+    titleGlow.setScale(1.05);
+    instructionElements.push(titleGlow);
+
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ TRION BATTLE ◆', {
+      fontSize: this.isMobileMode ? '48px' : '36px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
     });
     title.setOrigin(0.5);
+    instructionElements.push(title);
 
+    // Pulsing title animation
+    this.tweens.add({
+      targets: [title, titleGlow],
+      scaleX: 1.02,
+      scaleY: 1.02,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // Subtitle with typing effect style
+    const subtitle = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      titleY + (this.isMobileMode ? 50 : 40),
+      '[ WORLD TRIGGER COMBAT SIMULATOR ]',
+      {
+        fontSize: this.isMobileMode ? '18px' : '14px',
+        color: '#888888',
+        fontFamily: 'monospace',
+      }
+    );
+    subtitle.setOrigin(0.5);
+    instructionElements.push(subtitle);
+
+    // Horizontal divider lines
+    const dividerTop = this.add.graphics();
+    dividerTop.lineStyle(1, GAME_CONFIG.BULLET_COLOR, 0.5);
+    const dividerY = titleY + (this.isMobileMode ? 80 : 65);
+    dividerTop.moveTo(GAME_CONFIG.WIDTH / 2 - 200, dividerY);
+    dividerTop.lineTo(GAME_CONFIG.WIDTH / 2 + 200, dividerY);
+    dividerTop.strokePath();
+    instructionElements.push(dividerTop);
+
+    // Overview text with better styling
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       overviewTextY,
-      'トリオンバトルの概要\n' +
-        'トリオンとは生体エネルギーであり、攻撃・防御・被弾で減少し、0で敗北。\n' +
-        'トリガーはトリオンを使って起動する武器。3つ選んで切り替えながら戦う。\n' +
-        '※このゲームはパソコン推奨\n' +
-        '初めての人はBOSS MODEから始めるのがオススメ！\n' +
-        'モードを選んでスタート。',
+      '━━━ SYSTEM OVERVIEW ━━━\n\n' +
+        '► トリオン = 生体エネルギー\n' +
+        '► 攻撃・防御・被弾で減少 → 0で敗北\n' +
+        '► トリガー = 武器 (3つ選択して戦闘)\n\n' +
+        '※ PC推奨 | 初心者はBOSS MODEから',
       {
-        fontSize: this.isMobileMode ? '22px' : '16px',
-        color: '#ffffff',
+        fontSize: this.isMobileMode ? '20px' : '15px',
+        color: '#cccccc',
         fontFamily: 'monospace',
         align: 'center',
-        lineSpacing: this.isMobileMode ? 12 : 8,
+        lineSpacing: this.isMobileMode ? 10 : 8,
       }
     );
     overviewText.setOrigin(0.5);
+    instructionElements.push(overviewText);
 
-    const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, 'MODE SELECT', {
-      fontSize: this.isMobileMode ? '30px' : '18px',
+    // Mode select label with decorative elements
+    const modeLabelBg = this.add.graphics();
+    modeLabelBg.fillStyle(GAME_CONFIG.BULLET_COLOR, 0.1);
+    modeLabelBg.fillRoundedRect(
+      GAME_CONFIG.WIDTH / 2 - 120,
+      modeLabelY - 15,
+      240,
+      30,
+      5
+    );
+    instructionElements.push(modeLabelBg);
+
+    const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, '▼ SELECT MODE ▼', {
+      fontSize: this.isMobileMode ? '28px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
     });
     modeLabel.setOrigin(0.5);
+    instructionElements.push(modeLabel);
+
+    // Boss Mode Button with futuristic styling
+    const bossButtonGlow = this.add.rectangle(
+      firstButtonX,
+      buttonY,
+      buttonWidth + 8,
+      buttonHeight + 8,
+      GAME_CONFIG.BULLET_COLOR,
+      0.15
+    );
+    bossButtonGlow.setStrokeStyle(1, GAME_CONFIG.BULLET_COLOR, 0.3);
+    instructionElements.push(bossButtonGlow);
 
     const bossButton = this.add.rectangle(
       firstButtonX,
       buttonY,
       buttonWidth,
-      actionButtonHeight,
-      0x1a1a3a,
+      buttonHeight,
+      0x0a1a2a,
       0.95
     );
     bossButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const bossText = this.add.text(firstButtonX, buttonY, 'BOSS MODE', {
-      fontSize: this.isMobileMode ? '26px' : '18px',
-      color: '#ffffff',
+    instructionElements.push(bossButton);
+
+    // Boss button icon and text
+    const bossIcon = this.add.text(firstButtonX, buttonY - 8, '⬡', {
+      fontSize: this.isMobileMode ? '24px' : '20px',
+      color: '#00ffd5',
       fontFamily: 'monospace',
     });
+    bossIcon.setOrigin(0.5);
+    instructionElements.push(bossIcon);
+
+    const bossText = this.add.text(firstButtonX, buttonY + 12, 'BOSS MODE', {
+      fontSize: this.isMobileMode ? '24px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
     bossText.setOrigin(0.5);
+    instructionElements.push(bossText);
+
+    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 38 : 32), '[ SINGLE PLAYER ]', {
+      fontSize: this.isMobileMode ? '14px' : '11px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+    });
+    bossSubtext.setOrigin(0.5);
+    instructionElements.push(bossSubtext);
+
+    // 2P Mode Button with different color scheme
+    const twoPlayerButtonGlow = this.add.rectangle(
+      secondButtonX,
+      buttonY,
+      buttonWidth + 8,
+      buttonHeight + 8,
+      0xffd166,
+      0.15
+    );
+    twoPlayerButtonGlow.setStrokeStyle(1, 0xffd166, 0.3);
+    instructionElements.push(twoPlayerButtonGlow);
 
     const twoPlayerButton = this.add.rectangle(
       secondButtonX,
       buttonY,
       buttonWidth,
-      actionButtonHeight,
-      0x1a1a3a,
+      buttonHeight,
+      0x1a1a0a,
       0.95
     );
     twoPlayerButton.setStrokeStyle(3, 0xffd166, 0.9);
-    const twoPlayerText = this.add.text(secondButtonX, buttonY, '2P MODE', {
-      fontSize: this.isMobileMode ? '26px' : '18px',
-      color: '#ffffff',
+    instructionElements.push(twoPlayerButton);
+
+    // 2P button icon and text
+    const twoPlayerIcon = this.add.text(secondButtonX, buttonY - 8, '⬡⬡', {
+      fontSize: this.isMobileMode ? '20px' : '16px',
+      color: '#ffd166',
       fontFamily: 'monospace',
     });
-    twoPlayerText.setOrigin(0.5);
+    twoPlayerIcon.setOrigin(0.5);
+    instructionElements.push(twoPlayerIcon);
 
+    const twoPlayerText = this.add.text(secondButtonX, buttonY + 12, '2P MODE', {
+      fontSize: this.isMobileMode ? '24px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    twoPlayerText.setOrigin(0.5);
+    instructionElements.push(twoPlayerText);
+
+    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 38 : 32), '[ LOCAL VERSUS ]', {
+      fontSize: this.isMobileMode ? '14px' : '11px',
+      color: '#ffd166',
+      fontFamily: 'monospace',
+    });
+    twoPlayerSubtext.setOrigin(0.5);
+    instructionElements.push(twoPlayerSubtext);
+
+    // Button hover animations
+    const setupButtonHover = (
+      btn: Phaser.GameObjects.Rectangle,
+      glow: Phaser.GameObjects.Rectangle,
+      color: number
+    ) => {
+      btn.on('pointerover', () => {
+        this.tweens.add({
+          targets: glow,
+          alpha: 0.4,
+          scaleX: 1.05,
+          scaleY: 1.05,
+          duration: 150,
+        });
+        btn.setFillStyle(color === GAME_CONFIG.BULLET_COLOR ? 0x0a2a3a : 0x2a2a0a, 0.95);
+      });
+      btn.on('pointerout', () => {
+        this.tweens.add({
+          targets: glow,
+          alpha: 1,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 150,
+        });
+        btn.setFillStyle(color === GAME_CONFIG.BULLET_COLOR ? 0x0a1a2a : 0x1a1a0a, 0.95);
+      });
+    };
+
+    setupButtonHover(bossButton, bossButtonGlow, GAME_CONFIG.BULLET_COLOR);
+    setupButtonHover(twoPlayerButton, twoPlayerButtonGlow, 0xffd166);
+
+    // Footer decoration
+    const footerY = GAME_CONFIG.HEIGHT - (this.isMobileMode ? 60 : 50);
+    const footer = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      footerY,
+      '[ PRESS TO SELECT ]',
+      {
+        fontSize: this.isMobileMode ? '16px' : '12px',
+        color: '#555555',
+        fontFamily: 'monospace',
+      }
+    );
+    footer.setOrigin(0.5);
+    this.tweens.add({
+      targets: footer,
+      alpha: 0.3,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+    });
+    instructionElements.push(footer);
+
+    // Version indicator
+    const version = this.add.text(
+      GAME_CONFIG.WIDTH - 60,
+      GAME_CONFIG.HEIGHT - 30,
+      'v1.0',
+      {
+        fontSize: '12px',
+        color: '#333333',
+        fontFamily: 'monospace',
+      }
+    );
+    version.setOrigin(0.5);
+    instructionElements.push(version);
+
+    // Interactive handlers
     const handleBossMode = () => {
       this.showBossSetupInstructions();
     };
     bossButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBossMode);
     bossText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBossMode);
+    bossIcon.setInteractive({ useHandCursor: true }).on('pointerdown', handleBossMode);
+    bossSubtext.setInteractive({ useHandCursor: true }).on('pointerdown', handleBossMode);
 
     const handleTwoPlayerMode = () => {
       this.showTwoPlayerInstructions();
     };
     twoPlayerButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleTwoPlayerMode);
     twoPlayerText.setInteractive({ useHandCursor: true }).on('pointerdown', handleTwoPlayerMode);
-
-    const instructionElements: Phaser.GameObjects.GameObject[] = [
-      title,
-      overviewText,
-      modeLabel,
-      bossButton,
-      bossText,
-      twoPlayerButton,
-      twoPlayerText,
-    ];
+    twoPlayerIcon.setInteractive({ useHandCursor: true }).on('pointerdown', handleTwoPlayerMode);
+    twoPlayerSubtext.setInteractive({ useHandCursor: true }).on('pointerdown', handleTwoPlayerMode);
 
     this.setInstructionsContent(instructionElements, true);
   }
