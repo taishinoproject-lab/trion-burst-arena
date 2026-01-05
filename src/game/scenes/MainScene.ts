@@ -327,22 +327,22 @@ export class MainScene extends Phaser.Scene {
     this.gameOverText.setOrigin(0.5);
     this.gameOverText.setVisible(false);
 
-    // Tutorial text positioned at top center for better visibility
+    // Tutorial text positioned away from the center for better visibility
     this.tutorialHelpText = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      this.isMobileMode ? 90 : 70,
+      GAME_CONFIG.WIDTH - (this.isMobileMode ? 20 : 32),
+      this.isMobileMode ? 20 : 24,
       '',
       {
         fontSize: this.isMobileMode ? '16px' : '15px',
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: 'center',
+        align: 'right',
         lineSpacing: this.isMobileMode ? 4 : 6,
         backgroundColor: '#0a0a12',
         padding: { x: 16, y: 12 },
       }
     );
-    this.tutorialHelpText.setOrigin(0.5, 0);
+    this.tutorialHelpText.setOrigin(1, 0);
     this.tutorialHelpText.setVisible(false);
     this.tutorialHelpText.setDepth(90);
 
@@ -1370,35 +1370,23 @@ focusTarget: 'player',
   isCompleted: () => this.tutorialProgress.wideShieldBroken,
   focusTarget: 'player',
 },
-{
-  title: 'Step6 弾切替',
-  description: [
-    'キーボードの E で弾種を切替',
-    '（スマホは弾切替ボタン）',
-    'Eで切り替えてみよう',
-        ],
-        isCompleted: () => this.tutorialProgress.switched,
-        focusTarget: 'triggerDisplay',
-        requiresSwitch: true,
-      },
       {
-        title: 'Step7 ASTEROID',
+        title: 'Step6 ASTEROID',
         description: [
           '低コスト・連射向き',
           `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
-          'EでASTEROIDに切替',
           'ASTEROIDで10発当てよう',
         ],
         requiredBulletType: 'asteroid',
         requiredHits: 10,
         isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
         focusTarget: 'triggerDisplay',
-        requiresSwitch: true,
       },
       {
-        title: 'Step8 ASTEROID 遅延弾',
+        title: 'Step7 ASTEROID 遅延弾',
         description: [
           'Qで遅延弾モードに切替',
+          'アステロイドのみ遅延弾が使用可能',
           'DELAY: ON を確認',
           '遅延ASTEROIDで1発当てよう',
         ],
@@ -1416,11 +1404,13 @@ focusTarget: 'player',
         focusTarget: 'triggerDisplay',
       },
       {
-        title: 'Step9 METEORA',
+        title: 'Step8 METEORA',
         description: [
+          'キーボードの E で弾種を切替',
+          '（スマホは弾切替ボタン）',
+          'EでMETEORAに切替',
           '爆発で範囲攻撃・コスト高め',
           `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
-          'EでMETEORAに切替',
           'METEORAで10発当てよう',
         ],
         requiredBulletType: 'meteora',
@@ -1430,7 +1420,7 @@ focusTarget: 'player',
         requiresSwitch: true,
       },
       {
-        title: 'Step10 VIPER',
+        title: 'Step9 VIPER',
         description: [
           '誘導弾: マウス/指で誘導',
           '最も威力が高い',
@@ -1445,7 +1435,7 @@ focusTarget: 'player',
         requiresSwitch: true,
       },
       {
-        title: 'Step11 RED',
+        title: 'Step10 RED',
         description: [
           '低ダメージだがスロー付与',
           `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
@@ -1461,7 +1451,7 @@ focusTarget: 'player',
         requiresSwitch: true,
       },
       {
-        title: 'Step12 トリオン勝敗',
+        title: 'Step11 トリオン勝敗',
         description: [
           'トリオン0で敗北',
           '撃つ/守る/被弾で減る',
