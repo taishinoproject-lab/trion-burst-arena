@@ -149,6 +149,10 @@ export class MainScene extends Phaser.Scene {
     return this.gameStarted;
   }
 
+  public isTutorialActive() {
+    return this.isTutorialMode;
+  }
+
   constructor() {
     super({ key: 'MainScene' });
   }
@@ -160,6 +164,7 @@ export class MainScene extends Phaser.Scene {
   create() {
     this.isTutorialMode = false;
     this.tutorialOverlay = undefined;
+    this.events.emit('tutorial-state-changed', this.isTutorialMode);
     // Background
     this.cameras.main.setBackgroundColor(GAME_CONFIG.BACKGROUND_COLOR);
     
@@ -1309,6 +1314,7 @@ export class MainScene extends Phaser.Scene {
 
   private startTutorial() {
     this.isTutorialMode = true;
+    this.events.emit('tutorial-state-changed', this.isTutorialMode);
     this.difficulty = 'easy';
     this.selectedBulletTypes = [...AVAILABLE_BULLET_TYPES];
     this.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
