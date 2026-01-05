@@ -1047,8 +1047,9 @@ export class MainScene extends Phaser.Scene {
 
   private showCommandDetailInstructions() {
     const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
-    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 210);
-    const contentY = titleY + (this.isMobileMode ? 60 : 50);
+    const verticalOffset = this.isMobileMode ? -10 : -30;
+    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 210) + verticalOffset;
+    const contentY = titleY + (this.isMobileMode ? 60 : 54);
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, 'コマンド・トリガーの詳細', {
       fontSize: this.isMobileMode ? '32px' : '22px',
@@ -1085,7 +1086,7 @@ export class MainScene extends Phaser.Scene {
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     instructionElements.push(backButton, backText);
 
-    const commandText = [
+    const leftColumnLines = [
       '━━ コマンド解説 ━━',
       '・移動（WASD）：弾を避ける基本操作。',
       '・エイム（マウス）：狙いたい方向へ照準。',
@@ -1109,6 +1110,9 @@ export class MainScene extends Phaser.Scene {
       `ナローシールド：耐久${GAME_CONFIG.SHIELD_NARROW_STRENGTH}。正面だけ守るが強い。`,
       `ワイドシールド：耐久${GAME_CONFIG.SHIELD_WIDE_STRENGTH}。全周囲を守るが削れやすい。`,
       '',
+    ];
+
+    const rightColumnLines = [
       '━━ 初心者向け 戦略メモ ━━',
       '・VIPERは最大火力で主力。固定シールドの背後を狙うと強い。',
       '・METEORAはシールド破壊が得意。強い弾が来たら前方位シールドで防ぐ。',
@@ -1116,18 +1120,49 @@ export class MainScene extends Phaser.Scene {
       '・固定シールドは向きが変わらない。横や背後から攻撃して崩そう。',
       '',
       `※数値は基準値。戦況に合わせて弾を使い分けよう。`,
-    ].join('\n');
+    ];
 
-    const commandDetail = this.add.text(GAME_CONFIG.WIDTH / 2, contentY, commandText, {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '14px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      align: 'left',
-      lineSpacing: this.isMobileMode ? 10 : 6,
-      wordWrap: { width: this.isMobileMode ? 560 : 860 },
-    });
-    commandDetail.setOrigin(0.5, 0);
-    instructionElements.push(commandDetail);
+    if (this.isMobileMode) {
+      const commandText = [...leftColumnLines, ...rightColumnLines].join('\n');
+      const commandDetail = this.add.text(GAME_CONFIG.WIDTH / 2, contentY, commandText, {
+        fontSize: isCompactLayout ? '18px' : '20px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'left',
+        lineSpacing: 10,
+        wordWrap: { width: 560 },
+      });
+      commandDetail.setOrigin(0.5, 0);
+      instructionElements.push(commandDetail);
+    } else {
+      const columnGap = 40;
+      const columnWidth = 520;
+      const totalWidth = columnWidth * 2 + columnGap;
+      const leftX = GAME_CONFIG.WIDTH / 2 - totalWidth / 2;
+      const rightX = leftX + columnWidth + columnGap;
+
+      const leftText = this.add.text(leftX, contentY, leftColumnLines.join('\n'), {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'left',
+        lineSpacing: 6,
+        wordWrap: { width: columnWidth },
+      });
+      leftText.setOrigin(0, 0);
+
+      const rightText = this.add.text(rightX, contentY, rightColumnLines.join('\n'), {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'left',
+        lineSpacing: 6,
+        wordWrap: { width: columnWidth },
+      });
+      rightText.setOrigin(0, 0);
+
+      instructionElements.push(leftText, rightText);
+    }
 
     this.setInstructionsContent(instructionElements, true);
   }
