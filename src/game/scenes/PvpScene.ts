@@ -123,6 +123,7 @@ export class PvpScene extends Phaser.Scene {
   private player1BulletText!: Phaser.GameObjects.Text;
   private player2BulletText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
+  private damageTexts: Phaser.GameObjects.Text[] = [];
 
   private wKey!: Phaser.Input.Keyboard.Key;
   private aKey!: Phaser.Input.Keyboard.Key;
@@ -538,6 +539,7 @@ export class PvpScene extends Phaser.Scene {
     const damage = isExplosion ? GAME_CONFIG.METEORA_TRION_DAMAGE : bullet.trionDamage;
     if (targetId === 'p1') {
       this.player1Trion -= damage;
+      this.showDamageNumber(this.player1.x, this.player1.y, damage, true);
       if (bullet.type === 'red') {
         this.player1.applyRedBulletHit(
           PvpScene.TWO_PLAYER_RED_SLOW_DURATION,
@@ -547,6 +549,7 @@ export class PvpScene extends Phaser.Scene {
       }
     } else {
       this.player2Trion -= damage;
+      this.showDamageNumber(this.player2.x, this.player2.y, damage, false);
       if (bullet.type === 'red') {
         this.player2.applyRedBulletHit(
           PvpScene.TWO_PLAYER_RED_SLOW_DURATION,
@@ -602,6 +605,7 @@ export class PvpScene extends Phaser.Scene {
       const player1Bounds = new Phaser.Geom.Circle(this.player1.x, this.player1.y, GAME_CONFIG.PLAYER_RADIUS);
       if (Phaser.Geom.Intersects.CircleToCircle(area, player1Bounds)) {
         this.player1Trion -= GAME_CONFIG.METEORA_TRION_DAMAGE;
+        this.showDamageNumber(this.player1.x, this.player1.y, GAME_CONFIG.METEORA_TRION_DAMAGE, true);
       }
     }
 
@@ -611,8 +615,43 @@ export class PvpScene extends Phaser.Scene {
       const player2Bounds = new Phaser.Geom.Circle(this.player2.x, this.player2.y, GAME_CONFIG.PLAYER_RADIUS);
       if (Phaser.Geom.Intersects.CircleToCircle(area, player2Bounds)) {
         this.player2Trion -= GAME_CONFIG.METEORA_TRION_DAMAGE;
+        this.showDamageNumber(this.player2.x, this.player2.y, GAME_CONFIG.METEORA_TRION_DAMAGE, false);
       }
     }
+  }
+
+  private showDamageNumber(x: number, y: number, damage: number, isPlayer1Damage: boolean) {
+    const color = isPlayer1Damage ? '#ff6b6b' : '#00ffd5';
+    const offsetX = Phaser.Math.Between(-20, 20);
+    const offsetY = Phaser.Math.Between(-10, 10);
+
+    const damageText = this.add.text(x + offsetX, y + offsetY, `-${Math.round(damage)}`, {
+      fontSize: '22px',
+      fontFamily: 'monospace',
+      color: color,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    damageText.setOrigin(0.5, 0.5);
+    damageText.setDepth(90);
+    this.damageTexts.push(damageText);
+
+    this.tweens.add({
+      targets: damageText,
+      y: damageText.y - 50,
+      alpha: 0,
+      scale: 1.2,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        const index = this.damageTexts.indexOf(damageText);
+        if (index > -1) {
+          this.damageTexts.splice(index, 1);
+        }
+        damageText.destroy();
+      }
+    });
   }
 
   private regenerateTrion(delta: number) {

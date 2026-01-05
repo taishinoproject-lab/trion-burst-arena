@@ -434,6 +434,8 @@ export class MainScene extends Phaser.Scene {
       'トリオンバトルの概要\n' +
         'トリオンは体力とエネルギー。攻撃・防御・被弾で減少し、0で敗北。\n' +
         'トリガーは装備する武器。3つ選んで切り替えながら戦う。\n' +
+        'このゲームはパソコン推奨です。\n' +
+        '初めての人はBOSS MODEのチュートリアルから始めるのがオススメ。\n' +
         'モードを選んでスタート。',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
