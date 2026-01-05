@@ -37,7 +37,7 @@ export const GAME_CONFIG = {
   FIRE_RATE: 7, // shots per second
   
   // Asteroid bullet
-  ASTEROID_COST: 2,
+  ASTEROID_COST: 5,
   ASTEROID_TRION_DAMAGE: 10,
   ASTEROID_SHIELD_DAMAGE: 9,
   
