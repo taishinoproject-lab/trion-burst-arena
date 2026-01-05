@@ -1015,7 +1015,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private applyDifficultySettings() {
-    const fireRateMultiplier = this.difficulty === 'easy' ? 0.5 : this.difficulty === 'hard' ? 2 : 1;
+    const fireRateMultiplier = this.getEnemyFireRateMultiplier();
     this.boss.setFireRate(GAME_CONFIG.BOSS_FIRE_RATE * fireRateMultiplier);
     this.gameState.bossTrion = this.getBossMaxTrion();
   }
@@ -1947,9 +1947,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private spawnShieldedEnemy() {
+    const fireRateMultiplier = this.getEnemyFireRateMultiplier();
     const config: Partial<BossConfig> = {
       speed: GAME_CONFIG.BOSS_SPEED * 0.95,
-      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.25,
+      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.25 * fireRateMultiplier,
       bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED * 1.1,
       shieldCooldown: 1400,
       color: 0xffa94d,
@@ -1967,9 +1968,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private spawnRapidEnemy() {
+    const fireRateMultiplier = this.getEnemyFireRateMultiplier();
     const config: Partial<BossConfig> = {
       speed: GAME_CONFIG.BOSS_SPEED * 1.6,
-      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.6,
+      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.6 * fireRateMultiplier,
       bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED * 1.3,
       shieldCooldown: 2200,
       color: 0xff6bf0,
@@ -2037,6 +2039,16 @@ export class MainScene extends Phaser.Scene {
       delayedShotChance: 0.3,
       bulletWeights: { asteroid: 0.45, meteora: 0.3, viper: 0.25 },
     };
+  }
+
+  private getEnemyFireRateMultiplier() {
+    if (this.difficulty === 'easy') {
+      return 0.5;
+    }
+    if (this.difficulty === 'hard') {
+      return 2;
+    }
+    return 1;
   }
 
   private fireEnemy(enemy: EnemyEntry, time: number) {

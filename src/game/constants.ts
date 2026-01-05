@@ -87,8 +87,8 @@ export const AVAILABLE_BULLET_TYPES: BulletType[] = ['asteroid', 'meteora', 'vip
 export type Difficulty = 'easy' | 'middle' | 'hard';
 
 export const DIFFICULTY_DAMAGE_MULTIPLIER: Record<Difficulty, number> = {
-  easy: 0.5,
-  middle: 0.75,
+  easy: 1,
+  middle: 1,
   hard: 1,
 };
 
