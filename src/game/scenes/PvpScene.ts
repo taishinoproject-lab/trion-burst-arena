@@ -14,6 +14,7 @@ class PvpFighter {
   private slowUntil = 0;
   private slowStacks = 0;
   private slowStackMultiplier = 1;
+  private freezeUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, color: number) {
     this.scene = scene;
@@ -33,6 +34,10 @@ class PvpFighter {
     const now = this.scene.time.now;
     if (now >= this.slowUntil && this.slowStacks > 0) {
       this.slowStacks = 0;
+    }
+    if (now < this.freezeUntil) {
+      this.sprite.setPosition(this.x, this.y);
+      return;
     }
     const speedMultiplier = this.getSpeedMultiplier(now);
     const speed = GAME_CONFIG.PLAYER_SPEED * speedMultiplier * (delta / 1000);
@@ -64,6 +69,19 @@ class PvpFighter {
     this.slowStacks = isActive ? Math.min(this.slowStacks + 1, GAME_CONFIG.RED_BULLET_MAX_STACKS) : 1;
     this.slowUntil = now + durationMs;
     this.slowStackMultiplier = multiplier;
+  }
+
+  applyRedBulletHit(slowDurationMs: number, slowMultiplier: number, freezeDurationMs: number) {
+    const now = this.scene.time.now;
+    const slowActive = now < this.slowUntil && this.slowStacks > 0;
+    if (slowActive) {
+      this.freezeUntil = Math.max(this.freezeUntil, now + freezeDurationMs);
+      return;
+    }
+
+    this.slowStacks = 1;
+    this.slowUntil = now + slowDurationMs;
+    this.slowStackMultiplier = slowMultiplier;
   }
 
   getBulletSpeedMultiplier(currentTime: number) {
@@ -127,6 +145,9 @@ export class PvpScene extends Phaser.Scene {
   private player2LastFireTime = 0;
   private player2CyclePrev = false;
   private player2CycleNext = false;
+  private static readonly TWO_PLAYER_RED_SLOW_DURATION = 10000;
+  private static readonly TWO_PLAYER_RED_FREEZE_DURATION = 4000;
+  private static readonly TWO_PLAYER_VIPER_GUIDANCE_DURATION = 1000;
 
   constructor() {
     super({ key: 'PvpScene' });
@@ -404,7 +425,8 @@ export class PvpScene extends Phaser.Scene {
       isPlayer1,
       trionDamage,
       shieldDamage,
-      speed
+      speed,
+      bulletType === 'viper' ? PvpScene.TWO_PLAYER_VIPER_GUIDANCE_DURATION : undefined
     );
 
     if (isPlayer1) {
@@ -426,6 +448,7 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private checkCollisions() {
+    this.resolveBulletInterceptions();
     this.handleBulletHits(this.player1Bullets, this.player2, 'p2');
     this.handleBulletHits(this.player2Bullets, this.player1, 'p1');
 
@@ -484,12 +507,78 @@ export class PvpScene extends Phaser.Scene {
     if (targetId === 'p1') {
       this.player1Trion -= damage;
       if (bullet.type === 'red') {
-        this.player1.applySlow(GAME_CONFIG.RED_BULLET_SLOW_DURATION, GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER);
+        this.player1.applyRedBulletHit(
+          PvpScene.TWO_PLAYER_RED_SLOW_DURATION,
+          GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER,
+          PvpScene.TWO_PLAYER_RED_FREEZE_DURATION
+        );
       }
     } else {
       this.player2Trion -= damage;
       if (bullet.type === 'red') {
-        this.player2.applySlow(GAME_CONFIG.RED_BULLET_SLOW_DURATION, GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER);
+        this.player2.applyRedBulletHit(
+          PvpScene.TWO_PLAYER_RED_SLOW_DURATION,
+          GAME_CONFIG.RED_BULLET_SLOW_MULTIPLIER,
+          PvpScene.TWO_PLAYER_RED_FREEZE_DURATION
+        );
+      }
+    }
+  }
+
+  private resolveBulletInterceptions() {
+    for (const player1Bullet of this.player1Bullets) {
+      if (!player1Bullet.active) continue;
+      if (player1Bullet.type === 'red') continue;
+      const player1Bounds = player1Bullet.getBounds();
+
+      for (const player2Bullet of this.player2Bullets) {
+        if (!player2Bullet.active) continue;
+        if (player2Bullet.type === 'red') continue;
+        const player2Bounds = player2Bullet.getBounds();
+
+        if (!Phaser.Geom.Intersects.CircleToCircle(player1Bounds, player2Bounds)) continue;
+
+        if (player1Bullet.type === 'meteora') {
+          const area = player1Bullet.explode();
+          if (area) {
+            this.applyMeteoraExplosionArea(area);
+          }
+        } else {
+          player1Bullet.destroy();
+        }
+
+        if (player2Bullet.type === 'meteora') {
+          const area = player2Bullet.explode();
+          if (area) {
+            this.applyMeteoraExplosionArea(area);
+          }
+        } else {
+          player2Bullet.destroy();
+        }
+        break;
+      }
+    }
+  }
+
+  private applyMeteoraExplosionArea(area: Phaser.Geom.Circle) {
+    const player1Shield = this.player1Shield;
+    const player2Shield = this.player2Shield;
+
+    if (player1Shield?.active && this.circleHitsShield(area, player1Shield)) {
+      player1Shield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+    } else {
+      const player1Bounds = new Phaser.Geom.Circle(this.player1.x, this.player1.y, GAME_CONFIG.PLAYER_RADIUS);
+      if (Phaser.Geom.Intersects.CircleToCircle(area, player1Bounds)) {
+        this.player1Trion -= GAME_CONFIG.METEORA_TRION_DAMAGE;
+      }
+    }
+
+    if (player2Shield?.active && this.circleHitsShield(area, player2Shield)) {
+      player2Shield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
+    } else {
+      const player2Bounds = new Phaser.Geom.Circle(this.player2.x, this.player2.y, GAME_CONFIG.PLAYER_RADIUS);
+      if (Phaser.Geom.Intersects.CircleToCircle(area, player2Bounds)) {
+        this.player2Trion -= GAME_CONFIG.METEORA_TRION_DAMAGE;
       }
     }
   }

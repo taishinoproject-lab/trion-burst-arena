@@ -22,6 +22,7 @@ export class Bullet {
   private createdAt: number;
   private trail: Phaser.GameObjects.Arc[] = [];
   private trailTimer: number = 0;
+  private viperGuidanceDurationMs?: number;
   
   public isHeld: boolean = false;
   public releaseScheduled: boolean = false;
@@ -35,7 +36,8 @@ export class Bullet {
     isPlayerBullet: boolean,
     trionDamage: number,
     shieldDamage: number,
-    speed?: number
+    speed?: number,
+    viperGuidanceDurationMs?: number
   ) {
     this.scene = scene;
     this.x = x;
@@ -53,6 +55,9 @@ export class Bullet {
       this.speed = speed ?? GAME_CONFIG.BULLET_SPEED;
     }
     this.createdAt = scene.time.now;
+    if (type === 'viper') {
+      this.viperGuidanceDurationMs = viperGuidanceDurationMs;
+    }
     this.ignoreShield = type === 'red';
     
     this.velocityX = Math.cos(angle) * this.speed;
@@ -116,7 +121,19 @@ export class Bullet {
     const dt = delta / 1000;
     
     // Viper guided behavior
-    if (this.type === 'viper' && mouseX !== undefined && mouseY !== undefined) {
+    if (this.type === 'viper') {
+      if (this.scene.time.now - this.createdAt > GAME_CONFIG.VIPER_LIFETIME) {
+        this.destroy();
+        return;
+      }
+    }
+
+    const viperGuidanceActive =
+      this.type === 'viper' &&
+      (this.viperGuidanceDurationMs === undefined ||
+        this.scene.time.now - this.createdAt <= this.viperGuidanceDurationMs);
+
+    if (viperGuidanceActive && mouseX !== undefined && mouseY !== undefined) {
       // Calculate desired angle toward mouse
       const targetAngle = Math.atan2(mouseY - this.y, mouseX - this.x);
       
@@ -144,12 +161,6 @@ export class Bullet {
       if (this.trailTimer > 30) {
         this.trailTimer = 0;
         this.createTrailParticle();
-      }
-      
-      // Check lifetime
-      if (this.scene.time.now - this.createdAt > GAME_CONFIG.VIPER_LIFETIME) {
-        this.destroy();
-        return;
       }
     }
     
