@@ -172,6 +172,13 @@ export class PvpScene extends Phaser.Scene {
     super({ key: 'PvpScene' });
   }
 
+  init() {
+    const mobileFromRegistry = this.registry.get('isMobile');
+    if (typeof mobileFromRegistry === 'boolean') {
+      this.isMobileMode = mobileFromRegistry;
+    }
+  }
+
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
   }

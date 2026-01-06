@@ -31,6 +31,11 @@ export const createGameConfig = (
     antialias: true,
     pixelArt: false,
   },
+  callbacks: {
+    preBoot: (game) => {
+      game.registry.set('isMobile', isMobile);
+    },
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

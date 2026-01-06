@@ -174,6 +174,10 @@ export class MainScene extends Phaser.Scene {
 
   init(data?: { instructionStartMode?: 'modeSelect' | 'twoPlayer' }) {
     this.instructionStartMode = data?.instructionStartMode ?? 'modeSelect';
+    const mobileFromRegistry = this.registry.get('isMobile');
+    if (typeof mobileFromRegistry === 'boolean') {
+      this.isMobileMode = mobileFromRegistry;
+    }
   }
 
   create() {
