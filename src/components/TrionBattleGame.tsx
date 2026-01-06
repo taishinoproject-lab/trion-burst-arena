@@ -28,6 +28,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const [currentBulletType, setCurrentBulletType] = useState<BulletType | null>(null);
   const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
   const [loadingDelayDone, setLoadingDelayDone] = useState(false);
+  const fullscreenAttemptedRef = useRef(false);
   const isMobileResolved = isMobile !== null;
   const showSplash = splashPhase !== 'ready';
   const showLogo = splashPhase === 'logo';
@@ -78,6 +79,16 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  const requestFullscreenAndLandscape = useCallback(async () => {
+    if (!fullscreenRef.current || !canFullscreen) return;
+    if (!document.fullscreenElement) {
+      await fullscreenRef.current.requestFullscreen().catch(() => {});
+    }
+    if (screen.orientation?.lock) {
+      await screen.orientation.lock('landscape').catch(() => {});
+    }
+  }, [canFullscreen]);
 
   const handleBattleStateChange = useCallback((active: boolean) => {
     setIsBattleActive(active);
@@ -169,8 +180,31 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       await document.exitFullscreen();
       return;
     }
-    await fullscreenRef.current.requestFullscreen();
-  }, [canFullscreen]);
+    await requestFullscreenAndLandscape();
+  }, [canFullscreen, requestFullscreenAndLandscape]);
+
+  useEffect(() => {
+    if (!isMobile || !canFullscreen) {
+      fullscreenAttemptedRef.current = false;
+      return;
+    }
+    if (splashPhase !== 'ready') return;
+
+    const attemptFullscreen = () => {
+      if (fullscreenAttemptedRef.current) return;
+      fullscreenAttemptedRef.current = true;
+      void requestFullscreenAndLandscape();
+    };
+
+    attemptFullscreen();
+    window.addEventListener('touchstart', attemptFullscreen, { passive: true, once: true });
+    window.addEventListener('pointerdown', attemptFullscreen, { passive: true, once: true });
+
+    return () => {
+      window.removeEventListener('touchstart', attemptFullscreen);
+      window.removeEventListener('pointerdown', attemptFullscreen);
+    };
+  }, [canFullscreen, isMobile, requestFullscreenAndLandscape, splashPhase]);
 
   const handleMove = useCallback((x: number, y: number) => {
     if (sceneRef.current) {
