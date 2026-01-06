@@ -370,9 +370,10 @@ export class MainScene extends Phaser.Scene {
     }
     
     // Bottom UI - Bullet type and Delay status
-    const bottomY = GAME_CONFIG.HEIGHT - (isMobile ? 26 : 40);
-    const panelWidth = isMobile ? 260 : 360;
-    const panelHeight = isMobile ? 36 : 50;
+    const isCompactLayout = isMobile && this.scale.displaySize.height < 600;
+    const bottomY = GAME_CONFIG.HEIGHT - (isMobile ? (isCompactLayout ? 40 : 52) : 40);
+    const panelWidth = isMobile ? (isCompactLayout ? 290 : 330) : 360;
+    const panelHeight = isMobile ? (isCompactLayout ? 46 : 56) : 50;
     
     // Background panel for bottom UI
     const panel = this.add.rectangle(
@@ -385,18 +386,29 @@ export class MainScene extends Phaser.Scene {
     );
     panel.setStrokeStyle(1, GAME_CONFIG.BULLET_COLOR, 0.5);
     
-    const bottomFontSize = isMobile ? '13px' : '18px';
-    this.bulletTypeText = this.add.text(GAME_CONFIG.WIDTH / 2 - (isMobile ? 100 : 140), bottomY - (isMobile ? 6 : 10), '', {
-      fontSize: bottomFontSize,
-      color: '#00ffd5',
-      fontFamily: 'monospace',
-    });
+    const bottomFontSize = isMobile ? (isCompactLayout ? '14px' : '16px') : '18px';
+    const bottomTextY = bottomY - (isMobile ? (isCompactLayout ? 8 : 10) : 10);
+    this.bulletTypeText = this.add.text(
+      GAME_CONFIG.WIDTH / 2 - (isMobile ? (isCompactLayout ? 110 : 125) : 140),
+      bottomTextY,
+      '',
+      {
+        fontSize: bottomFontSize,
+        color: '#00ffd5',
+        fontFamily: 'monospace',
+      }
+    );
     
-    this.delayedAsteroidText = this.add.text(GAME_CONFIG.WIDTH / 2 + (isMobile ? 20 : 40), bottomY - (isMobile ? 6 : 10), '', {
-      fontSize: bottomFontSize,
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
+    this.delayedAsteroidText = this.add.text(
+      GAME_CONFIG.WIDTH / 2 + (isMobile ? (isCompactLayout ? 10 : 18) : 40),
+      bottomTextY,
+      '',
+      {
+        fontSize: bottomFontSize,
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      }
+    );
     
     // Game over text (hidden initially)
     this.gameOverText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2, '', {
@@ -413,13 +425,13 @@ export class MainScene extends Phaser.Scene {
     const tutorialTextY = isMobile ? 14 : 24;
     const tutorialWrapWidth = isMobile ? Math.round(GAME_CONFIG.WIDTH * 0.42) : undefined;
     this.tutorialHelpText = this.add.text(tutorialTextX, tutorialTextY, '', {
-      fontSize: isMobile ? '14px' : '15px',
+      fontSize: isMobile ? (isCompactLayout ? '15px' : '16px') : '15px',
       color: '#ffffff',
       fontFamily: 'monospace',
       align: 'right',
-      lineSpacing: isMobile ? 4 : 6,
+      lineSpacing: isMobile ? 6 : 6,
       backgroundColor: '#0a0a12',
-      padding: isMobile ? { x: 10, y: 8 } : { x: 16, y: 12 },
+      padding: isMobile ? { x: 14, y: 12 } : { x: 16, y: 12 },
       wordWrap: tutorialWrapWidth ? { width: tutorialWrapWidth, useAdvancedWrap: true } : undefined,
     });
     this.tutorialHelpText.setOrigin(1, 0);
@@ -477,12 +489,12 @@ export class MainScene extends Phaser.Scene {
       this.isMobileMode && this.scale.displaySize.width > this.scale.displaySize.height;
     // Reduce vertical offset for better centering on mobile
     const layoutOffsetY = this.isMobileMode
-      ? (isCompactLayout ? -140 : -60) + (isLandscapeMobile ? -60 : 0)
+      ? (isCompactLayout ? -110 : -40) + (isLandscapeMobile ? -50 : 0)
       : 0;
     const layoutCenterY = GAME_CONFIG.HEIGHT / 2 + layoutOffsetY;
     // Smaller buttons for mobile to prevent overflow
-    const actionButtonWidth = this.isMobileMode ? (isCompactLayout ? 240 : 280) : 180;
-    const actionButtonHeight = this.isMobileMode ? (isCompactLayout ? 50 : 60) : 50;
+    const actionButtonWidth = this.isMobileMode ? (isCompactLayout ? 260 : 300) : 180;
+    const actionButtonHeight = this.isMobileMode ? (isCompactLayout ? 56 : 68) : 50;
 
     return {
       isCompactLayout,
@@ -518,10 +530,10 @@ export class MainScene extends Phaser.Scene {
     const overviewTextY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 60 : 80) : 130);
     const modeLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 30 : 50) : 10);
     const buttonY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 90 : 110) : 90);
-    const buttonSpacing = this.isMobileMode ? 16 : 30;
+    const buttonSpacing = this.isMobileMode ? 20 : 30;
     // Smaller buttons for mobile - use vertical stack layout
-    const buttonWidth = this.isMobileMode ? (isCompactLayout ? 180 : 200) : 200;
-    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 50 : 56) : 60;
+    const buttonWidth = this.isMobileMode ? (isCompactLayout ? 200 : 220) : 200;
+    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 56 : 64) : 60;
     const totalButtonWidth = buttonWidth * 2 + buttonSpacing;
     const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
     const secondButtonX = firstButtonX + buttonWidth + buttonSpacing;
@@ -553,7 +565,7 @@ export class MainScene extends Phaser.Scene {
 
 
     // Glowing title with shadow effect
-    const titleFontSize = this.isMobileMode ? (isCompactLayout ? '32px' : '36px') : '36px';
+    const titleFontSize = this.isMobileMode ? (isCompactLayout ? '34px' : '38px') : '36px';
     const titleGlow = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ トリオンバトル ◆', {
       fontSize: titleFontSize,
       color: '#00ffd5',
@@ -587,8 +599,8 @@ export class MainScene extends Phaser.Scene {
 
 
     // Overview text with better styling - smaller on mobile
-    const overviewFontSize = this.isMobileMode ? (isCompactLayout ? '13px' : '15px') : '15px';
-    const overviewLineSpacing = this.isMobileMode ? (isCompactLayout ? 4 : 6) : 8;
+    const overviewFontSize = this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '15px';
+    const overviewLineSpacing = this.isMobileMode ? (isCompactLayout ? 6 : 8) : 8;
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       overviewTextY,
@@ -611,7 +623,7 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(overviewText);
 
     // Mode select label with decorative elements
-    const modeLabelWidth = this.isMobileMode ? (isCompactLayout ? 160 : 180) : 240;
+    const modeLabelWidth = this.isMobileMode ? (isCompactLayout ? 180 : 200) : 240;
     const modeLabelBg = this.add.graphics();
     modeLabelBg.fillStyle(GAME_CONFIG.BULLET_COLOR, 0.1);
     modeLabelBg.fillRoundedRect(
@@ -624,7 +636,7 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(modeLabelBg);
 
     const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, '▼ モード選択 ▼', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '18px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -656,12 +668,12 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(bossButton);
 
     // Boss button icon and text - smaller on mobile
-    const buttonIconSize = this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '20px';
-    const buttonTextSize = this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '18px';
-    const buttonSubtextSize = this.isMobileMode ? (isCompactLayout ? '9px' : '10px') : '11px';
-    const iconOffsetY = this.isMobileMode ? (isCompactLayout ? -10 : -12) : -15;
-    const textOffsetY = this.isMobileMode ? (isCompactLayout ? 4 : 5) : 5;
-    const subtextOffsetY = this.isMobileMode ? (isCompactLayout ? 16 : 20) : 22;
+    const buttonIconSize = this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '20px';
+    const buttonTextSize = this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '18px';
+    const buttonSubtextSize = this.isMobileMode ? (isCompactLayout ? '10px' : '12px') : '11px';
+    const iconOffsetY = this.isMobileMode ? (isCompactLayout ? -12 : -14) : -15;
+    const textOffsetY = this.isMobileMode ? (isCompactLayout ? 6 : 7) : 5;
+    const subtextOffsetY = this.isMobileMode ? (isCompactLayout ? 20 : 24) : 22;
 
     const bossIcon = this.add.text(firstButtonX, buttonY + iconOffsetY, '⬡', {
       fontSize: buttonIconSize,
@@ -713,7 +725,7 @@ export class MainScene extends Phaser.Scene {
 
     // 2P button icon and text
     const twoPlayerIcon = this.add.text(secondButtonX, buttonY + iconOffsetY, '⬡⬡', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '16px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
       color: '#ffd166',
       fontFamily: 'monospace',
     });
@@ -775,7 +787,7 @@ export class MainScene extends Phaser.Scene {
       footerY,
       '[ タップして選択 ]',
       {
-        fontSize: this.isMobileMode ? (isCompactLayout ? '10px' : '12px') : '12px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '11px' : '13px') : '12px',
         color: '#555555',
         fontFamily: 'monospace',
       }
@@ -834,7 +846,7 @@ export class MainScene extends Phaser.Scene {
     const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? -10 : 10) : -20);
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- トリオンバトル -', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '24px' : '28px') : '28px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '26px' : '32px') : '28px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
@@ -843,10 +855,10 @@ export class MainScene extends Phaser.Scene {
     const instructionElements: Phaser.GameObjects.GameObject[] = [title];
 
     // Smaller back button for mobile
-    const backButtonX = this.isMobileMode ? (isCompactLayout ? 70 : 90) : 110;
-    const backButtonY = this.isMobileMode ? (isCompactLayout ? 40 : 50) : 60;
-    const backButtonWidth = this.isMobileMode ? (isCompactLayout ? 120 : 150) : 150;
-    const backButtonHeight = this.isMobileMode ? (isCompactLayout ? 36 : 44) : 44;
+    const backButtonX = this.isMobileMode ? (isCompactLayout ? 80 : 100) : 110;
+    const backButtonY = this.isMobileMode ? (isCompactLayout ? 46 : 56) : 60;
+    const backButtonWidth = this.isMobileMode ? (isCompactLayout ? 140 : 180) : 150;
+    const backButtonHeight = this.isMobileMode ? (isCompactLayout ? 44 : 52) : 44;
     const backButton = this.add.rectangle(
       backButtonX,
       backButtonY,
@@ -857,7 +869,7 @@ export class MainScene extends Phaser.Scene {
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     const backText = this.add.text(backButtonX, backButtonY, '戻る', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -879,7 +891,7 @@ export class MainScene extends Phaser.Scene {
     );
     tutorialButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
     const tutorialText = this.add.text(GAME_CONFIG.WIDTH / 2, tutorialButtonY, 'チュートリアル', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '18px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -905,7 +917,7 @@ export class MainScene extends Phaser.Scene {
       detailButtonY,
       'トリガーの詳細',
       {
-        fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
       }
@@ -919,15 +931,15 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(detailButton, detailText);
 
     const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, '難易度選択', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '20px') : '18px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '22px') : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
     });
     difficultyLabel.setOrigin(0.5);
 
-    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 120 : GAME_CONFIG.WIDTH - 200;
-    const viperButtonWidth = this.isMobileMode ? (isCompactLayout ? 140 : 160) : 170;
-    const viperButtonHeight = this.isMobileMode ? (isCompactLayout ? 36 : 44) : 40;
+    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 130 : GAME_CONFIG.WIDTH - 200;
+    const viperButtonWidth = this.isMobileMode ? (isCompactLayout ? 170 : 190) : 170;
+    const viperButtonHeight = this.isMobileMode ? (isCompactLayout ? 44 : 52) : 40;
     const viperButton = this.add.rectangle(
       viperButtonX,
       difficultyLabelY,
@@ -938,7 +950,7 @@ export class MainScene extends Phaser.Scene {
     );
     viperButton.setStrokeStyle(2, 0x4ad6ff, 0.9);
     const viperText = this.add.text(viperButtonX, difficultyLabelY, 'バイパー設定', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '14px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -950,10 +962,10 @@ export class MainScene extends Phaser.Scene {
     viperText.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
 
     // Create smaller buttons for mobile - horizontal layout
-    const buttonWidth = this.isMobileMode ? (isCompactLayout ? 100 : 110) : 80;
-    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 40 : 48) : 40;
-    const buttonY = difficultyLabelY + (this.isMobileMode ? (isCompactLayout ? 40 : 50) : 80);
-    const buttonSpacing = this.isMobileMode ? (isCompactLayout ? 10 : 14) : 20;
+    const buttonWidth = this.isMobileMode ? (isCompactLayout ? 120 : 130) : 80;
+    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 48 : 56) : 40;
+    const buttonY = difficultyLabelY + (this.isMobileMode ? (isCompactLayout ? 50 : 60) : 80);
+    const buttonSpacing = this.isMobileMode ? (isCompactLayout ? 12 : 16) : 20;
     const totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
     const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
     const easyButtonX = firstButtonX;
@@ -971,7 +983,7 @@ export class MainScene extends Phaser.Scene {
     );
     easyBg.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.8);
     
-    const diffBtnFontSize = this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '20px';
+    const diffBtnFontSize = this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '20px';
     
     const easyText = this.add.text(
       easyButtonX,
@@ -1099,7 +1111,7 @@ export class MainScene extends Phaser.Scene {
       layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 70 : 90) : 190),
       '',
       {
-        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '14px',
         color: '#ffffff',
         fontFamily: 'monospace',
         align: 'center',
@@ -1111,11 +1123,11 @@ export class MainScene extends Phaser.Scene {
 
     const weaponButtons: { type: BulletType; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[] = [];
     // Smaller weapon buttons for mobile - 4 in a row
-    const weaponButtonWidth = this.isMobileMode ? (isCompactLayout ? 80 : 90) : 120;
-    const weaponButtonHeight = this.isMobileMode ? (isCompactLayout ? 32 : 38) : 40;
-    const weaponSpacing = this.isMobileMode ? (isCompactLayout ? 6 : 8) : 16;
-    const weaponStartY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 100 : 120) : 245);
-    const weaponRowSpacing = this.isMobileMode ? (isCompactLayout ? 42 : 50) : 50;
+    const weaponButtonWidth = this.isMobileMode ? (isCompactLayout ? 110 : 120) : 120;
+    const weaponButtonHeight = this.isMobileMode ? (isCompactLayout ? 42 : 46) : 40;
+    const weaponSpacing = this.isMobileMode ? (isCompactLayout ? 10 : 12) : 16;
+    const weaponStartY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 110 : 130) : 245);
+    const weaponRowSpacing = this.isMobileMode ? (isCompactLayout ? 56 : 64) : 50;
     const weaponButtonsPerRow = this.isMobileMode ? 2 : 5;
     const weaponRowCount = Math.ceil(AVAILABLE_BULLET_TYPES.length / weaponButtonsPerRow);
     const weaponTotalWidth = weaponButtonWidth * weaponButtonsPerRow + weaponSpacing * (weaponButtonsPerRow - 1);
@@ -1148,7 +1160,7 @@ export class MainScene extends Phaser.Scene {
     );
     startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
     const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'スタート', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '20px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -1169,7 +1181,7 @@ export class MainScene extends Phaser.Scene {
       startButton.setAlpha(this.selectedBulletTypes.length === 3 ? 1 : 0.45);
     };
 
-    const weaponLabelFontSize = this.isMobileMode ? (isCompactLayout ? '11px' : '13px') : '14px';
+    const weaponLabelFontSize = this.isMobileMode ? (isCompactLayout ? '13px' : '14px') : '14px';
 
     AVAILABLE_BULLET_TYPES.forEach((type, index) => {
       const row = this.isMobileMode ? Math.floor(index / weaponButtonsPerRow) : 0;
@@ -1218,7 +1230,7 @@ export class MainScene extends Phaser.Scene {
     const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
     const titleY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 200 : 210) : 230);
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, 'バイパー弾道設定', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '24px' : '28px') : '26px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '26px' : '30px') : '26px',
       color: '#00e5ff',
       fontFamily: 'monospace',
     });
@@ -1226,10 +1238,10 @@ export class MainScene extends Phaser.Scene {
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [title];
 
-    const backButtonX = this.isMobileMode ? (isCompactLayout ? 70 : 90) : 110;
-    const backButtonY = this.isMobileMode ? (isCompactLayout ? 40 : 50) : 60;
-    const backButtonWidth = this.isMobileMode ? (isCompactLayout ? 120 : 150) : 150;
-    const backButtonHeight = this.isMobileMode ? (isCompactLayout ? 36 : 44) : 44;
+    const backButtonX = this.isMobileMode ? (isCompactLayout ? 80 : 100) : 110;
+    const backButtonY = this.isMobileMode ? (isCompactLayout ? 46 : 56) : 60;
+    const backButtonWidth = this.isMobileMode ? (isCompactLayout ? 140 : 180) : 150;
+    const backButtonHeight = this.isMobileMode ? (isCompactLayout ? 44 : 52) : 44;
     const backButton = this.add.rectangle(
       backButtonX,
       backButtonY,
@@ -1240,7 +1252,7 @@ export class MainScene extends Phaser.Scene {
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     const backText = this.add.text(backButtonX, backButtonY, '戻る', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -1262,8 +1274,8 @@ export class MainScene extends Phaser.Scene {
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     instructionElements.push(backButton, backText);
 
-    const pathHeight = this.isMobileMode ? (isCompactLayout ? 220 : 260) : 320;
-    const baseX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.28 : GAME_CONFIG.WIDTH * 0.3;
+    const pathHeight = this.isMobileMode ? (isCompactLayout ? 260 : 300) : 320;
+    const baseX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.26 : GAME_CONFIG.WIDTH * 0.3;
     const startY = layoutCenterY - pathHeight / 2;
     const endY = layoutCenterY + pathHeight / 2;
     const segmentCount = 5;
@@ -1273,14 +1285,24 @@ export class MainScene extends Phaser.Scene {
     const pathGraphics = this.add.graphics();
     instructionElements.push(pathGraphics);
 
-    const startPoint = this.add.circle(baseX, startY, this.isMobileMode ? 6 : 8, 0x00ffd5);
-    const endPoint = this.add.circle(baseX, endY, this.isMobileMode ? 6 : 8, 0xffd166);
+    const startPoint = this.add.circle(
+      baseX,
+      startY,
+      this.isMobileMode ? (isCompactLayout ? 9 : 10) : 8,
+      0x00ffd5
+    );
+    const endPoint = this.add.circle(
+      baseX,
+      endY,
+      this.isMobileMode ? (isCompactLayout ? 9 : 10) : 8,
+      0xffd166
+    );
     const startLabel = this.add.text(
       baseX,
       startY - (this.isMobileMode ? 12 : 16),
       'スタート(発射)',
       {
-        fontSize: this.isMobileMode ? '12px' : '14px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '13px' : '14px') : '14px',
         color: '#00ffd5',
         fontFamily: 'monospace',
       }
@@ -1291,7 +1313,7 @@ export class MainScene extends Phaser.Scene {
       endY + (this.isMobileMode ? 10 : 14),
       'ゴール(着弾)',
       {
-        fontSize: this.isMobileMode ? '12px' : '14px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '13px' : '14px') : '14px',
         color: '#ffd166',
         fontFamily: 'monospace',
       }
@@ -1302,7 +1324,7 @@ export class MainScene extends Phaser.Scene {
     const midPoints: Phaser.GameObjects.Arc[] = [];
     const midPointYs = Array.from({ length: 4 }, (_, index) => startY + segmentSpacing * (index + 1));
     midPointYs.forEach((y) => {
-      const point = this.add.circle(baseX, y, this.isMobileMode ? 7 : 9, 0x00e5ff);
+      const point = this.add.circle(baseX, y, this.isMobileMode ? 10 : 9, 0x00e5ff);
       point.setStrokeStyle(2, 0xffffff, 0.6);
       point.setInteractive({ useHandCursor: true, draggable: true });
       this.input.setDraggable(point);
@@ -1349,15 +1371,15 @@ export class MainScene extends Phaser.Scene {
     const modePanelX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.68 : GAME_CONFIG.WIDTH * 0.7;
     const modePanelTop = startY - (this.isMobileMode ? 10 : 20);
     const modeTitle = this.add.text(modePanelX, modePanelTop, '弾道モード', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
     modeTitle.setOrigin(0.5, 0);
     instructionElements.push(modeTitle);
 
-    const activeModeText = this.add.text(modePanelX, modePanelTop + (this.isMobileMode ? 20 : 24), '', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+    const activeModeText = this.add.text(modePanelX, modePanelTop + (this.isMobileMode ? 22 : 24), '', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '14px',
       color: '#00e5ff',
       fontFamily: 'monospace',
     });
@@ -1365,10 +1387,10 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(activeModeText);
 
     const modeButtons: { bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[] = [];
-    const modeButtonWidth = this.isMobileMode ? (isCompactLayout ? 70 : 80) : 90;
-    const modeButtonHeight = this.isMobileMode ? (isCompactLayout ? 32 : 36) : 36;
-    const modeButtonY = modePanelTop + (this.isMobileMode ? 52 : 64);
-    const modeSpacing = this.isMobileMode ? 10 : 14;
+    const modeButtonWidth = this.isMobileMode ? (isCompactLayout ? 86 : 96) : 90;
+    const modeButtonHeight = this.isMobileMode ? (isCompactLayout ? 38 : 44) : 36;
+    const modeButtonY = modePanelTop + (this.isMobileMode ? 60 : 64);
+    const modeSpacing = this.isMobileMode ? 12 : 14;
     const totalModeWidth = modeButtonWidth * 3 + modeSpacing * 2;
     const modeStartX = modePanelX - totalModeWidth / 2 + modeButtonWidth / 2;
 
@@ -1386,7 +1408,7 @@ export class MainScene extends Phaser.Scene {
       const bg = this.add.rectangle(x, modeButtonY, modeButtonWidth, modeButtonHeight, 0x1a1a3a, 0.9);
       bg.setStrokeStyle(2, 0x444444, 0.6);
       const label = this.add.text(x, modeButtonY, `弾${i + 1}`, {
-        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '15px') : '14px',
         color: '#aaaaaa',
         fontFamily: 'monospace',
       });
@@ -1410,12 +1432,12 @@ export class MainScene extends Phaser.Scene {
       modeButtonY + (this.isMobileMode ? 50 : 60),
       '左の点とゴールを左右・上下にドラッグして弾道を設定\n弾は上のスタート(発射)→下のゴール(着弾)へ進む\n戦闘中はQで弾道を切替',
       {
-        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+        fontSize: this.isMobileMode ? (isCompactLayout ? '13px' : '15px') : '14px',
         color: '#ffffff',
         fontFamily: 'monospace',
         align: 'center',
         lineSpacing: 6,
-        wordWrap: { width: this.isMobileMode ? 260 : 320 },
+        wordWrap: { width: this.isMobileMode ? (isCompactLayout ? 280 : 300) : 320 },
       }
     );
     instructionsText.setOrigin(0.5, 0);
@@ -1916,10 +1938,10 @@ export class MainScene extends Phaser.Scene {
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
-    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 80 : GAME_CONFIG.WIDTH - 140;
-    const viperButtonY = this.isMobileMode ? 70 : 60;
-    const viperButtonWidth = this.isMobileMode ? 140 : 170;
-    const viperButtonHeight = this.isMobileMode ? 48 : 40;
+    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 100 : GAME_CONFIG.WIDTH - 140;
+    const viperButtonY = this.isMobileMode ? 80 : 60;
+    const viperButtonWidth = this.isMobileMode ? 180 : 170;
+    const viperButtonHeight = this.isMobileMode ? 56 : 40;
     const viperButton = this.add.rectangle(
       viperButtonX,
       viperButtonY,
