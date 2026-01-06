@@ -132,6 +132,20 @@ export class Boss {
     }
   }
 
+  updateSlowVisuals(currentTime: number) {
+    const isSlowed = currentTime < this.slowUntil && this.slowStacks > 0;
+    if (!isSlowed && this.slowStacks > 0) {
+      this.slowStacks = 0;
+    }
+    if (this.slowIndicator.visible !== isSlowed) {
+      this.slowIndicator.setVisible(isSlowed);
+    }
+  }
+
+  getMovementSpeedMultiplier(currentTime: number) {
+    return this.getSpeedMultiplier(currentTime);
+  }
+
   private pickNewTarget(playerX: number, playerY: number) {
     // Move around the player's general area, staying in upper screen
     const offsetX = Phaser.Math.Between(-200, 200);
