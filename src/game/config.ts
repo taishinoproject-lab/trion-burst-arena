@@ -37,7 +37,7 @@ export const createGameConfig = (
     },
   },
   scale: {
-    mode: isMobile ? Phaser.Scale.ENVELOP : Phaser.Scale.FIT,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: GAME_CONFIG.WIDTH,
     height: GAME_CONFIG.HEIGHT,
