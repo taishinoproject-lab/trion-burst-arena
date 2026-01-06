@@ -14,9 +14,10 @@ interface JoystickProps {
   label: string;
   accent: string;
   onMove: (x: number, y: number) => void;
+  labelRotateDegrees?: number;
 }
 
-const Joystick = ({ label, accent, onMove }: JoystickProps) => {
+const Joystick = ({ label, accent, onMove, labelRotateDegrees = 0 }: JoystickProps) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -131,8 +132,16 @@ const Joystick = ({ label, accent, onMove }: JoystickProps) => {
           />
         </div>
       </div>
-      <div className="text-center text-[10px] font-mono tracking-wider" style={{ color: `${accent}aa` }}>
-        {label}
+      <div
+        className="text-center text-[10px] font-mono tracking-wider"
+        style={{ color: `${accent}aa` }}
+      >
+        <span
+          className="inline-block"
+          style={{ transform: labelRotateDegrees ? `rotate(${labelRotateDegrees}deg)` : undefined }}
+        >
+          {label}
+        </span>
       </div>
     </div>
   );
@@ -142,12 +151,14 @@ const ActionButton = ({
   label,
   accent,
   pressed,
+  rotateDegrees = 0,
   onTouchStart,
   onTouchEnd,
 }: {
   label: string;
   accent: string;
   pressed?: boolean;
+  rotateDegrees?: number;
   onTouchStart: () => void;
   onTouchEnd?: () => void;
 }) => (
@@ -175,7 +186,12 @@ const ActionButton = ({
     }}
     type="button"
   >
-    {label}
+    <span
+      className="inline-block"
+      style={{ transform: rotateDegrees ? `rotate(${rotateDegrees}deg)` : undefined }}
+    >
+      {label}
+    </span>
   </button>
 );
 
@@ -192,15 +208,28 @@ export const MobilePvpControls = ({
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[70]">
+    <div className="absolute inset-0 pointer-events-none z-[70]">
       <div
-        className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-auto"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
+        className="absolute pointer-events-auto flex flex-col justify-between"
+        style={{
+          left: 'calc(0.5rem + env(safe-area-inset-left))',
+          top: 'calc(0.75rem + env(safe-area-inset-top))',
+          bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+        }}
       >
         <div className="flex flex-col items-center gap-3">
+          <Joystick
+            label="P1 移動"
+            accent="#00ffd5"
+            onMove={(x, y) => onMove('p1', x, y)}
+            labelRotateDegrees={-90}
+          />
+        </div>
+        <div className="flex flex-col items-center gap-2">
           <ActionButton
             label="射撃"
             accent="#00ffd5"
+            rotateDegrees={-90}
             pressed={p1Attacking}
             onTouchStart={() => {
               setP1Attacking(true);
@@ -211,39 +240,40 @@ export const MobilePvpControls = ({
               onAttack('p1', false);
             }}
           />
-          <Joystick
-            label="P1 移動"
-            accent="#00ffd5"
-            onMove={(x, y) => onMove('p1', x, y)}
+          <ActionButton
+            label="シールド"
+            accent="#4ad6ff"
+            rotateDegrees={-90}
+            onTouchStart={() => onShield('p1', false)}
           />
-          <div className="flex flex-col items-center gap-2">
-            <ActionButton
-              label="シールド"
-              accent="#4ad6ff"
-              onTouchStart={() => onShield('p1', false)}
-            />
-            <ActionButton
-              label="広域"
-              accent="#b464ff"
-              onTouchStart={() => onShield('p1', true)}
-            />
-            <ActionButton
-              label="切替"
-              accent="#ffc864"
-              onTouchStart={() => onCycleBullet('p1')}
-            />
-          </div>
+          <ActionButton
+            label="広域"
+            accent="#b464ff"
+            rotateDegrees={-90}
+            onTouchStart={() => onShield('p1', true)}
+          />
+          <ActionButton
+            label="切替"
+            accent="#ffc864"
+            rotateDegrees={-90}
+            onTouchStart={() => onCycleBullet('p1')}
+          />
         </div>
       </div>
 
       <div
-        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-auto"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
+        className="absolute pointer-events-auto flex flex-col justify-between"
+        style={{
+          right: 'calc(0.5rem + env(safe-area-inset-right))',
+          top: 'calc(0.75rem + env(safe-area-inset-top))',
+          bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+        }}
       >
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-2">
           <ActionButton
             label="射撃"
             accent="#ff6b6b"
+            rotateDegrees={90}
             pressed={p2Attacking}
             onTouchStart={() => {
               setP2Attacking(true);
@@ -254,28 +284,32 @@ export const MobilePvpControls = ({
               onAttack('p2', false);
             }}
           />
+          <ActionButton
+            label="シールド"
+            accent="#ff9aa2"
+            rotateDegrees={90}
+            onTouchStart={() => onShield('p2', false)}
+          />
+          <ActionButton
+            label="広域"
+            accent="#ff7ab6"
+            rotateDegrees={90}
+            onTouchStart={() => onShield('p2', true)}
+          />
+          <ActionButton
+            label="切替"
+            accent="#ffd166"
+            rotateDegrees={90}
+            onTouchStart={() => onCycleBullet('p2')}
+          />
+        </div>
+        <div className="flex flex-col items-center gap-3">
           <Joystick
             label="P2 移動"
             accent="#ff6b6b"
             onMove={(x, y) => onMove('p2', x, y)}
+            labelRotateDegrees={90}
           />
-          <div className="flex flex-col items-center gap-2">
-            <ActionButton
-              label="シールド"
-              accent="#ff9aa2"
-              onTouchStart={() => onShield('p2', false)}
-            />
-            <ActionButton
-              label="広域"
-              accent="#ff7ab6"
-              onTouchStart={() => onShield('p2', true)}
-            />
-            <ActionButton
-              label="切替"
-              accent="#ffd166"
-              onTouchStart={() => onCycleBullet('p2')}
-            />
-          </div>
         </div>
       </div>
     </div>
