@@ -1702,7 +1702,7 @@ export class MainScene extends Phaser.Scene {
     const noteText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       descriptionBounds.bottom + (this.isMobileMode ? 26 : 18),
-      '※2Pモードは遅延/弾道切替ボタン未実装のため、アステロイドキー=遅延、バイパーキー=弾道切替',
+      '※遅延/弾道切替は各プレイヤー側の切替ボタンで操作できます。',
       {
         fontSize: this.isMobileMode ? '18px' : '12px',
         color: '#cccccc',
