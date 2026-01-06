@@ -112,7 +112,7 @@ export const MobileControls = ({
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
+    <div className="fixed inset-0 pointer-events-none z-[70]">
       {/* Left side - Joystick */}
       <div
         className="absolute left-3 pointer-events-auto"
@@ -147,7 +147,7 @@ export const MobileControls = ({
         </div>
         {/* Label */}
         <div className="text-center mt-2 text-xs font-mono tracking-wider" style={{ color: 'rgba(0, 255, 213, 0.6)' }}>
-          MOVE
+          移動
         </div>
       </div>
 
@@ -181,7 +181,7 @@ export const MobileControls = ({
               <line x1="2" y1="12" x2="6" y2="12" />
               <line x1="18" y1="12" x2="22" y2="12" />
             </svg>
-            <span>FIRE</span>
+            <span>射撃</span>
           </button>
 
           {/* Cycle Bullet Type */}
@@ -201,7 +201,7 @@ export const MobileControls = ({
               <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
               <path d="M16 21h5v-5" />
             </svg>
-            <span>TYPE</span>
+            <span>切替</span>
           </button>
 
           {/* Shield */}
@@ -218,7 +218,7 @@ export const MobileControls = ({
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            <span>SHIELD</span>
+            <span>シールド</span>
           </button>
 
           {/* Delay Toggle */}
@@ -236,7 +236,7 @@ export const MobileControls = ({
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7v5l3 3" />
             </svg>
-            <span>DELAY</span>
+            <span>遅延</span>
           </button>
 
           {/* Wide Shield */}
@@ -254,7 +254,7 @@ export const MobileControls = ({
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <circle cx="12" cy="11" r="4" />
             </svg>
-            <span>WIDE SHIELD</span>
+            <span>広域シールド</span>
           </button>
         </div>
       </div>

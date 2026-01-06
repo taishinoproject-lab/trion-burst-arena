@@ -235,11 +235,11 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
             background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.85), rgba(0, 180, 150, 0.95))',
           }}
         >
-          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          {isFullscreen ? '全画面解除' : '全画面'}
         </button>
       )}
       <MobileControls
-        visible={isMobile && activeSceneKey === 'MainScene' && (isBattleActive || isTutorialActive)}
+        visible={isMobile && activeSceneKey === 'MainScene'}
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}

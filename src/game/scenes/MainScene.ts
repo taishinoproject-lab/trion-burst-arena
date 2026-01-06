@@ -141,6 +141,21 @@ export class MainScene extends Phaser.Scene {
     return this.difficulty === 'hard' ? GAME_CONFIG.BOSS_TRION_MAX * 2 : GAME_CONFIG.BOSS_TRION_MAX;
   }
 
+  private getBulletDisplayName(type: BulletType) {
+    switch (type) {
+      case 'asteroid':
+        return 'アステロイド';
+      case 'meteora':
+        return 'メテオラ';
+      case 'viper':
+        return 'ハウンド';
+      case 'red':
+        return 'レッドバレット';
+      default:
+        return type;
+    }
+  }
+
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
   }
@@ -238,7 +253,7 @@ export class MainScene extends Phaser.Scene {
     const barHeight = 24;
     
     // Player Trion UI (left side)
-    this.add.text(20, uiY - 8, 'PLAYER TRION', {
+    this.add.text(20, uiY - 8, 'プレイヤートリオン', {
       fontSize: '14px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -252,7 +267,7 @@ export class MainScene extends Phaser.Scene {
     });
     
     // Boss Trion UI (right side)
-    this.add.text(GAME_CONFIG.WIDTH - 20 - barWidth, uiY - 8, 'BOSS TRION', {
+    this.add.text(GAME_CONFIG.WIDTH - 20 - barWidth, uiY - 8, 'ボストリオン', {
       fontSize: '14px',
       color: '#ff6b6b',
       fontFamily: 'monospace',
@@ -275,7 +290,7 @@ export class MainScene extends Phaser.Scene {
       const label = this.add.text(
         GAME_CONFIG.WIDTH - 20 - enemyBarWidth,
         y - 10,
-        `ENEMY ${i + 1}`,
+        `敵 ${i + 1}`,
         {
           fontSize: '12px',
           color: '#ffb347',
@@ -461,7 +476,7 @@ export class MainScene extends Phaser.Scene {
 
 
     // Glowing title with shadow effect
-    const titleGlow = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ TRION BATTLE ◆', {
+    const titleGlow = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ トリオンバトル ◆', {
       fontSize: this.isMobileMode ? '48px' : '36px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -472,7 +487,7 @@ export class MainScene extends Phaser.Scene {
     titleGlow.setScale(1.05);
     instructionElements.push(titleGlow);
 
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ TRION BATTLE ◆', {
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ トリオンバトル ◆', {
       fontSize: this.isMobileMode ? '48px' : '36px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -497,11 +512,11 @@ export class MainScene extends Phaser.Scene {
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       overviewTextY,
-      '\n\n\n━━━ SYSTEM OVERVIEW ━━━\n' +
+      '\n\n\n━━━ システム概要 ━━━\n' +
         '► トリオン = 生体エネルギー\n' +
         '► 攻撃・防御・被弾で減少 → 0で敗北\n' +
         '► トリガー = 武器 (3つ選択して戦闘)\n\n' +
-        '※ PC推奨 | 初心者はBOSS MODEから',
+        '※ PC推奨 | 初心者はボスモードから',
       {
         fontSize: this.isMobileMode ? '20px' : '15px',
         color: '#cccccc',
@@ -575,7 +590,7 @@ export class MainScene extends Phaser.Scene {
     bossText.setOrigin(0.5);
     instructionElements.push(bossText);
 
-    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 28 : 22), '[ SINGLE PLAYER ]', {
+    const bossSubtext = this.add.text(firstButtonX, buttonY + (this.isMobileMode ? 28 : 22), '[ シングル ]', {
       fontSize: this.isMobileMode ? '14px' : '11px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -624,7 +639,7 @@ export class MainScene extends Phaser.Scene {
     twoPlayerText.setOrigin(0.5);
     instructionElements.push(twoPlayerText);
 
-    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 28 : 22), '[ LOCAL VERSUS ]', {
+    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + (this.isMobileMode ? 28 : 22), '[ ローカル対戦 ]', {
       fontSize: this.isMobileMode ? '14px' : '11px',
       color: '#ffd166',
       fontFamily: 'monospace',
@@ -668,7 +683,7 @@ export class MainScene extends Phaser.Scene {
     const footer = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       footerY,
-      '[ PRESS TO SELECT ]',
+      '[ タップして選択 ]',
       {
         fontSize: this.isMobileMode ? '16px' : '12px',
         color: '#555555',
@@ -727,7 +742,7 @@ export class MainScene extends Phaser.Scene {
     const detailButtonY = tutorialButtonY + (this.isMobileMode ? 90 : 70);
     const difficultyLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 10 : 40) : -20);
 
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- TRION BATTLE -', {
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- トリオンバトル -', {
       fontSize: this.isMobileMode ? '42px' : '28px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -749,7 +764,7 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
       fontSize: this.isMobileMode ? '22px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -811,7 +826,7 @@ export class MainScene extends Phaser.Scene {
     detailText.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
     instructionElements.push(detailButton, detailText);
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, 'SELECT DIFFICULTY', {
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, '難易度選択', {
       fontSize: this.isMobileMode ? '30px' : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -843,7 +858,7 @@ export class MainScene extends Phaser.Scene {
     const easyText = this.add.text(
       easyButtonX,
       buttonY,
-      'EASY',
+      'イージー',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
         color: this.difficulty === 'easy' ? '#00ffd5' : '#aaaaaa',
@@ -866,7 +881,7 @@ export class MainScene extends Phaser.Scene {
     const middleText = this.add.text(
       middleButtonX,
       buttonY,
-      'MIDDLE',
+      'ミドル',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
         color: this.difficulty === 'middle' ? '#ffd166' : '#aaaaaa',
@@ -889,7 +904,7 @@ export class MainScene extends Phaser.Scene {
     const hardText = this.add.text(
       hardButtonX,
       buttonY,
-      'HARD',
+      'ハード',
       {
         fontSize: this.isMobileMode ? '36px' : '20px',
         color: this.difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa',
@@ -978,10 +993,10 @@ export class MainScene extends Phaser.Scene {
     const weaponStartX = GAME_CONFIG.WIDTH / 2 - weaponTotalWidth / 2 + weaponButtonWidth / 2;
 
     const weaponNames: Record<BulletType, string> = {
-      asteroid: 'ASTEROID',
-      meteora: 'METEORA',
-      viper: 'VIPER',
-      red: 'RED BULLET',
+      asteroid: 'アステロイド',
+      meteora: 'メテオラ',
+      viper: 'ハウンド',
+      red: 'レッドバレット',
     };
 
     const startButtonY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 380 : 470) : 320);
@@ -994,7 +1009,7 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'START', {
+    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'スタート', {
       fontSize: this.isMobileMode ? (isCompactLayout ? '26px' : '30px') : '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -1002,7 +1017,7 @@ export class MainScene extends Phaser.Scene {
     startText.setOrigin(0.5);
 
     const updateWeaponButtons = () => {
-      weaponStatus.setText(`SELECTED: ${this.selectedBulletTypes.length}/3\n選択済み: ${this.selectedBulletTypes.length}/3`);
+      weaponStatus.setText(`選択中: ${this.selectedBulletTypes.length}/3\n選択済み: ${this.selectedBulletTypes.length}/3`);
       weaponButtons.forEach(({ type, bg, label }) => {
         const selected = this.selectedBulletTypes.includes(type);
         const strokeColor = selected ? GAME_CONFIG.BULLET_COLOR : 0x444444;
@@ -1082,7 +1097,7 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
       fontSize: this.isMobileMode ? '22px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -1101,18 +1116,18 @@ export class MainScene extends Phaser.Scene {
       '・エイム（マウス）：狙いたい方向へマウスを動かす。',
       '・射撃（左クリック/クリック）：弾を発射。',
       '・弾種切替（E）：選んだ3種を順に切替。',
-      '・遅延弾（Q）：ASTEROIDを遅らせて置き撃ち。',
+      '・遅延弾（Q）：アステロイドを遅らせて置き撃ち。',
       '・固定シールド（SPACE）：正面を守る高耐久シールド。',
       '・全方位シールド（SHIFT+SPACE）：周囲を守るが耐久は低め。',
       '',
       '━━ 弾の種類と特徴 ━━',
-      `ASTEROID（コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE} / 対シールド${GAME_CONFIG.ASTEROID_SHIELD_DAMAGE}）`,
+      `アステロイド（コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE} / 対シールド${GAME_CONFIG.ASTEROID_SHIELD_DAMAGE}）`,
       '  標準弾。低コストで数を出せる。遅延設置（Q）で3秒静止させることが可能。',
-      `METEORA（コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE} / 対シールド${GAME_CONFIG.METEORA_SHIELD_DAMAGE}）`,
+      `メテオラ（コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE} / 対シールド${GAME_CONFIG.METEORA_SHIELD_DAMAGE}）`,
       '  爆風で範囲攻撃。シールド崩しが得意で固まっている弾の一掃にも。',
-      `VIPER（コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE} / 対シールド${GAME_CONFIG.VIPER_SHIELD_DAMAGE}）`,
+      `ハウンド（コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE} / 対シールド${GAME_CONFIG.VIPER_SHIELD_DAMAGE}）`,
       '  誘導弾で高威力（当たればでかい）。シールド削りは苦手なので隙を狙う。',
-      `RED BULLET（コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}）`,
+      `レッドバレット（コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}）`,
       `  命中で移動と弾速を減速。最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}回まで重ね掛け可能。2回ヒットで敵がフリーズ`,
       '',
       '━━ シールドの耐久値 ━━',
@@ -1124,13 +1139,13 @@ export class MainScene extends Phaser.Scene {
 
     const rightColumnLines = [
       '━━ 初心者向け 戦略メモ ━━',
-      '・VIPERは"当たれば"最大火力で主力。うまく使おう。戦略的にはシールドの背後を狙うと強い。',
-      '・METEORAはシールド破壊が得意。シールドでVIPERが通らない時などに有効。',
-      '・RED BULLETは2回当てると数秒フリーズ、正直かなり強い。ただ遅いので当て方が大事',
-      '・RED BULLETはシールド・弾を貫通する。個人的にはRED BULLET × VIPERが好き',
+      '・ハウンドは"当たれば"最大火力で主力。うまく使おう。戦略的にはシールドの背後を狙うと強い。',
+      '・メテオラはシールド破壊が得意。シールドでハウンドが通らない時などに有効。',
+      '・レッドバレットは2回当てると数秒フリーズ、正直かなり強い。ただ遅いので当て方が大事',
+      '・レッドバレットはシールド・弾を貫通する。個人的にはレッドバレット × ハウンドが好き',
       '・固定シールドは向きが変わらない。これは相手にも言えるのでチャンスになる。',
       '・固定シールドを壊さないようにして背後に回るのがコツ（全方位シールドが出せないため）',
-      '・VIPER以外の弾は避け、VIPERは全方位シールドで防ぐ。敵が固定シールド展開中にVIPERで叩くのがおすすめ',
+      '・ハウンド以外の弾は避け、ハウンドは全方位シールドで防ぐ。敵が固定シールド展開中にハウンドで叩くのがおすすめ',
       '',
       `※数値は基準値。戦況に合わせて弾を使い分けよう。`,
     ];
@@ -1188,7 +1203,7 @@ export class MainScene extends Phaser.Scene {
     const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 + 220;
     const startButtonY = layoutCenterY + (this.isMobileMode ? 200 : 180);
 
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '2P MODE', {
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '2Pモード', {
       fontSize: this.isMobileMode ? '42px' : '28px',
       color: '#ffd166',
       fontFamily: 'monospace',
@@ -1215,7 +1230,7 @@ export class MainScene extends Phaser.Scene {
     const playerOneText = this.add.text(
       leftX,
       instructionTopY,
-      'PLAYER 1\n移動: WASD\n攻撃: F\n武器切替: Q/E\nシールド(正面): SPACE\n全方位シールド: SHIFT + SPACE',
+      'プレイヤー1\n移動: WASD\n攻撃: F\n武器切替: Q/E\nシールド(正面): SPACE\n全方位シールド: SHIFT + SPACE',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -1229,7 +1244,7 @@ export class MainScene extends Phaser.Scene {
     const playerTwoText = this.add.text(
       rightX,
       instructionTopY + instructionGapY,
-      'PLAYER 2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: L',
+      'プレイヤー2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: L',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -1253,7 +1268,7 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
       fontSize: this.isMobileMode ? '22px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -1274,7 +1289,7 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'START', {
+    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'スタート', {
       fontSize: this.isMobileMode ? '26px' : '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -1400,7 +1415,9 @@ export class MainScene extends Phaser.Scene {
       this.input.off('pointermove', handlePointerMove);
       this.input.off('pointerup', handlePointerUp);
       this.input.off('pointerupoutside', handlePointerUp);
-      background.disableInteractive();
+      if (background.active && background.scene) {
+        background.disableInteractive();
+      }
     };
   }
 
@@ -1431,7 +1448,7 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    const backText = this.add.text(buttonX, buttonY, 'BACK', {
+    const backText = this.add.text(buttonX, buttonY, '戻る', {
       fontSize: this.isMobileMode ? '22px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -1466,7 +1483,7 @@ export class MainScene extends Phaser.Scene {
     
     // Build formatted text with better visual hierarchy
     const progressBar = this.buildProgressBar(stepNum, totalSteps);
-    const stepLabel = `━━ STEP ${stepNum} / ${totalSteps} ━━`;
+    const stepLabel = `━━ ステップ ${stepNum} / ${totalSteps} ━━`;
     
     // Format description with bullet points for clarity
     const description = step.description.map((line, idx) => {
@@ -1679,11 +1696,11 @@ isCompleted: () => this.tutorialProgress.shieldBroken,
 focusTarget: 'player',
 },
 {
-  title: 'Step5 前方位シールド',
+  title: 'Step5 全方位シールド',
   description: [
-    'SHIFT + SPACE で前方位シールド',
-    '（スマホは前方位シールドボタン）',
-    '前方位シールドで弾を受けよう',
+    'SHIFT + SPACE で全方位シールド',
+    '（スマホは全方位シールドボタン）',
+    '全方位シールドで弾を受けよう',
     '弾を受けて消えたら次へ',
   ],
   requiredShieldType: 'wide',
@@ -1692,11 +1709,11 @@ focusTarget: 'player',
   focusTarget: 'player',
 },
       {
-        title: 'Step6 ASTEROID',
+        title: 'Step6 アステロイド',
         description: [
           '低コスト・連射向き',
           `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
-          'ASTEROIDで10発当てよう',
+          'アステロイドで10発当てよう',
         ],
         requiredBulletType: 'asteroid',
         requiredHits: 10,
@@ -1704,13 +1721,13 @@ focusTarget: 'player',
         focusTarget: 'triggerDisplay',
       },
       {
-        title: 'Step7 ASTEROID 遅延弾',
+        title: 'Step7 アステロイド 遅延弾',
         description: [
           'Qで遅延弾（3秒遅れて発射される）モードに切替',
-          '（スマホはDELAYボタン）',
+          '（スマホは遅延ボタン）',
           'アステロイドのみ遅延弾が使用可能',
-          'DELAY: ON を確認',
-          '遅延ASTEROIDで1発当てよう',
+          '遅延: オン を確認',
+          '遅延アステロイドで1発当てよう',
         ],
         onEnter: () => {
           if (this.gameState.delayedAsteroidEnabled) {
@@ -1726,14 +1743,14 @@ focusTarget: 'player',
         focusTarget: 'triggerDisplay',
       },
       {
-        title: 'Step8 METEORA',
+        title: 'Step8 メテオラ',
         description: [
           'キーボードの E で弾種を切替',
           '（スマホは弾切替ボタン）',
-          'EでMETEORAに切替',
+          'Eでメテオラに切替',
           '爆発で範囲攻撃・コスト高め・シールドを割りやすい',
           `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
-          'METEORAで10発当てよう',
+          'メテオラで10発当てよう',
         ],
         requiredBulletType: 'meteora',
         requiredHits: 10,
@@ -1742,13 +1759,13 @@ focusTarget: 'player',
         requiresSwitch: true,
       },
       {
-        title: 'Step9 VIPER',
+        title: 'Step9 ハウンド',
         description: [
           '誘導弾: マウス/指で誘導',
           '最も威力が高い・シールドには弱い',
           `コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
-          'EでVIPERに切替',
-          'VIPERで10発当てよう',
+          'Eでハウンドに切替',
+          'ハウンドで10発当てよう',
         ],
         requiredBulletType: 'viper',
         requiredHits: 10,
@@ -1757,14 +1774,14 @@ focusTarget: 'player',
         requiresSwitch: true,
       },
       {
-        title: 'Step10 RED',
+        title: 'Step10 レッドバレット',
         description: [
           '低ダメージだがスロー付与',
           `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
           `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続・2発当てると相手がフリーズ・シールド、弾透過`,
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
-          'EでREDに切替',
-          'REDで5発当てよう',
+          'Eでレッドバレットに切替',
+          'レッドバレットで5発当てよう',
         ],
         requiredBulletType: 'red',
         requiredHits: 5,
@@ -1778,7 +1795,7 @@ focusTarget: 'player',
           'トリオン0で敗北',
           'トリオンは撃つ/守る/被弾で減る',
           'トリオンは時間で回復する',
-          'チュートリアルは左上のBACKボタンを押して終了！頑張ってね～！',
+          'チュートリアルは左上の戻るボタンで終了！頑張ってね～！',
         ],
         isCompleted: () => this.tutorialProgress.summaryAcknowledged,
         focusTarget: 'backButton',
@@ -2303,7 +2320,7 @@ focusTarget: 'player',
       this.spawnShieldedEnemy();
       return;
     }
-    if (this.spawnedShieldedEnemy && !this.spawnedRapidEnemy && this.extraEnemies.length === 0) {
+    if (this.difficulty === 'hard' && this.spawnedShieldedEnemy && !this.spawnedRapidEnemy && this.extraEnemies.length === 0) {
       this.spawnedRapidEnemy = true;
       this.spawnRapidEnemy();
     }
@@ -2929,11 +2946,11 @@ focusTarget: 'player',
     this.safeSetText(this.bossTrionText, `${Math.floor(primaryTrion)}`);
     
     // Bullet type display
-    const bulletName = this.gameState.currentBulletType.toUpperCase();
-    this.safeSetText(this.bulletTypeText, `TRIGGER: ${bulletName}`);
+    const bulletName = this.getBulletDisplayName(this.gameState.currentBulletType);
+    this.safeSetText(this.bulletTypeText, `トリガー: ${bulletName}`);
 
-    const delayStatus = this.gameState.delayedAsteroidEnabled ? 'ON' : 'OFF';
-    this.safeSetText(this.delayedAsteroidText, `DELAY: ${delayStatus}`);
+    const delayStatus = this.gameState.delayedAsteroidEnabled ? 'オン' : 'オフ';
+    this.safeSetText(this.delayedAsteroidText, `遅延: ${delayStatus}`);
     if (this.isRenderableObject(this.delayedAsteroidText)) {
       this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
     }
@@ -2976,7 +2993,7 @@ focusTarget: 'player',
       bar.setVisible(true);
 
       label.setPosition(barX, barY - 10);
-      label.setText(`ENEMY ${index + labelOffset}`);
+      label.setText(`敵 ${index + labelOffset}`);
       label.setVisible(true);
 
       text.setText(`${Math.floor(enemy.trion)}`);
@@ -3003,16 +3020,16 @@ focusTarget: 'player',
     if (this.gameState.playerTrion <= 0) {
       this.gameState.isGameOver = true;
       this.gameState.playerWon = false;
-      this.showGameOver('TRION DEPLETED\n\nYOU LOSE');
+      this.showGameOver('トリオン枯渇\n\n敗北');
     } else if (this.gameState.bossTrion <= 0 && this.extraEnemies.length === 0) {
       this.gameState.isGameOver = true;
       this.gameState.playerWon = true;
-      this.showGameOver('BOSS DEFEATED\n\nYOU WIN!');
+      this.showGameOver('ボス撃破\n\n勝利！');
     }
   }
 
   private showGameOver(message: string) {
-    const restartMessage = this.isMobileMode ? 'TAP RESTART BUTTON' : 'Press R to Restart';
+    const restartMessage = this.isMobileMode ? 'リスタートボタンをタップ' : 'Rでリスタート';
     const shouldShowAdvice = !this.gameState.playerWon && !this.isTutorialMode && this.gameState.bossTrion > 0;
     this.gameOverText.setText(`${message}\n\n${restartMessage}`);
     const gameOverTextY = shouldShowAdvice
@@ -3052,7 +3069,7 @@ focusTarget: 'player',
     restartButton.setStrokeStyle(3, this.gameState.playerWon ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_COLOR, 0.9);
     restartButton.setDepth(101);
 
-    const restartText = this.add.text(GAME_CONFIG.WIDTH / 2, buttonY, 'RESTART', {
+    const restartText = this.add.text(GAME_CONFIG.WIDTH / 2, buttonY, 'リスタート', {
       fontSize: this.isMobileMode ? '36px' : '20px',
       color: '#ffffff',
       fontFamily: 'monospace',
