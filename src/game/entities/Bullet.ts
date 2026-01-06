@@ -30,6 +30,7 @@ export class Bullet {
   private viperPathStartPoint?: { x: number; y: number };
   private viperRefractionStage = 0;
   private viperDamageScale = 1;
+  private viperShieldScale = 1;
   private viperBaseColor?: number;
   private viperCurrentColor?: number;
   
@@ -106,6 +107,9 @@ export class Bullet {
     const strokeColor = type === 'red' ? GAME_CONFIG.RED_BULLET_STROKE_COLOR : 0xffffff;
     this.sprite.setStrokeStyle(1, strokeColor, 0.6);
     if (type === 'viper') {
+      this.viperShieldScale = GAME_CONFIG.VIPER_SHIELD_DAMAGE > 0
+        ? this.shieldDamage / GAME_CONFIG.VIPER_SHIELD_DAMAGE
+        : 1;
       this.updateViperRefraction(0);
     }
     
@@ -264,10 +268,13 @@ export class Bullet {
   }
   
   private createTrailParticle() {
+    const trailSize = this.type === 'viper'
+      ? 3 + this.viperRefractionStage * 0.6
+      : 3;
     const particle = this.scene.add.circle(
       this.x,
       this.y,
-      3,
+      trailSize,
       this.viperCurrentColor ?? GAME_CONFIG.VIPER_COLOR,
       0.6
     );
@@ -289,9 +296,14 @@ export class Bullet {
     const damageSteps = GAME_CONFIG.VIPER_REFRACTION_DAMAGE_STEPS;
     const baseDamage = damageSteps[Math.min(stage, damageSteps.length - 1)];
     this.trionDamage = baseDamage * this.viperDamageScale;
+    const shieldSteps = GAME_CONFIG.VIPER_REFRACTION_SHIELD_STEPS;
+    const baseShield = shieldSteps[Math.min(stage, shieldSteps.length - 1)];
+    this.shieldDamage = baseShield * this.viperShieldScale;
     this.viperCurrentColor = this.getViperColorForStage(stage);
     if (this.sprite?.active) {
       this.sprite.setFillStyle(this.viperCurrentColor);
+      const scale = 1 + stage * 0.12;
+      this.sprite.setScale(scale);
     }
   }
 
@@ -312,8 +324,8 @@ export class Bullet {
   private getViperColorForStage(stage: number) {
     const baseColor = this.viperBaseColor ?? GAME_CONFIG.VIPER_COLOR;
     const maxStage = Math.max(1, GAME_CONFIG.VIPER_REFRACTION_DAMAGE_STEPS.length - 1);
-    const blendRatio = Math.min(0.6, (stage / maxStage) * 0.6);
-    return this.blendColor(baseColor, 0xffffff, blendRatio);
+    const blendRatio = Math.min(0.85, (stage / maxStage) * 0.85);
+    return this.blendColor(baseColor, 0xfff1a6, blendRatio);
   }
 
   getExplosionArea(): Phaser.Geom.Circle {
