@@ -35,10 +35,15 @@ interface TutorialStep {
   requiredBulletType?: BulletType;
   requiredHits?: number;
   requiredShieldType?: ShieldType;
-  focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player' | 'backButton';
+  focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player' | 'backButton' | 'viperSettings';
   requiresSwitch?: boolean;
   requiresShieldBreak?: boolean;
   requiresDelayToggle?: boolean;
+  requiresViperSettings?: boolean;
+  requiresViperModeHits?: boolean;
+  countShieldHits?: boolean;
+  enemyShieldType?: ShieldType;
+  enemyMovement?: 'none' | 'sideToSide';
 }
 
 export class MainScene extends Phaser.Scene {
@@ -118,6 +123,8 @@ export class MainScene extends Phaser.Scene {
   private tutorialBackButton?: Phaser.GameObjects.Rectangle;
   private tutorialBackText?: Phaser.GameObjects.Text;
   private tutorialBackButtonTween?: Phaser.Tweens.Tween;
+  private tutorialViperButton?: Phaser.GameObjects.Rectangle;
+  private tutorialViperText?: Phaser.GameObjects.Text;
   private tutorialTapReady = false;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
@@ -130,6 +137,9 @@ export class MainScene extends Phaser.Scene {
   private instructionStartMode: 'modeSelect' | 'twoPlayer' = 'modeSelect';
   private tutorialShieldFireActive = false;
   private tutorialShieldFireEvent?: Phaser.Time.TimerEvent;
+  private tutorialEnemyMovement: 'none' | 'sideToSide' = 'none';
+  private tutorialEnemyMovementTimer = 0;
+  private tutorialEnemyBaseX = 0;
   private tutorialProgress = {
     introAcknowledged: false,
     moved: false,
@@ -141,6 +151,8 @@ export class MainScene extends Phaser.Scene {
     switched: false,
     requiredBulletHits: 0,
     delayedAsteroidToggled: false,
+    viperSettingsOpened: false,
+    viperModeHits: [false, false, false] as boolean[],
     summaryAcknowledged: false,
   };
 
@@ -421,6 +433,22 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     this.showModeSelectInstructions();
+  }
+
+  private ensureInstructionsOverlay() {
+    if (this.instructionsOverlay?.active && this.instructionsOverlay.scene) return;
+    const bg = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      GAME_CONFIG.HEIGHT / 2,
+      GAME_CONFIG.WIDTH,
+      GAME_CONFIG.HEIGHT,
+      0x0a0a12,
+      0.95
+    );
+    bg.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    this.instructionsBackground = bg;
+    this.instructionsOverlay = this.add.container(0, 0, [bg]);
+    this.instructionsOverlay.setDepth(100);
   }
 
   private getInstructionLayout() {
@@ -1165,7 +1193,8 @@ export class MainScene extends Phaser.Scene {
     this.setInstructionsContent(instructionElements, true);
   }
 
-  private showViperSettingsInstructions(returnTarget: 'boss' | 'twoPlayer' = 'boss') {
+  private showViperSettingsInstructions(returnTarget: 'boss' | 'twoPlayer' | 'tutorial' = 'boss') {
+    this.ensureInstructionsOverlay();
     const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
     const titleY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 200 : 210) : 230);
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, 'バイパー弾道設定', {
@@ -1199,9 +1228,15 @@ export class MainScene extends Phaser.Scene {
     const handleBack = () => {
       if (returnTarget === 'twoPlayer') {
         this.showTwoPlayerInstructions();
-      } else {
-        this.showBossSetupInstructions();
+        return;
       }
+      if (returnTarget === 'tutorial') {
+        this.destroyInstructionsOverlay();
+        this.setTutorialOverlayVisible(true);
+        this.updateTutorialHelpText();
+        return;
+      }
+      this.showBossSetupInstructions();
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
@@ -1792,7 +1827,9 @@ export class MainScene extends Phaser.Scene {
     this.instructionScrollCleanup?.();
     this.instructionScrollCleanup = undefined;
     this.instructionsContent = undefined;
-    this.instructionsOverlay.destroy(true);
+    if (this.instructionsOverlay?.active) {
+      this.instructionsOverlay.destroy(true);
+    }
   }
 
   private showTutorialOverlay() {
@@ -1829,11 +1866,74 @@ export class MainScene extends Phaser.Scene {
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
+    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 80 : GAME_CONFIG.WIDTH - 140;
+    const viperButtonY = this.isMobileMode ? 70 : 60;
+    const viperButtonWidth = this.isMobileMode ? 140 : 170;
+    const viperButtonHeight = this.isMobileMode ? 48 : 40;
+    const viperButton = this.add.rectangle(
+      viperButtonX,
+      viperButtonY,
+      viperButtonWidth,
+      viperButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    viperButton.setStrokeStyle(2, 0x4ad6ff, 0.9);
+    const viperText = this.add.text(viperButtonX, viperButtonY, 'バイパー設定', {
+      fontSize: this.isMobileMode ? '18px' : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    viperText.setOrigin(0.5);
+    const handleViperSettings = () => {
+      if (!this.isTutorialMode) return;
+      this.tutorialProgress.viperSettingsOpened = true;
+      this.setTutorialOverlayVisible(false);
+      this.showViperSettingsInstructions('tutorial');
+    };
+    viperButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
+    viperText.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
+    viperButton.setVisible(false);
+    viperText.setVisible(false);
+
     this.tutorialBackButton = backButton;
     this.tutorialBackText = backText;
-    this.tutorialOverlay = this.add.container(0, 0, [backButton, backText]);
+    this.tutorialViperButton = viperButton;
+    this.tutorialViperText = viperText;
+    this.tutorialOverlay = this.add.container(0, 0, [backButton, backText, viperButton, viperText]);
     this.tutorialOverlay.setDepth(100);
+    this.updateTutorialViperButtonVisibility(this.tutorialSteps[this.tutorialStepIndex]);
     this.updateTutorialFocusHighlight();
+  }
+
+  private setTutorialOverlayVisible(visible: boolean) {
+    this.tutorialOverlay?.setVisible(visible);
+    this.tutorialHelpText?.setVisible(visible);
+    this.tutorialHelpHighlight?.setVisible(visible);
+    if (!visible) {
+      this.tutorialFocusHighlight?.setVisible(false);
+    } else {
+      this.updateTutorialHelpHighlight();
+      this.updateTutorialFocusHighlight();
+    }
+  }
+
+  private updateTutorialViperButtonVisibility(step?: TutorialStep) {
+    if (!this.tutorialViperButton || !this.tutorialViperText) return;
+    const shouldShow = Boolean(step?.requiresViperSettings);
+    this.tutorialViperButton.setVisible(shouldShow);
+    this.tutorialViperText.setVisible(shouldShow);
+    if (shouldShow) {
+      if (!this.tutorialViperButton.input?.enabled) {
+        this.tutorialViperButton.setInteractive({ useHandCursor: true });
+      }
+      if (!this.tutorialViperText.input?.enabled) {
+        this.tutorialViperText.setInteractive({ useHandCursor: true });
+      }
+    } else {
+      this.tutorialViperButton.disableInteractive();
+      this.tutorialViperText.disableInteractive();
+    }
   }
 
   private updateTutorialHelpText() {
@@ -1939,6 +2039,24 @@ export class MainScene extends Phaser.Scene {
         bounds.width + padding * 2,
         bounds.height + padding * 2
       );
+    } else if (step.focusTarget === 'viperSettings') {
+      if (this.tutorialProgress.viperSettingsOpened) {
+        const bounds = this.bulletTypeText.getBounds();
+        highlight.strokeRect(
+          bounds.x - padding,
+          bounds.y - padding,
+          bounds.width + padding * 2,
+          bounds.height + padding * 2
+        );
+      } else if (this.tutorialViperButton) {
+        const bounds = this.tutorialViperButton.getBounds();
+        highlight.strokeRect(
+          bounds.x - padding,
+          bounds.y - padding,
+          bounds.width + padding * 2,
+          bounds.height + padding * 2
+        );
+      }
     } else if (step.focusTarget === 'player') {
       highlight.strokeCircle(this.player.x, this.player.y, GAME_CONFIG.PLAYER_RADIUS + 28);
     } else if (step.focusTarget === 'backButton' && this.tutorialBackButton) {
@@ -2128,16 +2246,22 @@ focusTarget: 'player',
       {
         title: 'Step9 バイパー',
         description: [
-          '事前に引いた弾道を通る弾',
-          'Qで弾道モードを切替できる',
+          '右端の「バイパー設定」を押して弾道を調整',
+          '戻ったらQで弾1/2/3を切替できる',
+          '正面はノーマルシールドで弾が通らない',
           `コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
           'Eでバイパーに切替',
-          'バイパーで10発当てよう',
+          'バイパーの弾1/2/3を全部当てよう',
         ],
         requiredBulletType: 'viper',
-        requiredHits: 10,
-        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
-        focusTarget: 'triggerDisplay',
+        requiredHits: 3,
+        isCompleted: () =>
+          this.tutorialProgress.viperSettingsOpened &&
+          this.tutorialProgress.requiredBulletHits >= 3,
+        focusTarget: 'viperSettings',
+        requiresViperSettings: true,
+        requiresViperModeHits: true,
+        enemyShieldType: 'narrow',
         requiresSwitch: true,
       },
       {
@@ -2148,6 +2272,7 @@ focusTarget: 'player',
           `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続・2発当てると相手がフリーズ・シールド、弾透過`,
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
           'Eでレッドバレットに切替',
+          '相手は左右にゆっくり動くのでスローを見てみよう',
           'レッドバレットで5発当てよう',
         ],
         requiredBulletType: 'red',
@@ -2155,9 +2280,28 @@ focusTarget: 'player',
         isCompleted: () => this.tutorialProgress.requiredBulletHits >= 5,
         focusTarget: 'triggerDisplay',
         requiresSwitch: true,
+        enemyShieldType: 'wide',
+        enemyMovement: 'sideToSide',
       },
       {
-        title: 'Step11 トリオン勝敗',
+        title: 'Step11 ハウンド',
+        description: [
+          '曲がりながら追尾する弾',
+          `コスト${GAME_CONFIG.HOUND_COST} / 威力${GAME_CONFIG.HOUND_TRION_DAMAGE}`,
+          'Eでハウンドに切替',
+          '全面シールド相手に軌道を見てみよう',
+          'ハウンドで3発当てよう',
+        ],
+        requiredBulletType: 'hound',
+        requiredHits: 3,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 3,
+        focusTarget: 'triggerDisplay',
+        requiresSwitch: true,
+        countShieldHits: true,
+        enemyShieldType: 'wide',
+      },
+      {
+        title: 'Step12 トリオン勝敗',
         description: [
           'トリオン0で敗北',
           'トリオンは撃つ/守る/被弾で減る',
@@ -2174,7 +2318,9 @@ focusTarget: 'player',
     this.resetTutorialStepFlags();
     const step = this.tutorialSteps[this.tutorialStepIndex];
     step?.onEnter?.();
+    this.setupTutorialEnemy(step);
     this.updateTutorialHelpText();
+    this.updateTutorialViperButtonVisibility(step);
   }
 
   private resetTutorialProgress() {
@@ -2189,6 +2335,8 @@ focusTarget: 'player',
       switched: false,
       requiredBulletHits: 0,
       delayedAsteroidToggled: false,
+      viperSettingsOpened: false,
+      viperModeHits: [false, false, false],
       summaryAcknowledged: false,
     };
     this.stopTutorialShieldFire();
@@ -2205,8 +2353,25 @@ focusTarget: 'player',
     this.tutorialProgress.switched = false;
     this.tutorialProgress.requiredBulletHits = 0;
     this.tutorialProgress.delayedAsteroidToggled = false;
+    this.tutorialProgress.viperSettingsOpened = false;
+    this.tutorialProgress.viperModeHits = [false, false, false];
     this.tutorialProgress.summaryAcknowledged = false;
     this.stopTutorialShieldFire();
+  }
+
+  private setupTutorialEnemy(step?: TutorialStep) {
+    if (!step) return;
+    this.boss.applySlow(0, 1);
+    this.tutorialEnemyMovement = step.enemyMovement ?? 'none';
+    if (this.tutorialEnemyMovement === 'sideToSide') {
+      this.tutorialEnemyMovementTimer = 0;
+      this.tutorialEnemyBaseX = this.boss.x;
+    }
+    if (step.enemyShieldType) {
+      this.ensureBossShield(step.enemyShieldType);
+    } else {
+      this.boss.deactivateShield();
+    }
   }
 
   private registerTutorialTap() {
@@ -2252,17 +2417,33 @@ focusTarget: 'player',
     }
   }
 
-  private registerTutorialBulletHit(bulletType: BulletType) {
+  private registerTutorialBulletHit(
+    bulletType: BulletType,
+    hitShield = false,
+    viperModeIndex?: number
+  ) {
     if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
     const step = this.tutorialSteps[this.tutorialStepIndex];
     if (!step?.requiredBulletType || !step.requiredHits) return;
+    if (hitShield && !step.countShieldHits) return;
     if (step.requiresSwitch && !this.tutorialProgress.switched) return;
     if (step.requiresDelayToggle && !this.gameState.delayedAsteroidEnabled) return;
+    if (step.requiresViperSettings && !this.tutorialProgress.viperSettingsOpened) return;
     if (bulletType !== step.requiredBulletType) return;
-    this.tutorialProgress.requiredBulletHits = Math.min(
-      step.requiredHits,
-      this.tutorialProgress.requiredBulletHits + 1
-    );
+    if (step.requiresViperModeHits && bulletType === 'viper') {
+      const modeIndex = Phaser.Math.Clamp(
+        viperModeIndex ?? this.viperModeIndex,
+        0,
+        this.tutorialProgress.viperModeHits.length - 1
+      );
+      this.tutorialProgress.viperModeHits[modeIndex] = true;
+      this.tutorialProgress.requiredBulletHits = this.tutorialProgress.viperModeHits.filter(Boolean).length;
+    } else {
+      this.tutorialProgress.requiredBulletHits = Math.min(
+        step.requiredHits,
+        this.tutorialProgress.requiredBulletHits + 1
+      );
+    }
     this.updateTutorialHelpText();
   }
 
@@ -2342,6 +2523,16 @@ focusTarget: 'player',
       this.tutorialShieldFireEvent = undefined;
     }
     this.tutorialShieldFireActive = false;
+  }
+
+  private ensureBossShield(type: ShieldType) {
+    if (this.boss.shieldActive && this.boss.shield && this.boss.shield.type === type) {
+      return;
+    }
+    this.boss.deactivateShield();
+    const aimAngle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
+    this.boss.shield = new Shield(this, this.boss.x, this.boss.y, aimAngle, type, this.boss.getRadius());
+    this.boss.shieldActive = true;
   }
 
   private registerTutorialMovement() {
@@ -2425,7 +2616,9 @@ focusTarget: 'player',
 
     // Update entities
     this.player.update(delta, this.mobileInput);
-    if (!this.isTutorialMode && this.gameState.bossTrion > 0) {
+    if (this.isTutorialMode) {
+      this.updateTutorialEnemyBehavior(delta, time);
+    } else if (this.gameState.bossTrion > 0) {
       this.boss.update(delta, this.player.x, this.player.y, time);
       // Boss firing
       this.fireEnemy(
@@ -2591,7 +2784,8 @@ focusTarget: 'player',
         GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
         GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
         GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier,
-        viperPath
+        viperPath,
+        this.viperModeIndex
       );
     } else if (bulletType === 'hound') {
       // Hound - guided bullet
@@ -2709,6 +2903,40 @@ focusTarget: 'player',
     this.player.sprite.setPosition(this.player.x, this.player.y);
     this.boss.x = tutorialX;
     this.boss.sprite.setPosition(this.boss.x, this.boss.y);
+  }
+
+  private updateTutorialEnemyBehavior(delta: number, time: number) {
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step) return;
+
+    this.boss.updateSlowVisuals(time);
+    const speedMultiplier = this.boss.getMovementSpeedMultiplier(time);
+
+    if (this.tutorialEnemyMovement === 'sideToSide') {
+      this.tutorialEnemyMovementTimer += delta * speedMultiplier;
+      const phase = this.tutorialEnemyMovementTimer * 0.002;
+      const amplitude = 120;
+      const offset = Math.sin(phase) * amplitude;
+      const baseX = this.tutorialEnemyBaseX || this.boss.x;
+      const padding = this.boss.getRadius() + 100;
+      this.boss.x = Phaser.Math.Clamp(baseX + offset, padding, GAME_CONFIG.WIDTH - padding);
+    }
+
+    this.boss.sprite.setPosition(this.boss.x, this.boss.y);
+
+    if (step.enemyShieldType) {
+      this.ensureBossShield(step.enemyShieldType);
+    }
+    if (this.boss.shieldActive && this.boss.shield) {
+      const aimAngle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
+      if (this.boss.shield.type === 'narrow') {
+        this.boss.shield.angle = aimAngle;
+        if (this.boss.shield.sprite instanceof Phaser.GameObjects.Rectangle) {
+          this.boss.shield.sprite.setRotation(aimAngle);
+        }
+      }
+      this.boss.shield.update(this.boss.x, this.boss.y, aimAngle);
+    }
   }
 
   private scheduleDelayedRelease(
@@ -3225,6 +3453,9 @@ focusTarget: 'player',
         // Check boss shield first
         if (target.boss.shieldActive && target.boss.shield) {
           if (this.bulletHitsShield(bullet, target.boss.shield)) {
+            if (bullet.isPlayerBullet) {
+              this.registerTutorialBulletHit(bullet.type, true, bullet.viperModeIndex);
+            }
             if (bullet.type === 'meteora') {
               this.triggerMeteoraExplosion(bullet);
             } else {
@@ -3258,7 +3489,7 @@ focusTarget: 'player',
               );
             }
             if (bullet.isPlayerBullet) {
-              this.registerTutorialBulletHit(bullet.type);
+              this.registerTutorialBulletHit(bullet.type, false, bullet.viperModeIndex);
             }
             bullet.destroy();
             break;

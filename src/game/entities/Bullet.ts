@@ -15,6 +15,7 @@ export class Bullet {
   public active: boolean = true;
   public hasExploded: boolean = false;
   public ignoreShield: boolean = false;
+  public viperModeIndex?: number;
   
   // Viper-specific properties
   private angle: number;
@@ -41,7 +42,8 @@ export class Bullet {
     trionDamage: number,
     shieldDamage: number,
     speed?: number,
-    viperPathPoints?: { x: number; y: number }[]
+    viperPathPoints?: { x: number; y: number }[],
+    viperModeIndex?: number
   ) {
     this.scene = scene;
     this.x = x;
@@ -67,6 +69,9 @@ export class Bullet {
       this.viperPathStartPoint = { x, y };
     }
     this.ignoreShield = type === 'red';
+    if (type === 'viper') {
+      this.viperModeIndex = viperModeIndex;
+    }
     
     this.velocityX = Math.cos(angle) * this.speed;
     this.velocityY = Math.sin(angle) * this.speed;
