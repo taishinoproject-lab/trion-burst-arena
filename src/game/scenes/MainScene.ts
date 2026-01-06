@@ -10,7 +10,9 @@ type EnemyPattern = 'mixed' | 'delayedAsteroid' | 'meteoraBarrage';
 interface EnemyBehavior {
   pattern: EnemyPattern;
   delayedShotChance: number;
-  bulletWeights?: { asteroid: number; meteora: number; viper: number; hound: number };
+  bulletWeights?: { asteroid: number; meteora: number; viper: number; hound: number; red: number };
+  redShotChance?: number;
+  houndIntervalMs?: number;
 }
 
 interface EnemyEntry {
@@ -18,6 +20,7 @@ interface EnemyEntry {
   trion: number;
   maxTrion: number;
   behavior: EnemyBehavior;
+  lastHoundTime?: number;
 }
 
 interface EnemyTarget {
@@ -3079,6 +3082,7 @@ focusTarget: 'player',
       behavior: {
         pattern: 'delayedAsteroid',
         delayedShotChance: 0.85,
+        redShotChance: 0.15,
       },
     });
   }
@@ -3087,7 +3091,7 @@ focusTarget: 'player',
     const fireRateMultiplier = this.getEnemyFireRateMultiplier();
     const config: Partial<BossConfig> = {
       speed: GAME_CONFIG.BOSS_SPEED * 1.6,
-      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.6 * fireRateMultiplier,
+      fireRate: GAME_CONFIG.BOSS_FIRE_RATE * 1.2 * fireRateMultiplier,
       bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED * 1.3,
       shieldCooldown: 2200,
       color: 0xff6bf0,
@@ -3100,7 +3104,9 @@ focusTarget: 'player',
       behavior: {
         pattern: 'meteoraBarrage',
         delayedShotChance: 0.15,
+        houndIntervalMs: 10000,
       },
+      lastHoundTime: this.time.now,
     });
   }
 
@@ -3153,7 +3159,7 @@ focusTarget: 'player',
     return {
       pattern: 'mixed',
       delayedShotChance: 0.3,
-      bulletWeights: { asteroid: 0.4, meteora: 0.3, viper: 0.2, hound: 0.1 },
+      bulletWeights: { asteroid: 0.4, meteora: 0.3, viper: 0.2, hound: 0.1, red: 0 },
     };
   }
 
@@ -3179,7 +3185,7 @@ focusTarget: 'player',
     let useDelayedShot = Phaser.Math.FloatBetween(0, 1) < behavior.delayedShotChance;
 
     if (behavior.pattern === 'mixed') {
-      const weights = behavior.bulletWeights ?? { asteroid: 0.4, meteora: 0.3, viper: 0.2, hound: 0.1 };
+      const weights = behavior.bulletWeights ?? { asteroid: 0.4, meteora: 0.3, viper: 0.2, hound: 0.1, red: 0 };
       const roll = Phaser.Math.FloatBetween(0, 1);
       if (roll < weights.asteroid) {
         bulletType = 'asteroid';
@@ -3187,13 +3193,32 @@ focusTarget: 'player',
         bulletType = 'meteora';
       } else if (roll < weights.asteroid + weights.meteora + weights.viper) {
         bulletType = 'viper';
-      } else {
+      } else if (roll < weights.asteroid + weights.meteora + weights.viper + weights.hound) {
         bulletType = 'hound';
+      } else {
+        bulletType = 'red';
       }
     } else if (behavior.pattern === 'meteoraBarrage') {
-      bulletType = 'meteora';
+      const houndIntervalMs = behavior.houndIntervalMs ?? 0;
+      if (houndIntervalMs > 0 && time - (enemy.lastHoundTime ?? 0) >= houndIntervalMs) {
+        bulletType = 'hound';
+        enemy.lastHoundTime = time;
+        useDelayedShot = false;
+      } else {
+        bulletType = 'meteora';
+      }
     } else {
-      bulletType = 'asteroid';
+      const redChance = behavior.redShotChance ?? 0;
+      if (redChance > 0 && Phaser.Math.FloatBetween(0, 1) < redChance) {
+        bulletType = 'red';
+        useDelayedShot = false;
+      } else {
+        bulletType = 'asteroid';
+      }
+    }
+
+    if (bulletType === 'red') {
+      useDelayedShot = false;
     }
 
     if (bulletType === 'asteroid') {
@@ -3236,6 +3261,23 @@ focusTarget: 'player',
       if (useDelayedShot) {
         this.scheduleDelayedRelease(bullet, () => ({ x: this.player.x, y: this.player.y }), 3000);
       }
+      return;
+    }
+
+    if (bulletType === 'red') {
+      const bullet = new Bullet(
+        this,
+        fireData.x,
+        fireData.y,
+        fireData.angle,
+        'red',
+        false,
+        GAME_CONFIG.RED_BULLET_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.RED_BULLET_SHIELD_DAMAGE * damageScale,
+        enemy.boss.getBulletSpeed(time, GAME_CONFIG.RED_BULLET_SPEED)
+      );
+      this.bossBullets.push(bullet);
+      this.trimBulletPool(this.bossBullets, this.maxBossBullets);
       return;
     }
 

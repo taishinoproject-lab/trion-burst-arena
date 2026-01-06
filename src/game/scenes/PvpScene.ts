@@ -8,6 +8,7 @@ class PvpFighter {
   public sprite: Phaser.GameObjects.Container;
   private body: Phaser.GameObjects.Arc;
   private aimIndicator: Phaser.GameObjects.Line;
+  private slowIndicator: Phaser.GameObjects.Arc;
   public x: number;
   public y: number;
   public angle: number = 0;
@@ -27,13 +28,23 @@ class PvpFighter {
     this.aimIndicator = scene.add.line(0, 0, 0, 0, 40, 0, GAME_CONFIG.BULLET_COLOR, 0.6);
     this.aimIndicator.setLineWidth(2);
 
-    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator]);
+    const slowRadius = GAME_CONFIG.BULLET_RADIUS * 1.4;
+    this.slowIndicator = scene.add.circle(0, 0, slowRadius, GAME_CONFIG.RED_BULLET_COLOR);
+    this.slowIndicator.setStrokeStyle(1, GAME_CONFIG.RED_BULLET_STROKE_COLOR, 0.7);
+    this.slowIndicator.setAlpha(0.9);
+    this.slowIndicator.setVisible(false);
+
+    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator, this.slowIndicator]);
   }
 
   updateMovement(delta: number, moveX: number, moveY: number) {
     const now = this.scene.time.now;
     if (now >= this.slowUntil && this.slowStacks > 0) {
       this.slowStacks = 0;
+    }
+    const slowActive = now < this.slowUntil && this.slowStacks > 0;
+    if (this.slowIndicator.visible !== slowActive) {
+      this.slowIndicator.setVisible(slowActive);
     }
     if (now < this.freezeUntil) {
       this.sprite.setPosition(this.x, this.y);
