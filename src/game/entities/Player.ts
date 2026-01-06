@@ -6,6 +6,7 @@ export class Player {
   public sprite: Phaser.GameObjects.Container;
   private body: Phaser.GameObjects.Arc;
   private aimIndicator: Phaser.GameObjects.Line;
+  private slowIndicator: Phaser.GameObjects.Arc;
   public x: number;
   public y: number;
   public angle: number = 0;
@@ -35,9 +36,15 @@ export class Player {
     // Aim indicator line
     this.aimIndicator = scene.add.line(0, 0, 0, 0, 40, 0, GAME_CONFIG.BULLET_COLOR, 0.6);
     this.aimIndicator.setLineWidth(2);
-    
+
+    const slowRadius = GAME_CONFIG.BULLET_RADIUS * 1.4;
+    this.slowIndicator = scene.add.circle(0, 0, slowRadius, GAME_CONFIG.RED_BULLET_COLOR);
+    this.slowIndicator.setStrokeStyle(1, GAME_CONFIG.RED_BULLET_STROKE_COLOR, 0.7);
+    this.slowIndicator.setAlpha(0.9);
+    this.slowIndicator.setVisible(false);
+
     // Container for player graphics
-    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator]);
+    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator, this.slowIndicator]);
     
     // Setup keyboard input
     this.keys = {
@@ -52,6 +59,10 @@ export class Player {
     const now = this.scene.time.now;
     if (now >= this.slowUntil && this.slowStacks > 0) {
       this.slowStacks = 0;
+    }
+    const isSlowed = now < this.slowUntil && this.slowStacks > 0;
+    if (this.slowIndicator.visible !== isSlowed) {
+      this.slowIndicator.setVisible(isSlowed);
     }
     const speedMultiplier = this.getSpeedMultiplier(now);
     const speed = GAME_CONFIG.PLAYER_SPEED * speedMultiplier * (delta / 1000);
