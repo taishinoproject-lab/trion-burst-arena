@@ -23,6 +23,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const [isBattleActive, setIsBattleActive] = useState(false);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
+  const [loadingDelayDone, setLoadingDelayDone] = useState(false);
   const isMobileResolved = isMobile !== null;
   const showSplash = splashPhase !== 'ready';
   const showLogo = splashPhase === 'logo';
@@ -44,15 +45,26 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   useEffect(() => {
     const logoTimer = window.setTimeout(() => {
       setSplashPhase('loading');
-    }, 300);
+    }, 2000);
     return () => window.clearTimeout(logoTimer);
   }, []);
 
   useEffect(() => {
-    if (isMobileResolved && splashPhase === 'loading') {
+    if (splashPhase !== 'loading') {
+      setLoadingDelayDone(false);
+      return;
+    }
+    const loadingTimer = window.setTimeout(() => {
+      setLoadingDelayDone(true);
+    }, 2000);
+    return () => window.clearTimeout(loadingTimer);
+  }, [splashPhase]);
+
+  useEffect(() => {
+    if (isMobileResolved && splashPhase === 'loading' && loadingDelayDone) {
       setSplashPhase('ready');
     }
-  }, [isMobileResolved, splashPhase]);
+  }, [isMobileResolved, loadingDelayDone, splashPhase]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
