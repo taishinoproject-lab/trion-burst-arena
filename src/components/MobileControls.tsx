@@ -32,7 +32,7 @@ export const MobileControls = ({
     const knob = knobRef.current;
     if (!joystick || !knob) return;
 
-    const joystickRadius = 44;
+    const joystickRadius = 52;
 
     const handleStart = (e: TouchEvent) => {
       e.preventDefault();
@@ -123,7 +123,7 @@ export const MobileControls = ({
       >
         <div
           ref={joystickRef}
-          className="relative w-28 h-28 rounded-full border-2 flex items-center justify-center"
+          className="relative w-32 h-32 rounded-full border-2 flex items-center justify-center"
           style={{
             background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.1) 0%, rgba(10, 10, 18, 0.9) 100%)',
             borderColor: 'rgba(0, 255, 213, 0.4)',
@@ -133,7 +133,7 @@ export const MobileControls = ({
           {/* Joystick knob */}
           <div
             ref={knobRef}
-            className="w-12 h-12 rounded-full transition-transform duration-75"
+            className="w-14 h-14 rounded-full transition-transform duration-75"
             style={{
               background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.6) 0%, rgba(0, 180, 150, 0.8) 100%)',
               boxShadow: '0 0 15px rgba(0, 255, 213, 0.5), 0 2px 8px rgba(0, 0, 0, 0.5)',
@@ -149,7 +149,7 @@ export const MobileControls = ({
           </div>
         </div>
         {/* Label */}
-        <div className="text-center mt-2 text-xs font-mono tracking-wider" style={{ color: 'rgba(0, 255, 213, 0.6)' }}>
+        <div className="text-center mt-3 text-[12px] font-mono tracking-wider" style={{ color: 'rgba(0, 255, 213, 0.6)' }}>
           移動
         </div>
       </div>
@@ -162,13 +162,13 @@ export const MobileControls = ({
           bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
         }}
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {/* Attack Button - Large, prominent */}
           <button
             onTouchStart={handleAttackStart}
             onTouchEnd={handleAttackEnd}
             onTouchCancel={handleAttackEnd}
-            className="col-span-1 row-span-2 w-[68px] h-[92px] rounded-lg font-mono text-[10px] font-bold tracking-wide transition-all duration-100 flex flex-col items-center justify-center gap-1"
+            className="col-span-1 row-span-2 w-[84px] h-[112px] rounded-lg font-mono text-[11px] font-bold tracking-wide transition-all duration-100 flex flex-col items-center justify-center gap-1"
             style={{
               background: isAttacking 
                 ? 'linear-gradient(135deg, rgba(0, 255, 213, 0.8) 0%, rgba(0, 180, 150, 0.9) 100%)'
@@ -180,7 +180,7 @@ export const MobileControls = ({
               color: isAttacking ? '#0a0a12' : '#00ffd5',
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="3" />
               <line x1="12" y1="2" x2="12" y2="6" />
               <line x1="12" y1="18" x2="12" y2="22" />
@@ -193,7 +193,7 @@ export const MobileControls = ({
           {/* Cycle Bullet Type */}
           <button
             onTouchStart={(e) => { e.preventDefault(); onCycleBullet(); }}
-            className="w-14 h-11 rounded-lg font-mono text-[9px] font-bold tracking-wide transition-all duration-100 flex flex-col items-center justify-center gap-0.5 active:scale-95"
+            className="w-16 h-12 rounded-lg font-mono text-[10px] font-bold tracking-wide transition-all duration-100 flex flex-col items-center justify-center gap-0.5 active:scale-95"
             style={{
               background: 'linear-gradient(135deg, rgba(255, 200, 100, 0.15) 0%, rgba(10, 10, 18, 0.95) 100%)',
               border: '2px solid rgba(255, 200, 100, 0.5)',
@@ -213,7 +213,7 @@ export const MobileControls = ({
           {/* Shield */}
           <button
             onTouchStart={(e) => { e.preventDefault(); onShield(); }}
-            className="w-14 h-11 rounded-lg font-mono text-[9px] font-bold tracking-wide transition-all duration-100 flex flex-col items-center justify-center gap-0.5 active:scale-95"
+            className="w-16 h-12 rounded-lg font-mono text-[10px] font-bold tracking-wide transition-all duration-100 flex flex-col items-center justify-center gap-0.5 active:scale-95"
             style={{
               background: 'linear-gradient(135deg, rgba(0, 200, 255, 0.15) 0%, rgba(10, 10, 18, 0.95) 100%)',
               border: '2px solid rgba(0, 200, 255, 0.5)',
@@ -230,7 +230,7 @@ export const MobileControls = ({
           {/* Delay Toggle */}
           <button
             onTouchStart={(e) => { e.preventDefault(); onDelayToggle(); }}
-            className="col-span-2 h-10 rounded-lg font-mono text-[9px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center gap-2 active:scale-95"
+            className="col-span-2 h-12 rounded-lg font-mono text-[10px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center gap-2 active:scale-95"
             style={{
               background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.08) 0%, rgba(10, 10, 18, 0.95) 100%)',
               border: '2px solid rgba(0, 255, 213, 0.35)',
@@ -248,7 +248,7 @@ export const MobileControls = ({
           {/* Wide Shield */}
           <button
             onTouchStart={(e) => { e.preventDefault(); onWideShield(); }}
-            className="col-span-2 w-full h-11 rounded-lg font-mono text-[9px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center gap-2 active:scale-95"
+            className="col-span-2 w-full h-12 rounded-lg font-mono text-[10px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center gap-2 active:scale-95"
             style={{
               background: 'linear-gradient(135deg, rgba(180, 100, 255, 0.15) 0%, rgba(10, 10, 18, 0.95) 100%)',
               border: '2px solid rgba(180, 100, 255, 0.5)',

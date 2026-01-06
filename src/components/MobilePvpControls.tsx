@@ -28,7 +28,7 @@ const Joystick = ({ label, accent, onMove, labelRotateDegrees = 0 }: JoystickPro
     const knob = knobRef.current;
     if (!joystick || !knob) return;
 
-    const joystickRadius = 40;
+    const joystickRadius = 48;
 
     const handleStart = (e: TouchEvent) => {
       e.preventDefault();
@@ -97,7 +97,7 @@ const Joystick = ({ label, accent, onMove, labelRotateDegrees = 0 }: JoystickPro
     <div className="flex flex-col items-center gap-2">
       <div
         ref={joystickRef}
-        className="relative w-24 h-24 rounded-full border-2 flex items-center justify-center"
+        className="relative w-28 h-28 rounded-full border-2 flex items-center justify-center"
         style={{
           background: `linear-gradient(135deg, ${accent}22 0%, rgba(10, 10, 18, 0.9) 100%)`,
           borderColor: `${accent}66`,
@@ -106,7 +106,7 @@ const Joystick = ({ label, accent, onMove, labelRotateDegrees = 0 }: JoystickPro
       >
         <div
           ref={knobRef}
-          className="w-10 h-10 rounded-full transition-transform duration-75"
+          className="w-12 h-12 rounded-full transition-transform duration-75"
           style={{
             background: `linear-gradient(135deg, ${accent}cc 0%, ${accent}88 100%)`,
             boxShadow: `0 0 12px ${accent}aa, 0 2px 6px rgba(0, 0, 0, 0.5)`,
@@ -133,7 +133,7 @@ const Joystick = ({ label, accent, onMove, labelRotateDegrees = 0 }: JoystickPro
         </div>
       </div>
       <div
-        className="text-center text-[10px] font-mono tracking-wider"
+        className="text-center text-[12px] font-mono tracking-wider"
         style={{ color: `${accent}aa` }}
       >
         <span
@@ -175,7 +175,7 @@ const ActionButton = ({
       event.preventDefault();
       onTouchEnd?.();
     }}
-    className="w-16 h-16 rounded-xl font-mono text-[10px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center active:scale-95"
+    className="w-[72px] h-[72px] rounded-xl font-mono text-[11px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center active:scale-95"
     style={{
       background: pressed
         ? `linear-gradient(135deg, ${accent}cc 0%, ${accent}ee 100%)`
@@ -217,7 +217,7 @@ export const MobilePvpControls = ({
           bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
         }}
       >
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-4">
           <Joystick
             label="P1 移動"
             accent="#00ffd5"
@@ -225,7 +225,7 @@ export const MobilePvpControls = ({
             labelRotateDegrees={-90}
           />
         </div>
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-3">
           <ActionButton
             label="射撃"
             accent="#00ffd5"
@@ -269,7 +269,7 @@ export const MobilePvpControls = ({
           bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
         }}
       >
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-3">
           <ActionButton
             label="射撃"
             accent="#ff6b6b"
@@ -303,7 +303,7 @@ export const MobilePvpControls = ({
             onTouchStart={() => onCycleBullet('p2')}
           />
         </div>
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-4">
           <Joystick
             label="P2 移動"
             accent="#ff6b6b"
