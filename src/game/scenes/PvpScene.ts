@@ -788,7 +788,10 @@ export class PvpScene extends Phaser.Scene {
       return {
         trionDamage: GAME_CONFIG.ASTEROID_TRION_DAMAGE,
         shieldDamage: GAME_CONFIG.ASTEROID_SHIELD_DAMAGE,
-        speed: GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier,
+        speed:
+          GAME_CONFIG.BULLET_SPEED *
+          GAME_CONFIG.ASTEROID_SPEED_MULTIPLIER *
+          bulletSpeedMultiplier,
       };
     }
     if (bulletType === 'meteora') {

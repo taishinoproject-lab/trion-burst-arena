@@ -131,6 +131,11 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       gameInstance.scene.scenes.forEach((scene) => {
         scene.events.on(Phaser.Scenes.Events.START, () => handleSceneStart(scene));
       });
+      gameInstance.scene.scenes.forEach((scene) => {
+        if (scene.scene.isActive()) {
+          handleSceneStart(scene);
+        }
+      });
     };
     if (gameInstance.scene && gameInstance.scene.scenes.length > 0) {
       bindSceneStart();
@@ -302,7 +307,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
             style={{ opacity: showLogo ? 1 : 0 }}
             aria-hidden={!showLogo}
           >
-            <img src={loadingLogoUrl} alt="Trion Burst Arena" className="h-24 w-auto" />
+            <img src={loadingLogoUrl} alt="Trion Burst Arena" className="h-48 w-auto" />
           </div>
           <div
             className="absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-300"
@@ -312,9 +317,9 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
             <img
               src={loadingCubeUrl}
               alt="Loading"
-              className="h-16 w-16 animate-[spin_6s_linear_infinite]"
+              className="h-32 w-32 animate-[spin_6s_linear_infinite]"
             />
-            <p className="text-sm font-semibold tracking-[0.2em]">Loading...</p>
+            <p className="text-lg font-semibold tracking-[0.2em]">Loading...</p>
           </div>
         </div>
       </div>
