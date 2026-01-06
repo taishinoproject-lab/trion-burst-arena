@@ -60,6 +60,15 @@ export const GAME_CONFIG = {
   VIPER_PATH_SEGMENT_LENGTH: 90,
   VIPER_PATH_MAX_OFFSET: 150,
 
+  // Hound bullet (guided)
+  HOUND_COST: 7,
+  HOUND_TRION_DAMAGE: 50,
+  HOUND_SHIELD_DAMAGE: 2,
+  HOUND_SPEED: 400,
+  HOUND_TURN_RATE: 4.5, // radians per second
+  HOUND_LIFETIME: 2500, // ms before auto-destroy
+  HOUND_COLOR: 0x00e5ff, // same cyan as viper
+
   // Red bullet (slow)
   RED_BULLET_COST: 15,
   RED_BULLET_TRION_DAMAGE: 5,
@@ -83,9 +92,9 @@ export const GAME_CONFIG = {
   SHIELD_WIDE_PADDING: 22, // extra radius beyond player/boss size
 };
 
-export type BulletType = 'asteroid' | 'meteora' | 'viper' | 'red';
+export type BulletType = 'asteroid' | 'meteora' | 'viper' | 'red' | 'hound';
 
-export const AVAILABLE_BULLET_TYPES: BulletType[] = ['asteroid', 'meteora', 'viper', 'red'];
+export const AVAILABLE_BULLET_TYPES: BulletType[] = ['asteroid', 'meteora', 'viper', 'red', 'hound'];
 
 export type Difficulty = 'easy' | 'middle' | 'hard';
 

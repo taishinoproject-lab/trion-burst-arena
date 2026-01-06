@@ -53,6 +53,8 @@ export class Bullet {
     this.angle = angle;
     if (type === 'viper') {
       this.speed = speed ?? GAME_CONFIG.VIPER_SPEED;
+    } else if (type === 'hound') {
+      this.speed = speed ?? GAME_CONFIG.HOUND_SPEED;
     } else if (type === 'red') {
       this.speed = speed ?? GAME_CONFIG.RED_BULLET_SPEED;
     } else {
@@ -72,6 +74,8 @@ export class Bullet {
     let color: number;
     if (type === 'viper') {
       color = GAME_CONFIG.VIPER_COLOR;
+    } else if (type === 'hound') {
+      color = GAME_CONFIG.HOUND_COLOR;
     } else if (type === 'red') {
       color = GAME_CONFIG.RED_BULLET_COLOR;
     } else {
@@ -80,6 +84,7 @@ export class Bullet {
     
     const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 :
                    type === 'viper' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
+                   type === 'hound' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
                    type === 'red' ? GAME_CONFIG.BULLET_RADIUS * 1.4 :
                    GAME_CONFIG.BULLET_RADIUS;
     
@@ -116,7 +121,7 @@ export class Bullet {
     this.velocityY = Math.sin(this.angle) * this.speed;
   }
 
-  update(delta: number, _mouseX?: number, _mouseY?: number) {
+  update(delta: number, mouseX?: number, mouseY?: number) {
     if (!this.active) return;
     
     if (this.isHeld) {
@@ -126,12 +131,18 @@ export class Bullet {
 
     const dt = delta / 1000;
     
+    const age = this.scene.time.now - this.createdAt;
+    if (this.type === 'viper' && age > GAME_CONFIG.VIPER_LIFETIME) {
+      this.destroy();
+      return;
+    }
+    if (this.type === 'hound' && age > GAME_CONFIG.HOUND_LIFETIME) {
+      this.destroy();
+      return;
+    }
+
     // Viper path behavior
     if (this.type === 'viper') {
-      if (this.scene.time.now - this.createdAt > GAME_CONFIG.VIPER_LIFETIME) {
-        this.destroy();
-        return;
-      }
       if (this.viperPathPoints && !this.viperPathComplete) {
         this.followViperPath(dt);
       } else {
@@ -144,6 +155,31 @@ export class Bullet {
         this.trailTimer = 0;
         this.createTrailParticle();
       }
+    } else if (this.type === 'hound' && mouseX !== undefined && mouseY !== undefined) {
+      const targetAngle = Math.atan2(mouseY - this.y, mouseX - this.x);
+      let angleDiff = targetAngle - this.angle;
+
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+      const maxTurn = GAME_CONFIG.HOUND_TURN_RATE * dt;
+      if (Math.abs(angleDiff) < maxTurn) {
+        this.angle = targetAngle;
+      } else {
+        this.angle += Math.sign(angleDiff) * maxTurn;
+      }
+
+      this.velocityX = Math.cos(this.angle) * this.speed;
+      this.velocityY = Math.sin(this.angle) * this.speed;
+
+      this.trailTimer += delta;
+      if (this.trailTimer > 30) {
+        this.trailTimer = 0;
+        this.createTrailParticle();
+      }
+
+      this.x += this.velocityX * dt;
+      this.y += this.velocityY * dt;
     } else {
       this.x += this.velocityX * dt;
       this.y += this.velocityY * dt;
