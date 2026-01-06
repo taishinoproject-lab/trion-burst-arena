@@ -12,6 +12,7 @@ interface TrionBattleGameProps {
 
 export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const gameContainerRef = useRef<HTMLDivElement>(null);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<MainScene | null>(null);
   const pvpSceneRef = useRef<PvpScene | null>(null);
@@ -120,12 +121,12 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, [handleBattleStateChange, isMobile]);
 
   const handleFullscreenToggle = useCallback(async () => {
-    if (!gameContainerRef.current || !canFullscreen) return;
+    if (!fullscreenRef.current || !canFullscreen) return;
     if (document.fullscreenElement) {
       await document.exitFullscreen();
       return;
     }
-    await gameContainerRef.current.requestFullscreen();
+    await fullscreenRef.current.requestFullscreen();
   }, [canFullscreen]);
 
   const handleMove = useCallback((x: number, y: number) => {
@@ -190,6 +191,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
 
   return (
     <div
+      ref={fullscreenRef}
       className={className}
       style={
         isMobile

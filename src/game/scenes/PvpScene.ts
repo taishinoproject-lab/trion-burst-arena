@@ -76,10 +76,9 @@ class PvpFighter {
     const slowActive = now < this.slowUntil && this.slowStacks > 0;
     if (slowActive) {
       this.freezeUntil = Math.max(this.freezeUntil, now + freezeDurationMs);
-      return;
     }
 
-    this.slowStacks = 1;
+    this.slowStacks = slowActive ? Math.min(this.slowStacks + 1, GAME_CONFIG.RED_BULLET_MAX_STACKS) : 1;
     this.slowUntil = now + slowDurationMs;
     this.slowStackMultiplier = slowMultiplier;
   }
