@@ -16,12 +16,17 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<MainScene | null>(null);
   const pvpSceneRef = useRef<PvpScene | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [activeSceneKey, setActiveSceneKey] = useState('MainScene');
   const [isBattleActive, setIsBattleActive] = useState(false);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
+  const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
+  const isMobileResolved = isMobile !== null;
+  const showSplash = splashPhase !== 'ready';
+  const showLogo = splashPhase === 'logo';
+  const showLoading = splashPhase !== 'logo';
 
   useEffect(() => {
     // Detect mobile/touch device
@@ -37,6 +42,19 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   useEffect(() => {
+    const logoTimer = window.setTimeout(() => {
+      setSplashPhase('loading');
+    }, 300);
+    return () => window.clearTimeout(logoTimer);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileResolved && splashPhase === 'loading') {
+      setSplashPhase('ready');
+    }
+  }, [isMobileResolved, splashPhase]);
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
     };
@@ -50,7 +68,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   useEffect(() => {
-    if (!gameContainerRef.current) return;
+    if (!gameContainerRef.current || isMobile === null) return;
     
     // Destroy existing game if isMobile changed
     if (gameRef.current) {
@@ -256,6 +274,36 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         onShield={handlePvpShield}
         onCycleBullet={handlePvpCycle}
       />
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-black transition-opacity duration-500"
+        style={{
+          opacity: showSplash ? 1 : 0,
+          pointerEvents: showSplash ? 'auto' : 'none',
+        }}
+        aria-hidden={!showSplash}
+      >
+        <div className="relative flex flex-col items-center justify-center gap-4 text-center text-white">
+          <div
+            className="flex flex-col items-center justify-center gap-4 transition-opacity duration-300"
+            style={{ opacity: showLogo ? 1 : 0 }}
+            aria-hidden={!showLogo}
+          >
+            <img src="/loading-logo.png" alt="Trion Burst Arena" className="h-24 w-auto" />
+          </div>
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-300"
+            style={{ opacity: showLoading ? 1 : 0 }}
+            aria-hidden={!showLoading}
+          >
+            <img
+              src="/loading-cube.png"
+              alt="Loading"
+              className="h-16 w-16 animate-[spin_6s_linear_infinite]"
+            />
+            <p className="text-sm font-semibold tracking-[0.2em]">Loading...</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
