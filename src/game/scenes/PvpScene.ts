@@ -3,6 +3,8 @@ import { AVAILABLE_BULLET_TYPES, BulletType, GAME_CONFIG } from '../constants';
 import { Bullet } from '../entities/Bullet';
 import { Shield, ShieldType } from '../entities/Shield';
 
+type ViperPathOffset = { x: number; y: number };
+
 class PvpFighter {
   private scene: Phaser.Scene;
   public sprite: Phaser.GameObjects.Container;
@@ -157,6 +159,33 @@ export class PvpScene extends Phaser.Scene {
   private player2LastFireTime = 0;
   private player2CyclePrev = false;
   private player2CycleNext = false;
+  private player1DelayedAsteroidEnabled = false;
+  private player2DelayedAsteroidEnabled = false;
+  private player1ViperModeIndex = 0;
+  private player2ViperModeIndex = 0;
+  private viperPathOffsets: ViperPathOffset[][] = [
+    [
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+    ],
+    [
+      { x: 60, y: 0 },
+      { x: 120, y: 0 },
+      { x: 120, y: 0 },
+      { x: 60, y: 0 },
+      { x: 0, y: 0 },
+    ],
+    [
+      { x: -90, y: 0 },
+      { x: -40, y: 0 },
+      { x: 40, y: 0 },
+      { x: 90, y: 0 },
+      { x: 0, y: 0 },
+    ],
+  ];
   private mobileInput = {
     p1: {
       moveX: 0,
@@ -227,9 +256,15 @@ export class PvpScene extends Phaser.Scene {
     this.gameOver = false;
     this.player1LastFireTime = 0;
     this.player2LastFireTime = 0;
+    this.player1DelayedAsteroidEnabled = false;
+    this.player2DelayedAsteroidEnabled = false;
+    this.player1ViperModeIndex = 0;
+    this.player2ViperModeIndex = 0;
 
     this.setupInput();
     this.createUI();
+    this.emitBulletTypeChanged('p1');
+    this.emitBulletTypeChanged('p2');
   }
 
   update(_time: number, delta: number) {
@@ -275,6 +310,19 @@ export class PvpScene extends Phaser.Scene {
 
   public triggerMobileCycleBullet(player: 'p1' | 'p2') {
     this.mobileInput[player].cycleQueued = true;
+  }
+
+  public triggerMobileDelayToggle(player: 'p1' | 'p2') {
+    const bulletType = this.getBulletTypeForPlayer(player);
+    if (bulletType === 'viper') {
+      this.cycleViperMode(player);
+    } else if (bulletType === 'asteroid') {
+      this.toggleDelayedAsteroidMode(player);
+    }
+  }
+
+  public getCurrentBulletType(player: 'p1' | 'p2') {
+    return this.getBulletTypeForPlayer(player);
   }
 
   private setupInput() {
@@ -437,13 +485,16 @@ export class PvpScene extends Phaser.Scene {
   private handleInput() {
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
       this.player1BulletIndex = this.getPrevBulletIndex(this.player1BulletIndex);
+      this.emitBulletTypeChanged('p1');
     }
     if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
       this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
+      this.emitBulletTypeChanged('p1');
     }
     if (this.mobileInput.p1.cycleQueued) {
       this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
       this.mobileInput.p1.cycleQueued = false;
+      this.emitBulletTypeChanged('p1');
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.oKey)) {
@@ -455,15 +506,18 @@ export class PvpScene extends Phaser.Scene {
     if (this.mobileInput.p2.cycleQueued) {
       this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex);
       this.mobileInput.p2.cycleQueued = false;
+      this.emitBulletTypeChanged('p2');
     }
 
     if (this.player2CyclePrev) {
       this.player2BulletIndex = this.getPrevBulletIndex(this.player2BulletIndex);
       this.player2CyclePrev = false;
+      this.emitBulletTypeChanged('p2');
     }
     if (this.player2CycleNext) {
       this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex);
       this.player2CycleNext = false;
+      this.emitBulletTypeChanged('p2');
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
@@ -551,6 +605,7 @@ export class PvpScene extends Phaser.Scene {
     const bulletType = AVAILABLE_BULLET_TYPES[bulletIndex];
     const cost = this.getBulletCost(bulletType);
     const trion = isPlayer1 ? this.player1Trion : this.player2Trion;
+    const delayedAsteroidEnabled = this.isDelayedAsteroidEnabled(player);
 
     if (trion < cost) return;
 
@@ -569,7 +624,20 @@ export class PvpScene extends Phaser.Scene {
     const aimY = Math.sin(angle);
     const bulletSpeedMultiplier = shooter.getBulletSpeedMultiplier(now);
 
-    const { trionDamage, shieldDamage, speed } = this.getBulletStats(bulletType, bulletSpeedMultiplier);
+    const { trionDamage, shieldDamage, speed } = this.getBulletStats(
+      bulletType,
+      bulletSpeedMultiplier,
+      delayedAsteroidEnabled
+    );
+    const viperModeIndex = this.getViperModeIndex(player);
+    const viperPath = bulletType === 'viper'
+      ? this.buildViperPathPoints(
+          shooter.x + aimX * 20,
+          shooter.y + aimY * 20,
+          angle,
+          viperModeIndex
+        )
+      : undefined;
     const bullet = new Bullet(
       this,
       shooter.x + aimX * 20,
@@ -579,13 +647,19 @@ export class PvpScene extends Phaser.Scene {
       isPlayer1,
       trionDamage,
       shieldDamage,
-      speed
+      speed,
+      viperPath,
+      bulletType === 'viper' ? viperModeIndex : undefined
     );
 
     if (isPlayer1) {
       this.player1Bullets.push(bullet);
     } else {
       this.player2Bullets.push(bullet);
+    }
+
+    if (bulletType === 'asteroid' && delayedAsteroidEnabled) {
+      this.scheduleDelayedRelease(bullet, () => ({ x: target.x, y: target.y }), 3000);
     }
   }
 
@@ -796,10 +870,16 @@ export class PvpScene extends Phaser.Scene {
     return GAME_CONFIG.RED_BULLET_COST;
   }
 
-  private getBulletStats(bulletType: BulletType, bulletSpeedMultiplier: number) {
+  private getBulletStats(
+    bulletType: BulletType,
+    bulletSpeedMultiplier: number,
+    delayedAsteroidEnabled: boolean
+  ) {
     if (bulletType === 'asteroid') {
       return {
-        trionDamage: GAME_CONFIG.ASTEROID_TRION_DAMAGE,
+        trionDamage: delayedAsteroidEnabled
+          ? GAME_CONFIG.ASTEROID_DELAY_TRION_DAMAGE
+          : GAME_CONFIG.ASTEROID_TRION_DAMAGE,
         shieldDamage: GAME_CONFIG.ASTEROID_SHIELD_DAMAGE,
         speed:
           GAME_CONFIG.BULLET_SPEED *
@@ -841,6 +921,85 @@ export class PvpScene extends Phaser.Scene {
 
   private getPrevBulletIndex(index: number) {
     return (index - 1 + AVAILABLE_BULLET_TYPES.length) % AVAILABLE_BULLET_TYPES.length;
+  }
+
+  private emitBulletTypeChanged(player: 'p1' | 'p2') {
+    this.events.emit('pvp-bullet-changed', {
+      player,
+      bulletType: this.getBulletTypeForPlayer(player),
+    });
+  }
+
+  private getBulletTypeForPlayer(player: 'p1' | 'p2') {
+    const index = player === 'p1' ? this.player1BulletIndex : this.player2BulletIndex;
+    return AVAILABLE_BULLET_TYPES[index];
+  }
+
+  private toggleDelayedAsteroidMode(player: 'p1' | 'p2') {
+    if (player === 'p1') {
+      this.player1DelayedAsteroidEnabled = !this.player1DelayedAsteroidEnabled;
+      return;
+    }
+    this.player2DelayedAsteroidEnabled = !this.player2DelayedAsteroidEnabled;
+  }
+
+  private cycleViperMode(player: 'p1' | 'p2') {
+    const modeCount = this.viperPathOffsets.length;
+    if (modeCount === 0) return;
+    if (player === 'p1') {
+      this.player1ViperModeIndex = (this.player1ViperModeIndex + 1) % modeCount;
+      return;
+    }
+    this.player2ViperModeIndex = (this.player2ViperModeIndex + 1) % modeCount;
+  }
+
+  private getViperModeIndex(player: 'p1' | 'p2') {
+    return player === 'p1' ? this.player1ViperModeIndex : this.player2ViperModeIndex;
+  }
+
+  private isDelayedAsteroidEnabled(player: 'p1' | 'p2') {
+    return player === 'p1' ? this.player1DelayedAsteroidEnabled : this.player2DelayedAsteroidEnabled;
+  }
+
+  private buildViperPathPoints(startX: number, startY: number, angle: number, modeIndex: number) {
+    const offsets = this.getViperPathOffsets(modeIndex);
+    if (offsets.length === 0) return undefined;
+    const segmentLength = GAME_CONFIG.VIPER_PATH_SEGMENT_LENGTH;
+    const dirX = Math.cos(angle);
+    const dirY = Math.sin(angle);
+    const perpX = -dirY;
+    const perpY = dirX;
+    const points: { x: number; y: number }[] = [];
+    offsets.forEach((offset, index) => {
+      const distance = segmentLength * (index + 1) + offset.y;
+      points.push({
+        x: startX + dirX * distance + perpX * offset.x,
+        y: startY + dirY * distance + perpY * offset.x,
+      });
+    });
+    return points;
+  }
+
+  private getViperPathOffsets(modeIndex: number) {
+    const offsets = this.viperPathOffsets[modeIndex] ?? [];
+    if (offsets.length === 0) return [];
+    const normalized = Array.from({ length: 5 }, (_, index) => offsets[index] ?? { x: 0, y: 0 });
+    return normalized.map((offset) => ({ x: offset.x ?? 0, y: offset.y ?? 0 }));
+  }
+
+  private scheduleDelayedRelease(
+    bullet: Bullet,
+    getTarget: () => { x: number; y: number },
+    delayMs: number
+  ) {
+    if (!bullet.active || bullet.releaseScheduled) return;
+    bullet.hold();
+    bullet.releaseScheduled = true;
+    this.time.delayedCall(delayMs, () => {
+      if (!bullet.active || !bullet.isHeld) return;
+      const target = getTarget();
+      bullet.releaseTowards(target.x, target.y);
+    });
   }
 
   private bulletHitsShield(bullet: Bullet, shield: Shield): boolean {
