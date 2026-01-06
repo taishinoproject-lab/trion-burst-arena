@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { BulletType } from '../game/constants';
 
 interface MobileControlsProps {
+  currentBulletType?: BulletType;
   onMove: (x: number, y: number) => void;
   onAttack: (pressed: boolean) => void;
   onCycleBullet: () => void;
@@ -11,6 +13,7 @@ interface MobileControlsProps {
 }
 
 export const MobileControls = ({
+  currentBulletType,
   onMove,
   onAttack,
   onCycleBullet,
@@ -110,6 +113,7 @@ export const MobileControls = ({
   };
 
   if (!visible) return null;
+  const delayLabel = currentBulletType === 'viper' ? '弾道切替' : '遅延';
 
   return (
     <div className="absolute inset-0 pointer-events-none z-[70]">
@@ -242,7 +246,7 @@ export const MobileControls = ({
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7v5l3 3" />
             </svg>
-            <span>遅延</span>
+            <span>{delayLabel}</span>
           </button>
 
           {/* Wide Shield */}

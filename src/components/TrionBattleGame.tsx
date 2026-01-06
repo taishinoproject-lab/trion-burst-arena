@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Phaser from 'phaser';
 import { createGameConfig } from '../game/config';
+import { BulletType } from '../game/constants';
 import { MobileControls } from './MobileControls';
 import { MobilePvpControls } from './MobilePvpControls';
 import { MainScene } from '../game/scenes/MainScene';
@@ -24,6 +25,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const [activeSceneKey, setActiveSceneKey] = useState('MainScene');
   const [isBattleActive, setIsBattleActive] = useState(false);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
+  const [currentBulletType, setCurrentBulletType] = useState<BulletType | null>(null);
   const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
   const [loadingDelayDone, setLoadingDelayDone] = useState(false);
   const isMobileResolved = isMobile !== null;
@@ -111,8 +113,11 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         mainScene.events.on('battle-state-changed', handleBattleStateChange);
         mainScene.events.off('tutorial-state-changed');
         mainScene.events.on('tutorial-state-changed', setIsTutorialActive);
+        mainScene.events.off('bullet-type-changed', setCurrentBulletType);
+        mainScene.events.on('bullet-type-changed', setCurrentBulletType);
         setIsBattleActive(mainScene.isBattleActive());
         setIsTutorialActive(mainScene.isTutorialActive());
+        setCurrentBulletType(mainScene.getCurrentBulletType());
         sceneRef.current = mainScene;
         pvpSceneRef.current = null;
         mainScene.setMobileMode(isMobile);
@@ -123,6 +128,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         }
         setIsBattleActive(false);
         setIsTutorialActive(false);
+        setCurrentBulletType(null);
         sceneRef.current = null;
         pvpSceneRef.current = scene.scene.key === 'PvpScene' ? (scene as PvpScene) : null;
       }
@@ -279,6 +285,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
       )}
       <MobileControls
         visible={isMobile && activeSceneKey === 'MainScene'}
+        currentBulletType={currentBulletType ?? undefined}
         onMove={handleMove}
         onAttack={handleAttack}
         onCycleBullet={handleCycleBullet}
