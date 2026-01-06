@@ -112,11 +112,14 @@ export const MobileControls = ({
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[70]">
+    <div className="absolute inset-0 pointer-events-none z-[70]">
       {/* Left side - Joystick */}
       <div
-        className="absolute left-3 pointer-events-auto"
-        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        className="absolute pointer-events-auto"
+        style={{
+          left: 'calc(0.75rem + env(safe-area-inset-left))',
+          bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+        }}
       >
         <div
           ref={joystickRef}
@@ -153,8 +156,11 @@ export const MobileControls = ({
 
       {/* Right side - Action buttons */}
       <div
-        className="absolute right-3 pointer-events-auto"
-        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        className="absolute pointer-events-auto"
+        style={{
+          right: 'calc(0.75rem + env(safe-area-inset-right))',
+          bottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+        }}
       >
         <div className="grid grid-cols-2 gap-3">
           {/* Attack Button - Large, prominent */}
