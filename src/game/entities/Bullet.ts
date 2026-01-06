@@ -28,6 +28,10 @@ export class Bullet {
   private viperPathComplete = false;
   private viperPathLastPoint?: { x: number; y: number };
   private viperPathStartPoint?: { x: number; y: number };
+  private viperRefractionStage = 0;
+  private viperDamageScale = 1;
+  private viperBaseColor?: number;
+  private viperCurrentColor?: number;
   
   public isHeld: boolean = false;
   public releaseScheduled: boolean = false;
@@ -78,7 +82,13 @@ export class Bullet {
     
     let color: number;
     if (type === 'viper') {
-      color = GAME_CONFIG.VIPER_COLOR;
+      const baseColor = isPlayerBullet ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_BULLET_COLOR;
+      this.viperBaseColor = baseColor;
+      this.viperDamageScale = GAME_CONFIG.VIPER_TRION_DAMAGE > 0
+        ? this.trionDamage / GAME_CONFIG.VIPER_TRION_DAMAGE
+        : 1;
+      this.viperCurrentColor = this.getViperColorForStage(0);
+      color = this.viperCurrentColor ?? baseColor;
     } else if (type === 'hound') {
       color = GAME_CONFIG.HOUND_COLOR;
     } else if (type === 'red') {
@@ -88,7 +98,6 @@ export class Bullet {
     }
     
     const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 :
-                   type === 'viper' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
                    type === 'hound' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
                    type === 'red' ? GAME_CONFIG.BULLET_RADIUS * 1.4 :
                    GAME_CONFIG.BULLET_RADIUS;
@@ -96,6 +105,9 @@ export class Bullet {
     this.sprite = scene.add.circle(x, y, radius, color);
     const strokeColor = type === 'red' ? GAME_CONFIG.RED_BULLET_STROKE_COLOR : 0xffffff;
     this.sprite.setStrokeStyle(1, strokeColor, 0.6);
+    if (type === 'viper') {
+      this.updateViperRefraction(0);
+    }
     
     // Add glow effect
     this.sprite.setAlpha(0.9);
@@ -207,7 +219,8 @@ export class Bullet {
     if (!this.viperPathPoints) return;
     let remaining = this.speed * dt;
     while (remaining > 0 && !this.viperPathComplete) {
-      const target = this.viperPathPoints[this.viperPathIndex];
+      const targetIndex = this.viperPathIndex;
+      const target = this.viperPathPoints[targetIndex];
       if (!target) {
         this.viperPathComplete = true;
         return;
@@ -221,6 +234,11 @@ export class Bullet {
         remaining -= distance;
         this.viperPathLastPoint = target;
         this.viperPathIndex += 1;
+        if (targetIndex < this.viperPathPoints.length - 1) {
+          this.updateViperRefraction(
+            Math.min(this.viperRefractionStage + 1, GAME_CONFIG.VIPER_REFRACTION_DAMAGE_STEPS.length - 1)
+          );
+        }
         if (this.viperPathIndex >= this.viperPathPoints.length) {
           this.viperPathComplete = true;
           const prevPoint =
@@ -250,7 +268,7 @@ export class Bullet {
       this.x,
       this.y,
       3,
-      GAME_CONFIG.VIPER_COLOR,
+      this.viperCurrentColor ?? GAME_CONFIG.VIPER_COLOR,
       0.6
     );
     
@@ -263,6 +281,39 @@ export class Bullet {
         particle.destroy();
       }
     });
+  }
+
+  private updateViperRefraction(stage: number) {
+    if (this.type !== 'viper') return;
+    this.viperRefractionStage = stage;
+    const damageSteps = GAME_CONFIG.VIPER_REFRACTION_DAMAGE_STEPS;
+    const baseDamage = damageSteps[Math.min(stage, damageSteps.length - 1)];
+    this.trionDamage = baseDamage * this.viperDamageScale;
+    this.viperCurrentColor = this.getViperColorForStage(stage);
+    if (this.sprite?.active) {
+      this.sprite.setFillStyle(this.viperCurrentColor);
+    }
+  }
+
+  private blendColor(baseColor: number, targetColor: number, amount: number) {
+    const clamped = Phaser.Math.Clamp(amount, 0, 1);
+    const r1 = (baseColor >> 16) & 0xff;
+    const g1 = (baseColor >> 8) & 0xff;
+    const b1 = baseColor & 0xff;
+    const r2 = (targetColor >> 16) & 0xff;
+    const g2 = (targetColor >> 8) & 0xff;
+    const b2 = targetColor & 0xff;
+    const r = Math.round(r1 + (r2 - r1) * clamped);
+    const g = Math.round(g1 + (g2 - g1) * clamped);
+    const b = Math.round(b1 + (b2 - b1) * clamped);
+    return (r << 16) | (g << 8) | b;
+  }
+
+  private getViperColorForStage(stage: number) {
+    const baseColor = this.viperBaseColor ?? GAME_CONFIG.VIPER_COLOR;
+    const maxStage = Math.max(1, GAME_CONFIG.VIPER_REFRACTION_DAMAGE_STEPS.length - 1);
+    const blendRatio = Math.min(0.6, (stage / maxStage) * 0.6);
+    return this.blendColor(baseColor, 0xffffff, blendRatio);
   }
 
   getExplosionArea(): Phaser.Geom.Circle {

@@ -46,6 +46,8 @@ interface TutorialStep {
   enemyMovement?: 'none' | 'sideToSide';
 }
 
+type ViperPathOffset = { x: number; y: number };
+
 export class MainScene extends Phaser.Scene {
   private player!: Player;
   private boss!: Boss;
@@ -66,10 +68,28 @@ export class MainScene extends Phaser.Scene {
   private availableBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper', 'hound'];
   private isTutorialMode = false;
   private viperModeIndex = 0;
-  private viperPathOffsets: number[][] = [
-    [0, 0, 0, 0],
-    [60, 120, 120, 60],
-    [-90, -40, 40, 90],
+  private viperPathOffsets: ViperPathOffset[][] = [
+    [
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+    ],
+    [
+      { x: 60, y: 0 },
+      { x: 120, y: 0 },
+      { x: 120, y: 0 },
+      { x: 60, y: 0 },
+      { x: 0, y: 0 },
+    ],
+    [
+      { x: -90, y: 0 },
+      { x: -40, y: 0 },
+      { x: 40, y: 0 },
+      { x: 90, y: 0 },
+      { x: 0, y: 0 },
+    ],
   ];
   private viperSettingsCleanup?: () => void;
   
@@ -1289,13 +1309,28 @@ export class MainScene extends Phaser.Scene {
       midPoints.push(point);
       instructionElements.push(point);
     });
+    endPoint.setStrokeStyle(2, 0xffffff, 0.6);
+    endPoint.setInteractive({ useHandCursor: true, draggable: true });
+    this.input.setDraggable(endPoint);
 
     let activeModeIndex = this.viperModeIndex;
+    const basePointYs = [...midPointYs, endY];
+    const controlPoints = [...midPoints, endPoint];
+    const maxForwardOffset = segmentSpacing * 0.4;
+    const minGap = segmentSpacing * 0.3;
+    const normalizeOffsets = (offsets?: ViperPathOffset[]) => {
+      const defaultOffsets = Array.from({ length: 5 }, () => ({ x: 0, y: 0 }));
+      offsets?.forEach((offset, index) => {
+        if (!defaultOffsets[index]) return;
+        defaultOffsets[index] = { x: offset.x ?? 0, y: offset.y ?? 0 };
+      });
+      return defaultOffsets;
+    };
     const updatePointsFromOffsets = () => {
-      const offsets = this.viperPathOffsets[activeModeIndex] ?? [0, 0, 0, 0];
-      midPoints.forEach((point, index) => {
-        point.x = baseX + (offsets[index] ?? 0);
-        point.y = midPointYs[index];
+      const offsets = normalizeOffsets(this.viperPathOffsets[activeModeIndex]);
+      controlPoints.forEach((point, index) => {
+        point.x = baseX + (offsets[index]?.x ?? 0);
+        point.y = basePointYs[index] + (offsets[index]?.y ?? 0);
       });
     };
 
@@ -1304,8 +1339,7 @@ export class MainScene extends Phaser.Scene {
       pathGraphics.lineStyle(3, 0x00e5ff, 0.8);
       pathGraphics.beginPath();
       pathGraphics.moveTo(startPoint.x, startPoint.y);
-      midPoints.forEach((point) => pathGraphics.lineTo(point.x, point.y));
-      pathGraphics.lineTo(endPoint.x, endPoint.y);
+      controlPoints.forEach((point) => pathGraphics.lineTo(point.x, point.y));
       pathGraphics.strokePath();
     };
 
@@ -1374,7 +1408,7 @@ export class MainScene extends Phaser.Scene {
     const instructionsText = this.add.text(
       modePanelX,
       modeButtonY + (this.isMobileMode ? 50 : 60),
-      '左の点を左右にドラッグして弾道を設定\n弾は上のスタート(発射)→下のゴール(着弾)へ進む\n戦闘中はQで弾道を切替',
+      '左の点とゴールを左右・上下にドラッグして弾道を設定\n弾は上のスタート(発射)→下のゴール(着弾)へ進む\n戦闘中はQで弾道を切替',
       {
         fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
         color: '#ffffff',
@@ -1390,14 +1424,28 @@ export class MainScene extends Phaser.Scene {
     const dragHandler = (
       _pointer: Phaser.Input.Pointer,
       gameObject: Phaser.GameObjects.GameObject,
-      dragX: number
+      dragX: number,
+      dragY: number
     ) => {
-      const index = midPoints.findIndex((point) => point === gameObject);
+      const index = controlPoints.findIndex((point) => point === gameObject);
       if (index === -1) return;
+      const prevPoint = index === 0 ? startPoint : controlPoints[index - 1];
+      const nextPoint = index === controlPoints.length - 1 ? null : controlPoints[index + 1];
+      const baseY = basePointYs[index];
+      const minY = Math.max(baseY - maxForwardOffset, prevPoint.y + minGap);
+      const maxY = Math.min(
+        baseY + maxForwardOffset,
+        nextPoint ? nextPoint.y - minGap : baseY + maxForwardOffset
+      );
       const clampedX = Phaser.Math.Clamp(dragX, baseX - maxOffset, baseX + maxOffset);
-      midPoints[index].x = clampedX;
-      const activeOffsets = this.viperPathOffsets[activeModeIndex] ?? [0, 0, 0, 0];
-      activeOffsets[index] = clampedX - baseX;
+      const clampedY = Phaser.Math.Clamp(dragY, minY, maxY);
+      controlPoints[index].x = clampedX;
+      controlPoints[index].y = clampedY;
+      const activeOffsets = normalizeOffsets(this.viperPathOffsets[activeModeIndex]);
+      activeOffsets[index] = {
+        x: clampedX - baseX,
+        y: clampedY - baseY,
+      };
       this.viperPathOffsets[activeModeIndex] = activeOffsets;
       redrawPath();
     };
@@ -1406,7 +1454,7 @@ export class MainScene extends Phaser.Scene {
     this.input.on('drag', dragHandler);
     this.viperSettingsCleanup = () => {
       this.input.off('drag', dragHandler);
-      midPoints.forEach((point) => point.disableInteractive());
+      controlPoints.forEach((point) => point.disableInteractive());
     };
   }
 
@@ -1826,6 +1874,8 @@ export class MainScene extends Phaser.Scene {
   private destroyInstructionsOverlay() {
     this.instructionScrollCleanup?.();
     this.instructionScrollCleanup = undefined;
+    this.viperSettingsCleanup?.();
+    this.viperSettingsCleanup = undefined;
     this.instructionsContent = undefined;
     if (this.instructionsOverlay?.active) {
       this.instructionsOverlay.destroy(true);
@@ -2824,7 +2874,7 @@ focusTarget: 'player',
   }
 
   private buildViperPathPoints(startX: number, startY: number, angle: number) {
-    const offsets = this.viperPathOffsets[this.viperModeIndex] ?? [];
+    const offsets = this.getViperPathOffsets(this.viperModeIndex);
     if (offsets.length === 0) return undefined;
     const segmentLength = GAME_CONFIG.VIPER_PATH_SEGMENT_LENGTH;
     const dirX = Math.cos(angle);
@@ -2833,18 +2883,20 @@ focusTarget: 'player',
     const perpY = dirX;
     const points: { x: number; y: number }[] = [];
     offsets.forEach((offset, index) => {
-      const distance = segmentLength * (index + 1);
+      const distance = segmentLength * (index + 1) + offset.y;
       points.push({
-        x: startX + dirX * distance + perpX * offset,
-        y: startY + dirY * distance + perpY * offset,
+        x: startX + dirX * distance + perpX * offset.x,
+        y: startY + dirY * distance + perpY * offset.x,
       });
     });
-    const finalDistance = segmentLength * (offsets.length + 1);
-    points.push({
-      x: startX + dirX * finalDistance,
-      y: startY + dirY * finalDistance,
-    });
     return points;
+  }
+
+  private getViperPathOffsets(modeIndex: number) {
+    const offsets = this.viperPathOffsets[modeIndex] ?? [];
+    if (offsets.length === 0) return [];
+    const normalized = Array.from({ length: 5 }, (_, index) => offsets[index] ?? { x: 0, y: 0 });
+    return normalized.map((offset) => ({ x: offset.x ?? 0, y: offset.y ?? 0 }));
   }
 
   private tryDeployShield() {

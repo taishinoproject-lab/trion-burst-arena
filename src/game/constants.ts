@@ -52,11 +52,12 @@ export const GAME_CONFIG = {
   
   // Viper bullet (pre-set trajectory)
   VIPER_COST: 5,
-  VIPER_TRION_DAMAGE: 20,
+  VIPER_TRION_DAMAGE: 10,
+  VIPER_REFRACTION_DAMAGE_STEPS: [10, 12, 14, 16, 20],
   VIPER_SHIELD_DAMAGE: 5,
   VIPER_SPEED: 400,
   VIPER_LIFETIME: 2500, // ms before auto-destroy
-  VIPER_COLOR: 0x00e5ff, // slightly different cyan for viper
+  VIPER_COLOR: 0x00ffd5, // match asteroid look
   VIPER_PATH_SEGMENT_LENGTH: 90,
   VIPER_PATH_MAX_OFFSET: 150,
 
