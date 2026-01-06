@@ -172,6 +172,21 @@ export class PvpScene extends Phaser.Scene {
     super({ key: 'PvpScene' });
   }
 
+  private getBulletDisplayName(type: BulletType) {
+    switch (type) {
+      case 'asteroid':
+        return 'アステロイド';
+      case 'meteora':
+        return 'メテオラ';
+      case 'viper':
+        return 'ハウンド';
+      case 'red':
+        return 'レッドバレット';
+      default:
+        return type;
+    }
+  }
+
   create() {
     this.cameras.main.setBackgroundColor(GAME_CONFIG.BACKGROUND_COLOR);
     this.createBackgroundGrid();
@@ -277,7 +292,7 @@ export class PvpScene extends Phaser.Scene {
       0.95
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    const backText = this.add.text(backButtonX, backButtonY, 'BACK', {
+    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#ffffff',
@@ -289,12 +304,12 @@ export class PvpScene extends Phaser.Scene {
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
-    this.add.text(barMarginX, barY - 18, 'P1 TRION', {
+    this.add.text(barMarginX, barY - 18, 'P1 トリオン', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#00ffd5',
     });
-    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - 18, 'P2 TRION', {
+    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - 18, 'P2 トリオン', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#ff6b6b',
@@ -321,7 +336,7 @@ export class PvpScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.instructionText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 32, 'R: Restart', {
+    this.instructionText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 32, 'R: リスタート', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#6b7280',
@@ -358,8 +373,8 @@ export class PvpScene extends Phaser.Scene {
     );
     this.player2TrionBar.lineStyle(2, 0xff6b6b, 0.6);
     this.player2TrionBar.strokeRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
-    this.player1BulletText.setText(`P1 Bullet: ${AVAILABLE_BULLET_TYPES[this.player1BulletIndex]}`);
-    this.player2BulletText.setText(`P2 Bullet: ${AVAILABLE_BULLET_TYPES[this.player2BulletIndex]}`);
+    this.player1BulletText.setText(`P1 弾: ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player1BulletIndex])}`);
+    this.player2BulletText.setText(`P2 弾: ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player2BulletIndex])}`);
   }
 
   private getPlayer1Movement() {
@@ -564,7 +579,7 @@ export class PvpScene extends Phaser.Scene {
 
     if (this.player1Trion <= 0 || this.player2Trion <= 0) {
       this.gameOver = true;
-      const winner = this.player1Trion <= 0 ? 'P2 WIN' : 'P1 WIN';
+      const winner = this.player1Trion <= 0 ? 'P2 勝利' : 'P1 勝利';
       this.winnerText.setText(winner);
     }
   }

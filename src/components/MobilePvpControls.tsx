@@ -192,14 +192,14 @@ export const MobilePvpControls = ({
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
+    <div className="fixed inset-0 pointer-events-none z-[70]">
       <div
         className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-auto"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex flex-col items-center gap-3">
           <ActionButton
-            label="FIRE"
+            label="射撃"
             accent="#00ffd5"
             pressed={p1Attacking}
             onTouchStart={() => {
@@ -212,23 +212,23 @@ export const MobilePvpControls = ({
             }}
           />
           <Joystick
-            label="P1 MOVE"
+            label="P1 移動"
             accent="#00ffd5"
             onMove={(x, y) => onMove('p1', x, y)}
           />
           <div className="flex flex-col items-center gap-2">
             <ActionButton
-              label="SHIELD"
+              label="シールド"
               accent="#4ad6ff"
               onTouchStart={() => onShield('p1', false)}
             />
             <ActionButton
-              label="WIDE"
+              label="広域"
               accent="#b464ff"
               onTouchStart={() => onShield('p1', true)}
             />
             <ActionButton
-              label="TYPE"
+              label="切替"
               accent="#ffc864"
               onTouchStart={() => onCycleBullet('p1')}
             />
@@ -242,7 +242,7 @@ export const MobilePvpControls = ({
       >
         <div className="flex flex-col items-center gap-3">
           <ActionButton
-            label="FIRE"
+            label="射撃"
             accent="#ff6b6b"
             pressed={p2Attacking}
             onTouchStart={() => {
@@ -255,23 +255,23 @@ export const MobilePvpControls = ({
             }}
           />
           <Joystick
-            label="P2 MOVE"
+            label="P2 移動"
             accent="#ff6b6b"
             onMove={(x, y) => onMove('p2', x, y)}
           />
           <div className="flex flex-col items-center gap-2">
             <ActionButton
-              label="SHIELD"
+              label="シールド"
               accent="#ff9aa2"
               onTouchStart={() => onShield('p2', false)}
             />
             <ActionButton
-              label="WIDE"
+              label="広域"
               accent="#ff7ab6"
               onTouchStart={() => onShield('p2', true)}
             />
             <ActionButton
-              label="TYPE"
+              label="切替"
               accent="#ffd166"
               onTouchStart={() => onCycleBullet('p2')}
             />
