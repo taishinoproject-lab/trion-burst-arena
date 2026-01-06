@@ -22,7 +22,11 @@ export class Bullet {
   private createdAt: number;
   private trail: Phaser.GameObjects.Arc[] = [];
   private trailTimer: number = 0;
-  private viperGuidanceDurationMs?: number;
+  private viperPathPoints?: { x: number; y: number }[];
+  private viperPathIndex = 0;
+  private viperPathComplete = false;
+  private viperPathLastPoint?: { x: number; y: number };
+  private viperPathStartPoint?: { x: number; y: number };
   
   public isHeld: boolean = false;
   public releaseScheduled: boolean = false;
@@ -37,7 +41,7 @@ export class Bullet {
     trionDamage: number,
     shieldDamage: number,
     speed?: number,
-    viperGuidanceDurationMs?: number
+    viperPathPoints?: { x: number; y: number }[]
   ) {
     this.scene = scene;
     this.x = x;
@@ -55,8 +59,10 @@ export class Bullet {
       this.speed = speed ?? GAME_CONFIG.BULLET_SPEED;
     }
     this.createdAt = scene.time.now;
-    if (type === 'viper') {
-      this.viperGuidanceDurationMs = viperGuidanceDurationMs;
+    if (type === 'viper' && viperPathPoints) {
+      this.viperPathPoints = viperPathPoints;
+      this.viperPathLastPoint = { x, y };
+      this.viperPathStartPoint = { x, y };
     }
     this.ignoreShield = type === 'red';
     
@@ -110,7 +116,7 @@ export class Bullet {
     this.velocityY = Math.sin(this.angle) * this.speed;
   }
 
-  update(delta: number, mouseX?: number, mouseY?: number) {
+  update(delta: number, _mouseX?: number, _mouseY?: number) {
     if (!this.active) return;
     
     if (this.isHeld) {
@@ -120,52 +126,28 @@ export class Bullet {
 
     const dt = delta / 1000;
     
-    // Viper guided behavior
+    // Viper path behavior
     if (this.type === 'viper') {
       if (this.scene.time.now - this.createdAt > GAME_CONFIG.VIPER_LIFETIME) {
         this.destroy();
         return;
       }
-    }
-
-    const viperGuidanceActive =
-      this.type === 'viper' &&
-      (this.viperGuidanceDurationMs === undefined ||
-        this.scene.time.now - this.createdAt <= this.viperGuidanceDurationMs);
-
-    if (viperGuidanceActive && mouseX !== undefined && mouseY !== undefined) {
-      // Calculate desired angle toward mouse
-      const targetAngle = Math.atan2(mouseY - this.y, mouseX - this.x);
-      
-      // Gradually turn toward target
-      let angleDiff = targetAngle - this.angle;
-      
-      // Normalize angle difference to -PI to PI
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      
-      // Apply turn rate
-      const maxTurn = GAME_CONFIG.VIPER_TURN_RATE * dt;
-      if (Math.abs(angleDiff) < maxTurn) {
-        this.angle = targetAngle;
+      if (this.viperPathPoints && !this.viperPathComplete) {
+        this.followViperPath(dt);
       } else {
-        this.angle += Math.sign(angleDiff) * maxTurn;
+        this.x += this.velocityX * dt;
+        this.y += this.velocityY * dt;
       }
-      
-      // Update velocity based on new angle
-      this.velocityX = Math.cos(this.angle) * this.speed;
-      this.velocityY = Math.sin(this.angle) * this.speed;
-      
-      // Create trail effect
+
       this.trailTimer += delta;
       if (this.trailTimer > 30) {
         this.trailTimer = 0;
         this.createTrailParticle();
       }
+    } else {
+      this.x += this.velocityX * dt;
+      this.y += this.velocityY * dt;
     }
-    
-    this.x += this.velocityX * dt;
-    this.y += this.velocityY * dt;
     
     this.sprite.setPosition(this.x, this.y);
     
@@ -177,6 +159,48 @@ export class Bullet {
       this.y > GAME_CONFIG.HEIGHT + 50
     ) {
       this.destroy();
+    }
+  }
+
+  private followViperPath(dt: number) {
+    if (!this.viperPathPoints) return;
+    let remaining = this.speed * dt;
+    while (remaining > 0 && !this.viperPathComplete) {
+      const target = this.viperPathPoints[this.viperPathIndex];
+      if (!target) {
+        this.viperPathComplete = true;
+        return;
+      }
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= remaining) {
+        this.x = target.x;
+        this.y = target.y;
+        remaining -= distance;
+        this.viperPathLastPoint = target;
+        this.viperPathIndex += 1;
+        if (this.viperPathIndex >= this.viperPathPoints.length) {
+          this.viperPathComplete = true;
+          const prevPoint =
+            this.viperPathPoints.length > 1
+              ? this.viperPathPoints[this.viperPathPoints.length - 2]
+              : this.viperPathStartPoint ?? this.viperPathLastPoint ?? { x: this.x, y: this.y };
+          const finalAngle = Math.atan2(this.y - prevPoint.y, this.x - prevPoint.x);
+          this.angle = finalAngle;
+          this.velocityX = Math.cos(this.angle) * this.speed;
+          this.velocityY = Math.sin(this.angle) * this.speed;
+          break;
+        }
+      } else {
+        const ratio = remaining / distance;
+        this.x += dx * ratio;
+        this.y += dy * ratio;
+        this.angle = Math.atan2(dy, dx);
+        this.velocityX = Math.cos(this.angle) * this.speed;
+        this.velocityY = Math.sin(this.angle) * this.speed;
+        remaining = 0;
+      }
     }
   }
   

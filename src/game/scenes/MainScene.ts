@@ -60,6 +60,13 @@ export class MainScene extends Phaser.Scene {
   private selectedBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
   private availableBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
   private isTutorialMode = false;
+  private viperModeIndex = 0;
+  private viperPathOffsets: number[][] = [
+    [0, 0, 0, 0],
+    [60, 120, 120, 60],
+    [-90, -40, 40, 90],
+  ];
+  private viperSettingsCleanup?: () => void;
   
   private gameState: GameState = {
     playerTrion: GAME_CONFIG.PLAYER_TRION_MAX,
@@ -148,7 +155,7 @@ export class MainScene extends Phaser.Scene {
       case 'meteora':
         return 'メテオラ';
       case 'viper':
-        return 'ハウンド';
+        return 'バイパー';
       case 'red':
         return 'レッドバレット';
       default:
@@ -440,6 +447,8 @@ export class MainScene extends Phaser.Scene {
     elements: Phaser.GameObjects.GameObject[],
     enableScroll = false
   ) {
+    this.viperSettingsCleanup?.();
+    this.viperSettingsCleanup = undefined;
     this.instructionScrollCleanup?.();
     if (this.instructionsContent) {
       this.instructionsOverlay.remove(this.instructionsContent, true);
@@ -866,6 +875,30 @@ export class MainScene extends Phaser.Scene {
     });
     difficultyLabel.setOrigin(0.5);
 
+    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 120 : GAME_CONFIG.WIDTH - 200;
+    const viperButtonWidth = this.isMobileMode ? (isCompactLayout ? 140 : 160) : 170;
+    const viperButtonHeight = this.isMobileMode ? (isCompactLayout ? 36 : 44) : 40;
+    const viperButton = this.add.rectangle(
+      viperButtonX,
+      difficultyLabelY,
+      viperButtonWidth,
+      viperButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    viperButton.setStrokeStyle(2, 0x4ad6ff, 0.9);
+    const viperText = this.add.text(viperButtonX, difficultyLabelY, 'バイパー設定', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    viperText.setOrigin(0.5);
+    const handleViperSettings = () => {
+      this.showViperSettingsInstructions();
+    };
+    viperButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
+    viperText.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
+
     // Create smaller buttons for mobile - horizontal layout
     const buttonWidth = this.isMobileMode ? (isCompactLayout ? 100 : 110) : 80;
     const buttonHeight = this.isMobileMode ? (isCompactLayout ? 40 : 48) : 40;
@@ -996,7 +1029,17 @@ export class MainScene extends Phaser.Scene {
       updateDifficultySelection('hard');
     });
 
-    instructionElements.push(difficultyLabel, easyBg, easyText, middleBg, middleText, hardBg, hardText);
+    instructionElements.push(
+      difficultyLabel,
+      viperButton,
+      viperText,
+      easyBg,
+      easyText,
+      middleBg,
+      middleText,
+      hardBg,
+      hardText
+    );
     if (promptText) {
       instructionElements.push(promptText);
     }
@@ -1031,14 +1074,14 @@ export class MainScene extends Phaser.Scene {
     const weaponNames: Record<BulletType, string> = {
       asteroid: 'アステロイド',
       meteora: 'メテオラ',
-      viper: 'ハウンド',
+      viper: 'バイパー',
       red: 'レッドバレット',
     };
     // Short names for compact mobile
     const weaponNamesShort: Record<BulletType, string> = {
       asteroid: 'アステロイド',
       meteora: 'メテオラ',
-      viper: 'ハウンド',
+      viper: 'バイパー',
       red: 'レッド',
     };
 
@@ -1118,6 +1161,190 @@ export class MainScene extends Phaser.Scene {
     this.setInstructionsContent(instructionElements, true);
   }
 
+  private showViperSettingsInstructions() {
+    const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
+    const titleY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 200 : 210) : 230);
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, 'バイパー弾道設定', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '24px' : '28px') : '26px',
+      color: '#00e5ff',
+      fontFamily: 'monospace',
+    });
+    title.setOrigin(0.5);
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [title];
+
+    const backButtonX = this.isMobileMode ? (isCompactLayout ? 70 : 90) : 110;
+    const backButtonY = this.isMobileMode ? (isCompactLayout ? 40 : 50) : 60;
+    const backButtonWidth = this.isMobileMode ? (isCompactLayout ? 120 : 150) : 150;
+    const backButtonHeight = this.isMobileMode ? (isCompactLayout ? 36 : 44) : 44;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.showBossSetupInstructions();
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    instructionElements.push(backButton, backText);
+
+    const pathHeight = this.isMobileMode ? (isCompactLayout ? 220 : 260) : 320;
+    const baseX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.28 : GAME_CONFIG.WIDTH * 0.3;
+    const startY = layoutCenterY - pathHeight / 2;
+    const endY = layoutCenterY + pathHeight / 2;
+    const segmentCount = 5;
+    const segmentSpacing = pathHeight / segmentCount;
+    const maxOffset = GAME_CONFIG.VIPER_PATH_MAX_OFFSET;
+
+    const pathGraphics = this.add.graphics();
+    instructionElements.push(pathGraphics);
+
+    const startPoint = this.add.circle(baseX, startY, this.isMobileMode ? 6 : 8, 0x00ffd5);
+    const endPoint = this.add.circle(baseX, endY, this.isMobileMode ? 6 : 8, 0xffd166);
+    instructionElements.push(startPoint, endPoint);
+
+    const midPoints: Phaser.GameObjects.Arc[] = [];
+    const midPointYs = Array.from({ length: 4 }, (_, index) => startY + segmentSpacing * (index + 1));
+    midPointYs.forEach((y) => {
+      const point = this.add.circle(baseX, y, this.isMobileMode ? 7 : 9, 0x00e5ff);
+      point.setStrokeStyle(2, 0xffffff, 0.6);
+      point.setInteractive({ useHandCursor: true, draggable: true });
+      this.input.setDraggable(point);
+      midPoints.push(point);
+      instructionElements.push(point);
+    });
+
+    let activeModeIndex = this.viperModeIndex;
+    const updatePointsFromOffsets = () => {
+      const offsets = this.viperPathOffsets[activeModeIndex] ?? [0, 0, 0, 0];
+      midPoints.forEach((point, index) => {
+        point.x = baseX + (offsets[index] ?? 0);
+        point.y = midPointYs[index];
+      });
+    };
+
+    const redrawPath = () => {
+      pathGraphics.clear();
+      pathGraphics.lineStyle(3, 0x00e5ff, 0.8);
+      pathGraphics.beginPath();
+      pathGraphics.moveTo(startPoint.x, startPoint.y);
+      midPoints.forEach((point) => pathGraphics.lineTo(point.x, point.y));
+      pathGraphics.lineTo(endPoint.x, endPoint.y);
+      pathGraphics.strokePath();
+    };
+
+    updatePointsFromOffsets();
+    redrawPath();
+
+    const modePanelX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.68 : GAME_CONFIG.WIDTH * 0.7;
+    const modePanelTop = startY - (this.isMobileMode ? 10 : 20);
+    const modeTitle = this.add.text(modePanelX, modePanelTop, '弾道モード', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    modeTitle.setOrigin(0.5, 0);
+    instructionElements.push(modeTitle);
+
+    const activeModeText = this.add.text(modePanelX, modePanelTop + (this.isMobileMode ? 20 : 24), '', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+      color: '#00e5ff',
+      fontFamily: 'monospace',
+    });
+    activeModeText.setOrigin(0.5, 0);
+    instructionElements.push(activeModeText);
+
+    const modeButtons: { bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[] = [];
+    const modeButtonWidth = this.isMobileMode ? (isCompactLayout ? 70 : 80) : 90;
+    const modeButtonHeight = this.isMobileMode ? (isCompactLayout ? 32 : 36) : 36;
+    const modeButtonY = modePanelTop + (this.isMobileMode ? 52 : 64);
+    const modeSpacing = this.isMobileMode ? 10 : 14;
+    const totalModeWidth = modeButtonWidth * 3 + modeSpacing * 2;
+    const modeStartX = modePanelX - totalModeWidth / 2 + modeButtonWidth / 2;
+
+    const updateModeButtons = () => {
+      activeModeText.setText(`設定中: 弾${activeModeIndex + 1}`);
+      modeButtons.forEach((button, index) => {
+        const selected = index === activeModeIndex;
+        button.bg.setStrokeStyle(2, selected ? 0x00e5ff : 0x444444, selected ? 0.9 : 0.6);
+        button.label.setColor(selected ? '#00e5ff' : '#aaaaaa');
+      });
+    };
+
+    for (let i = 0; i < 3; i += 1) {
+      const x = modeStartX + i * (modeButtonWidth + modeSpacing);
+      const bg = this.add.rectangle(x, modeButtonY, modeButtonWidth, modeButtonHeight, 0x1a1a3a, 0.9);
+      bg.setStrokeStyle(2, 0x444444, 0.6);
+      const label = this.add.text(x, modeButtonY, `弾${i + 1}`, {
+        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+        color: '#aaaaaa',
+        fontFamily: 'monospace',
+      });
+      label.setOrigin(0.5);
+      const selectMode = () => {
+        activeModeIndex = i;
+        this.viperModeIndex = i;
+        updatePointsFromOffsets();
+        redrawPath();
+        updateModeButtons();
+      };
+      bg.setInteractive({ useHandCursor: true }).on('pointerdown', selectMode);
+      label.setInteractive({ useHandCursor: true }).on('pointerdown', selectMode);
+      modeButtons.push({ bg, label });
+      instructionElements.push(bg, label);
+    }
+    updateModeButtons();
+
+    const instructionsText = this.add.text(
+      modePanelX,
+      modeButtonY + (this.isMobileMode ? 50 : 60),
+      '左の点を左右にドラッグして弾道を設定\n戦闘中はQで弾道を切替',
+      {
+        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: this.isMobileMode ? 260 : 320 },
+      }
+    );
+    instructionsText.setOrigin(0.5, 0);
+    instructionElements.push(instructionsText);
+
+    const dragHandler = (
+      _pointer: Phaser.Input.Pointer,
+      gameObject: Phaser.GameObjects.GameObject,
+      dragX: number
+    ) => {
+      const index = midPoints.findIndex((point) => point === gameObject);
+      if (index === -1) return;
+      const clampedX = Phaser.Math.Clamp(dragX, baseX - maxOffset, baseX + maxOffset);
+      midPoints[index].x = clampedX;
+      const activeOffsets = this.viperPathOffsets[activeModeIndex] ?? [0, 0, 0, 0];
+      activeOffsets[index] = clampedX - baseX;
+      this.viperPathOffsets[activeModeIndex] = activeOffsets;
+      redrawPath();
+    };
+
+    this.setInstructionsContent(instructionElements);
+    this.input.on('drag', dragHandler);
+    this.viperSettingsCleanup = () => {
+      this.input.off('drag', dragHandler);
+      midPoints.forEach((point) => point.disableInteractive());
+    };
+  }
+
   private showCommandDetailInstructions(returnTarget: 'boss' | 'twoPlayer' = 'boss') {
     const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
     const verticalOffset = this.isMobileMode ? -10 : -30;
@@ -1169,7 +1396,7 @@ export class MainScene extends Phaser.Scene {
       '・エイム（マウス）：狙いたい方向へマウスを動かす。',
       '・射撃（左クリック/クリック）：弾を発射。',
       '・弾種切替（E）：選んだ3種を順に切替。',
-      '・遅延弾（Q）：アステロイドを遅らせて置き撃ち。',
+      '・遅延弾/弾道切替（Q）：アステロイドは遅延、バイパーは弾道切替。',
       '・固定シールド（SPACE）：正面を守る高耐久シールド。',
       '・全方位シールド（SHIFT+SPACE）：周囲を守るが耐久は低め。',
       '',
@@ -1178,8 +1405,9 @@ export class MainScene extends Phaser.Scene {
       '  標準弾。低コストで数を出せる。遅延設置（Q）で3秒静止させることが可能。',
       `メテオラ（コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE} / 対シールド${GAME_CONFIG.METEORA_SHIELD_DAMAGE}）`,
       '  爆風で範囲攻撃。シールド崩しが得意で固まっている弾の一掃にも。',
-      `ハウンド（コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE} / 対シールド${GAME_CONFIG.VIPER_SHIELD_DAMAGE}）`,
-      '  誘導弾で高威力（当たればでかい）。シールド削りは苦手なので隙を狙う。',
+      `バイパー（コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE} / 対シールド${GAME_CONFIG.VIPER_SHIELD_DAMAGE}）`,
+      '  事前に引いた弾道で飛ぶ。戦闘中の誘導はできないが裏取りに強い。',
+      '  難易度画面の「バイパー設定」から弾道を編集。',
       `レッドバレット（コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}）`,
       `  命中で移動と弾速を減速。最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}回まで重ね掛け可能。2回ヒットで敵がフリーズ`,
       '',
@@ -1192,13 +1420,13 @@ export class MainScene extends Phaser.Scene {
 
     const rightColumnLines = [
       '━━ 初心者向け 戦略メモ ━━',
-      '・ハウンドは"当たれば"最大火力で主力。うまく使おう。戦略的にはシールドの背後を狙うと強い。',
-      '・メテオラはシールド破壊が得意。シールドでハウンドが通らない時などに有効。',
+      '・バイパーは事前に弾道を引けるので、シールドの裏を狙う動きが強い。',
+      '・メテオラはシールド破壊が得意。シールドでバイパーが通らない時などに有効。',
       '・レッドバレットは2回当てると数秒フリーズ、正直かなり強い。ただ遅いので当て方が大事',
-      '・レッドバレットはシールド・弾を貫通する。個人的にはレッドバレット × ハウンドが好き',
+      '・レッドバレットはシールド・弾を貫通する。個人的にはレッドバレット × バイパーが好き',
       '・固定シールドは向きが変わらない。これは相手にも言えるのでチャンスになる。',
       '・固定シールドを壊さないようにして背後に回るのがコツ（全方位シールドが出せないため）',
-      '・ハウンド以外の弾は避け、ハウンドは全方位シールドで防ぐ。敵が固定シールド展開中にハウンドで叩くのがおすすめ',
+      '・バイパー以外の弾は避け、バイパーは全方位シールドで防ぐ。敵が固定シールド展開中にバイパーで叩くのがおすすめ',
       '',
       `※数値は基準値。戦況に合わせて弾を使い分けよう。`,
     ];
@@ -1836,13 +2064,13 @@ focusTarget: 'player',
         requiresSwitch: true,
       },
       {
-        title: 'Step9 ハウンド',
+        title: 'Step9 バイパー',
         description: [
-          '誘導弾: マウス/指で誘導',
-          '最も威力が高い・シールドには弱い',
+          '事前に引いた弾道を通る弾',
+          'Qで弾道モードを切替できる',
           `コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE}`,
-          'Eでハウンドに切替',
-          'ハウンドで10発当てよう',
+          'Eでバイパーに切替',
+          'バイパーで10発当てよう',
         ],
         requiredBulletType: 'viper',
         requiredHits: 10,
@@ -2178,9 +2406,13 @@ focusTarget: 'player',
   }
 
   private handleInput() {
-    // Toggle asteroid delay mode
+    // Toggle asteroid delay mode / cycle viper trajectory
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
-      this.toggleDelayedAsteroidMode();
+      if (this.gameState.currentBulletType === 'viper') {
+        this.cycleViperMode();
+      } else if (this.gameState.currentBulletType === 'asteroid') {
+        this.toggleDelayedAsteroidMode();
+      }
     }
     
     // Switch bullet type (cycle through selected types)
@@ -2279,7 +2511,12 @@ focusTarget: 'player',
         GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier
       );
     } else if (bulletType === 'viper') {
-      // Viper - guided bullet
+      // Viper - pre-set trajectory bullet
+      const viperPath = this.buildViperPathPoints(
+        this.player.x + fireDirection.x * 20,
+        this.player.y + fireDirection.y * 20,
+        baseAngle
+      );
       bullet = new Bullet(
         this,
         this.player.x + fireDirection.x * 20,
@@ -2289,7 +2526,8 @@ focusTarget: 'player',
         true,
         GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
         GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
-        GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier
+        GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier,
+        viperPath
       );
     } else {
       bullet = new Bullet(
@@ -2312,6 +2550,30 @@ focusTarget: 'player',
     if (bulletType === 'asteroid' && this.gameState.delayedAsteroidEnabled) {
       this.scheduleDelayedRelease(bullet, () => this.getClosestEnemyPosition(), 3000);
     }
+  }
+
+  private buildViperPathPoints(startX: number, startY: number, angle: number) {
+    const offsets = this.viperPathOffsets[this.viperModeIndex] ?? [];
+    if (offsets.length === 0) return undefined;
+    const segmentLength = GAME_CONFIG.VIPER_PATH_SEGMENT_LENGTH;
+    const dirX = Math.cos(angle);
+    const dirY = Math.sin(angle);
+    const perpX = -dirY;
+    const perpY = dirX;
+    const points: { x: number; y: number }[] = [];
+    offsets.forEach((offset, index) => {
+      const distance = segmentLength * (index + 1);
+      points.push({
+        x: startX + dirX * distance + perpX * offset,
+        y: startY + dirY * distance + perpY * offset,
+      });
+    });
+    const finalDistance = segmentLength * (offsets.length + 1);
+    points.push({
+      x: startX + dirX * finalDistance,
+      y: startY + dirY * finalDistance,
+    });
+    return points;
   }
 
   private tryDeployShield() {
@@ -2355,6 +2617,12 @@ focusTarget: 'player',
         this.updateTutorialHelpText();
       }
     }
+  }
+
+  private cycleViperMode() {
+    const modeCount = this.viperPathOffsets.length;
+    if (modeCount === 0) return;
+    this.viperModeIndex = (this.viperModeIndex + 1) % modeCount;
   }
 
   private applyMobileTutorialLayout() {
@@ -2610,7 +2878,7 @@ focusTarget: 'player',
       return bullet.active;
     });
     
-    // Update and clean up boss bullets (track player for viper guidance)
+    // Update and clean up boss bullets
     this.bossBullets = this.bossBullets.filter(bullet => {
       bullet.update(delta, this.player.x, this.player.y);
       return bullet.active;
@@ -3032,10 +3300,17 @@ focusTarget: 'player',
     const bulletName = this.getBulletDisplayName(this.gameState.currentBulletType);
     this.safeSetText(this.bulletTypeText, `トリガー: ${bulletName}`);
 
-    const delayStatus = this.gameState.delayedAsteroidEnabled ? 'オン' : 'オフ';
-    this.safeSetText(this.delayedAsteroidText, `遅延: ${delayStatus}`);
-    if (this.isRenderableObject(this.delayedAsteroidText)) {
-      this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
+    if (this.gameState.currentBulletType === 'viper') {
+      this.safeSetText(this.delayedAsteroidText, `弾道: ${this.viperModeIndex + 1}`);
+      if (this.isRenderableObject(this.delayedAsteroidText)) {
+        this.delayedAsteroidText.setColor('#00e5ff');
+      }
+    } else {
+      const delayStatus = this.gameState.delayedAsteroidEnabled ? 'オン' : 'オフ';
+      this.safeSetText(this.delayedAsteroidText, `遅延: ${delayStatus}`);
+      if (this.isRenderableObject(this.delayedAsteroidText)) {
+        this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
+      }
     }
     
     const enemyBarWidth = 160;
@@ -3162,8 +3437,8 @@ focusTarget: 'player',
 
     if (shouldShowAdvice) {
       const adviceMessage = this.isMobileMode
-        ? '攻略ヒント:\nバイパーは高威力だがシールドに弱い。\nメテオラでシールドを割ろう。\nバイパーが多い時は全方位シールド(Shift+Space)\n→ Eでバイパーに切替えて連射すると有利。'
-        : '攻略ヒント:\nバイパーは高威力だがシールドに弱い。\nメテオラでシールドを割ろう。\nバイパーが多い時は全方位シールド(Shift+Space)を装備し、\nEでバイパーに切替えて連射すると比較的勝ちやすい。';
+        ? '攻略ヒント:\nバイパーは弾道を事前に引けるので、\nシールドの裏を狙う弾道を作ろう。\nバイパーが多い時は全方位シールド(Shift+Space)\n→ 弾道を読まれない位置取りが有効。'
+        : '攻略ヒント:\nバイパーは弾道を事前に引けるので、\nシールドの裏を狙う弾道を作ろう。\nバイパーが多い時は全方位シールド(Shift+Space)を装備し、\n弾道を読まれない位置取りを意識すると有利。';
       const adviceText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? 10 : 20), adviceMessage, {
         fontSize: this.isMobileMode ? '16px' : '18px',
         color: '#ffffff',
@@ -3218,7 +3493,11 @@ focusTarget: 'player',
   public triggerDelayToggle() {
     if (this.gameState.isGameOver || !this.gameStarted) return;
     this.registerTutorialTap();
-    this.toggleDelayedAsteroidMode();
+    if (this.gameState.currentBulletType === 'viper') {
+      this.cycleViperMode();
+    } else if (this.gameState.currentBulletType === 'asteroid') {
+      this.toggleDelayedAsteroidMode();
+    }
   }
 
   public triggerShield(wide: boolean = false) {

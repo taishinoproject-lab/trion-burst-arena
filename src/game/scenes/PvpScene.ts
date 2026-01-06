@@ -166,8 +166,6 @@ export class PvpScene extends Phaser.Scene {
   };
   private static readonly TWO_PLAYER_RED_SLOW_DURATION = 10000;
   private static readonly TWO_PLAYER_RED_FREEZE_DURATION = 4000;
-  private static readonly TWO_PLAYER_VIPER_GUIDANCE_DURATION = 1000;
-
   constructor() {
     super({ key: 'PvpScene' });
   }
@@ -190,7 +188,7 @@ export class PvpScene extends Phaser.Scene {
       case 'meteora':
         return 'メテオラ';
       case 'viper':
-        return 'ハウンド';
+        return 'バイパー';
       case 'red':
         return 'レッドバレット';
       default:
@@ -568,8 +566,7 @@ export class PvpScene extends Phaser.Scene {
       isPlayer1,
       trionDamage,
       shieldDamage,
-      speed,
-      bulletType === 'viper' ? PvpScene.TWO_PLAYER_VIPER_GUIDANCE_DURATION : undefined
+      speed
     );
 
     if (isPlayer1) {

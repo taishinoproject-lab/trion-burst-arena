@@ -50,14 +50,15 @@ export const GAME_CONFIG = {
   METEORA_EXPLOSION_RADIUS: 70,
   METEORA_EXPLOSION_DURATION: 200, // ms
   
-  // Viper bullet (guided)
-  VIPER_COST: 7,
-  VIPER_TRION_DAMAGE: 50,
-  VIPER_SHIELD_DAMAGE: 2,
+  // Viper bullet (pre-set trajectory)
+  VIPER_COST: 5,
+  VIPER_TRION_DAMAGE: 20,
+  VIPER_SHIELD_DAMAGE: 5,
   VIPER_SPEED: 400,
-  VIPER_TURN_RATE: 4.5, // radians per second
   VIPER_LIFETIME: 2500, // ms before auto-destroy
   VIPER_COLOR: 0x00e5ff, // slightly different cyan for viper
+  VIPER_PATH_SEGMENT_LENGTH: 90,
+  VIPER_PATH_MAX_OFFSET: 150,
 
   // Red bullet (slow)
   RED_BULLET_COST: 15,
