@@ -534,17 +534,36 @@ export class MainScene extends Phaser.Scene {
 
   private showModeSelectInstructions() {
     const { layoutCenterY, actionButtonHeight, isCompactLayout } = this.getInstructionLayout();
-    const titleY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 160 : 180) : 230);
-    const overviewTextY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 60 : 80) : 130);
-    const modeLabelY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 30 : 50) : 10);
-    const buttonY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 90 : 110) : 90);
-    const buttonSpacing = this.isMobileMode ? 20 : 30;
-    // Smaller buttons for mobile - use vertical stack layout
-    const buttonWidth = this.isMobileMode ? (isCompactLayout ? 200 : 220) : 200;
-    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 56 : 64) : 60;
-    const totalButtonWidth = buttonWidth * 2 + buttonSpacing;
-    const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
-    const secondButtonX = firstButtonX + buttonWidth + buttonSpacing;
+    const mobileScale = this.isMobileMode ? 3 : 1;
+    const layoutBaseY = this.isMobileMode
+      ? layoutCenterY + (isCompactLayout ? 120 : 140)
+      : layoutCenterY;
+    const titleY =
+      layoutBaseY -
+      (this.isMobileMode ? (isCompactLayout ? 160 : 180) * mobileScale : 230);
+    const overviewTextY =
+      layoutBaseY -
+      (this.isMobileMode ? (isCompactLayout ? 60 : 80) * mobileScale : 130);
+    const modeLabelY =
+      layoutBaseY +
+      (this.isMobileMode ? (isCompactLayout ? 30 : 50) * mobileScale : 10);
+    const buttonY =
+      layoutBaseY +
+      (this.isMobileMode ? (isCompactLayout ? 90 : 110) * mobileScale : 90);
+    const buttonSpacing = this.isMobileMode ? 20 * mobileScale : 30;
+    // Larger buttons for mobile - use vertical stack layout
+    const baseButtonWidth = this.isMobileMode ? (isCompactLayout ? 200 : 220) : 200;
+    const baseButtonHeight = this.isMobileMode ? (isCompactLayout ? 56 : 64) : 60;
+    const buttonWidth = this.isMobileMode
+      ? Math.min(baseButtonWidth * mobileScale, GAME_CONFIG.WIDTH * 0.9)
+      : baseButtonWidth;
+    const buttonHeight = this.isMobileMode ? baseButtonHeight * mobileScale : baseButtonHeight;
+    const totalButtonWidth = this.isMobileMode ? buttonWidth : buttonWidth * 2 + buttonSpacing;
+    const firstButtonX = this.isMobileMode
+      ? GAME_CONFIG.WIDTH / 2
+      : GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
+    const secondButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : firstButtonX + buttonWidth + buttonSpacing;
+    const secondButtonY = this.isMobileMode ? buttonY + buttonHeight + buttonSpacing : buttonY;
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [];
 
@@ -573,7 +592,9 @@ export class MainScene extends Phaser.Scene {
 
 
     // Glowing title with shadow effect
-    const titleFontSize = this.isMobileMode ? (isCompactLayout ? '34px' : '38px') : '36px';
+    const titleFontSize = this.isMobileMode
+      ? `${(isCompactLayout ? 34 : 38) * mobileScale}px`
+      : '36px';
     const titleGlow = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ トリオンバトル ◆', {
       fontSize: titleFontSize,
       color: '#00ffd5',
@@ -607,8 +628,10 @@ export class MainScene extends Phaser.Scene {
 
 
     // Overview text with better styling - smaller on mobile
-    const overviewFontSize = this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '15px';
-    const overviewLineSpacing = this.isMobileMode ? (isCompactLayout ? 6 : 8) : 8;
+    const overviewFontSize = this.isMobileMode
+      ? `${(isCompactLayout ? 14 : 16) * mobileScale}px`
+      : '15px';
+    const overviewLineSpacing = this.isMobileMode ? (isCompactLayout ? 6 : 8) * mobileScale : 8;
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       overviewTextY,
@@ -631,20 +654,24 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(overviewText);
 
     // Mode select label with decorative elements
-    const modeLabelWidth = this.isMobileMode ? (isCompactLayout ? 180 : 200) : 240;
+    const modeLabelWidth = this.isMobileMode
+      ? Math.min((isCompactLayout ? 180 : 200) * mobileScale, GAME_CONFIG.WIDTH * 0.8)
+      : 240;
     const modeLabelBg = this.add.graphics();
     modeLabelBg.fillStyle(GAME_CONFIG.BULLET_COLOR, 0.1);
     modeLabelBg.fillRoundedRect(
       GAME_CONFIG.WIDTH / 2 - modeLabelWidth / 2,
-      modeLabelY - (this.isMobileMode ? 10 : 15),
+      modeLabelY - (this.isMobileMode ? 10 * mobileScale : 15),
       modeLabelWidth,
-      this.isMobileMode ? 22 : 30,
+      this.isMobileMode ? 22 * mobileScale : 30,
       5
     );
     instructionElements.push(modeLabelBg);
 
     const modeLabel = this.add.text(GAME_CONFIG.WIDTH / 2, modeLabelY, '▼ モード選択 ▼', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '18px',
+      fontSize: this.isMobileMode
+        ? `${(isCompactLayout ? 18 : 20) * mobileScale}px`
+        : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -656,8 +683,8 @@ export class MainScene extends Phaser.Scene {
     const bossButtonGlow = this.add.rectangle(
       firstButtonX,
       buttonY,
-      buttonWidth + 8,
-      buttonHeight + 8,
+      buttonWidth + (this.isMobileMode ? 8 * mobileScale : 8),
+      buttonHeight + (this.isMobileMode ? 8 * mobileScale : 8),
       GAME_CONFIG.BULLET_COLOR,
       0.15
     );
@@ -676,12 +703,18 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(bossButton);
 
     // Boss button icon and text - smaller on mobile
-    const buttonIconSize = this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '20px';
-    const buttonTextSize = this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '18px';
-    const buttonSubtextSize = this.isMobileMode ? (isCompactLayout ? '10px' : '12px') : '11px';
-    const iconOffsetY = this.isMobileMode ? (isCompactLayout ? -12 : -14) : -15;
-    const textOffsetY = this.isMobileMode ? (isCompactLayout ? 6 : 7) : 5;
-    const subtextOffsetY = this.isMobileMode ? (isCompactLayout ? 20 : 24) : 22;
+    const buttonIconSize = this.isMobileMode
+      ? `${(isCompactLayout ? 16 : 18) * mobileScale}px`
+      : '20px';
+    const buttonTextSize = this.isMobileMode
+      ? `${(isCompactLayout ? 18 : 20) * mobileScale}px`
+      : '18px';
+    const buttonSubtextSize = this.isMobileMode
+      ? `${(isCompactLayout ? 10 : 12) * mobileScale}px`
+      : '11px';
+    const iconOffsetY = this.isMobileMode ? (isCompactLayout ? -12 : -14) * mobileScale : -15;
+    const textOffsetY = this.isMobileMode ? (isCompactLayout ? 6 : 7) * mobileScale : 5;
+    const subtextOffsetY = this.isMobileMode ? (isCompactLayout ? 20 : 24) * mobileScale : 22;
 
     const bossIcon = this.add.text(firstButtonX, buttonY + iconOffsetY, '⬡', {
       fontSize: buttonIconSize,
@@ -711,9 +744,9 @@ export class MainScene extends Phaser.Scene {
     // 2P Mode Button with different color scheme
     const twoPlayerButtonGlow = this.add.rectangle(
       secondButtonX,
-      buttonY,
-      buttonWidth + 8,
-      buttonHeight + 8,
+      secondButtonY,
+      buttonWidth + (this.isMobileMode ? 8 * mobileScale : 8),
+      buttonHeight + (this.isMobileMode ? 8 * mobileScale : 8),
       0xffd166,
       0.15
     );
@@ -722,7 +755,7 @@ export class MainScene extends Phaser.Scene {
 
     const twoPlayerButton = this.add.rectangle(
       secondButtonX,
-      buttonY,
+      secondButtonY,
       buttonWidth,
       buttonHeight,
       0x1a1a0a,
@@ -732,15 +765,17 @@ export class MainScene extends Phaser.Scene {
     instructionElements.push(twoPlayerButton);
 
     // 2P button icon and text
-    const twoPlayerIcon = this.add.text(secondButtonX, buttonY + iconOffsetY, '⬡⬡', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '16px',
+    const twoPlayerIcon = this.add.text(secondButtonX, secondButtonY + iconOffsetY, '⬡⬡', {
+      fontSize: this.isMobileMode
+        ? `${(isCompactLayout ? 14 : 16) * mobileScale}px`
+        : '16px',
       color: '#ffd166',
       fontFamily: 'monospace',
     });
     twoPlayerIcon.setOrigin(0.5);
     instructionElements.push(twoPlayerIcon);
 
-    const twoPlayerText = this.add.text(secondButtonX, buttonY + textOffsetY, '対戦モード', {
+    const twoPlayerText = this.add.text(secondButtonX, secondButtonY + textOffsetY, '対戦モード', {
       fontSize: buttonTextSize,
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -749,11 +784,16 @@ export class MainScene extends Phaser.Scene {
     twoPlayerText.setOrigin(0.5);
     instructionElements.push(twoPlayerText);
 
-    const twoPlayerSubtext = this.add.text(secondButtonX, buttonY + subtextOffsetY, '[ ローカル ]', {
+    const twoPlayerSubtext = this.add.text(
+      secondButtonX,
+      secondButtonY + subtextOffsetY,
+      '[ ローカル ]',
+      {
       fontSize: buttonSubtextSize,
       color: '#ffd166',
       fontFamily: 'monospace',
-    });
+      }
+    );
     twoPlayerSubtext.setOrigin(0.5);
     instructionElements.push(twoPlayerSubtext);
 
@@ -795,7 +835,9 @@ export class MainScene extends Phaser.Scene {
       footerY,
       '[ タップして選択 ]',
       {
-        fontSize: this.isMobileMode ? (isCompactLayout ? '11px' : '13px') : '12px',
+        fontSize: this.isMobileMode
+          ? `${(isCompactLayout ? 11 : 13) * mobileScale}px`
+          : '12px',
         color: '#555555',
         fontFamily: 'monospace',
       }
@@ -1537,13 +1579,18 @@ export class MainScene extends Phaser.Scene {
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     instructionElements.push(backButton, backText);
 
+    const delaySwitchLine =
+      returnTarget === 'twoPlayer'
+        ? '・遅延弾/弾道切替：アステロイドキーは遅延、バイパーキーは弾道切替。'
+        : '・遅延弾/弾道切替（Q）：アステロイドは遅延、バイパーは弾道切替。';
+
     const leftColumnLines = [
       '━━ コマンド解説 ━━',
       '・移動（WASDキー）：キャラクターを動かす基本操作。',
       '・エイム（マウス）：狙いたい方向へマウスを動かす。',
       '・射撃（左クリック/クリック）：弾を発射。',
       '・弾種切替（E）：選んだ3種を順に切替。',
-      '・遅延弾/弾道切替（Q）：アステロイドは遅延、バイパーは弾道切替。',
+      delaySwitchLine,
       '・固定シールド（SPACE）：正面を守る高耐久シールド。',
       '・全方位シールド（SHIFT+SPACE）：周囲を守るが耐久は低め。',
       '',
@@ -1626,11 +1673,9 @@ export class MainScene extends Phaser.Scene {
   private showTwoPlayerInstructions() {
     const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
     const titleY = layoutCenterY - (this.isMobileMode ? 220 : 220);
-    const instructionGapY = this.isMobileMode ? 170 : 0;
-    const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 - 220;
-    const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 + 220;
-    const startButtonY = layoutCenterY + (this.isMobileMode ? 200 : 180);
-    const detailButtonY = startButtonY - (this.isMobileMode ? 150 : 70);
+    const instructionGapY = this.isMobileMode ? 0 : 0;
+    const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.28 : GAME_CONFIG.WIDTH / 2 - 220;
+    const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.72 : GAME_CONFIG.WIDTH / 2 + 220;
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '2Pモード', {
       fontSize: this.isMobileMode ? '42px' : '28px',
@@ -1654,7 +1699,23 @@ export class MainScene extends Phaser.Scene {
     description.setOrigin(0.5);
 
     const descriptionBounds = description.getBounds();
-    const instructionTopY = descriptionBounds.bottom + (this.isMobileMode ? 50 : 32);
+    const noteText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      descriptionBounds.bottom + (this.isMobileMode ? 26 : 18),
+      '※2Pモードは遅延/弾道切替ボタン未実装のため、アステロイドキー=遅延、バイパーキー=弾道切替',
+      {
+        fontSize: this.isMobileMode ? '18px' : '12px',
+        color: '#cccccc',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 4,
+        wordWrap: { width: GAME_CONFIG.WIDTH * 0.9 },
+      }
+    );
+    noteText.setOrigin(0.5);
+
+    const noteBounds = noteText.getBounds();
+    const instructionTopY = noteBounds.bottom + (this.isMobileMode ? 40 : 24);
 
     const playerOneText = this.add.text(
       leftX,
@@ -1664,11 +1725,12 @@ export class MainScene extends Phaser.Scene {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: this.isMobileMode ? 'center' : 'left',
+        align: this.isMobileMode ? 'left' : 'left',
         lineSpacing: 6,
+        wordWrap: this.isMobileMode ? { width: GAME_CONFIG.WIDTH * 0.42 } : undefined,
       }
     );
-    playerOneText.setOrigin(this.isMobileMode ? 0.5 : 0, 0);
+    playerOneText.setOrigin(this.isMobileMode ? 0 : 0, 0);
 
     const playerTwoText = this.add.text(
       rightX,
@@ -1678,11 +1740,23 @@ export class MainScene extends Phaser.Scene {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: this.isMobileMode ? 'center' : 'left',
+        align: this.isMobileMode ? 'right' : 'left',
         lineSpacing: 6,
+        wordWrap: this.isMobileMode ? { width: GAME_CONFIG.WIDTH * 0.42 } : undefined,
       }
     );
-    playerTwoText.setOrigin(this.isMobileMode ? 0.5 : 0, 0);
+    playerTwoText.setOrigin(this.isMobileMode ? 1 : 0, 0);
+
+    const instructionBottomY = Math.max(
+      playerOneText.getBounds().bottom,
+      playerTwoText.getBounds().bottom
+    );
+    const detailButtonY = this.isMobileMode
+      ? instructionBottomY + 80
+      : layoutCenterY + 110;
+    const startButtonY = this.isMobileMode
+      ? detailButtonY + 120
+      : layoutCenterY + 180;
 
     const backButtonX = this.isMobileMode ? 120 : 110;
     const backButtonY = this.isMobileMode ? 70 : 60;
@@ -1711,12 +1785,12 @@ export class MainScene extends Phaser.Scene {
 
     const detailButtonWidth = this.isMobileMode ? actionButtonWidth : 160;
     const detailButtonX = this.isMobileMode
-      ? GAME_CONFIG.WIDTH / 2
+      ? GAME_CONFIG.WIDTH * 0.3
       : GAME_CONFIG.WIDTH / 2 - detailButtonWidth / 2 - 12;
     const viperButtonX = this.isMobileMode
-      ? GAME_CONFIG.WIDTH / 2
+      ? GAME_CONFIG.WIDTH * 0.7
       : GAME_CONFIG.WIDTH / 2 + detailButtonWidth / 2 + 12;
-    const viperButtonY = this.isMobileMode ? detailButtonY + 70 : detailButtonY;
+    const viperButtonY = detailButtonY;
 
     const detailButton = this.add.rectangle(
       detailButtonX,
@@ -1785,6 +1859,7 @@ export class MainScene extends Phaser.Scene {
     const instructionElements: Phaser.GameObjects.GameObject[] = [
       title,
       description,
+      noteText,
       playerOneText,
       playerTwoText,
       backButton,
