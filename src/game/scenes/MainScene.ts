@@ -10,7 +10,7 @@ type EnemyPattern = 'mixed' | 'delayedAsteroid' | 'meteoraBarrage';
 interface EnemyBehavior {
   pattern: EnemyPattern;
   delayedShotChance: number;
-  bulletWeights?: { asteroid: number; meteora: number; viper: number };
+  bulletWeights?: { asteroid: number; meteora: number; viper: number; hound: number };
 }
 
 interface EnemyEntry {
@@ -58,7 +58,7 @@ export class MainScene extends Phaser.Scene {
   private readonly maxBossBullets = 300;
   private isMobileMode = false;
   private selectedBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
-  private availableBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
+  private availableBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper', 'hound'];
   private isTutorialMode = false;
   private viperModeIndex = 0;
   private viperPathOffsets: number[][] = [
@@ -158,6 +158,8 @@ export class MainScene extends Phaser.Scene {
         return 'バイパー';
       case 'red':
         return 'レッドバレット';
+      case 'hound':
+        return 'ハウンド';
       default:
         return type;
     }
@@ -1066,8 +1068,8 @@ export class MainScene extends Phaser.Scene {
     const weaponSpacing = this.isMobileMode ? (isCompactLayout ? 6 : 8) : 16;
     const weaponStartY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 100 : 120) : 245);
     const weaponRowSpacing = this.isMobileMode ? (isCompactLayout ? 42 : 50) : 50;
-    const weaponRowCount = this.isMobileMode ? 2 : 1;
-    const weaponButtonsPerRow = this.isMobileMode ? 2 : 4;
+    const weaponButtonsPerRow = this.isMobileMode ? 2 : 5;
+    const weaponRowCount = Math.ceil(AVAILABLE_BULLET_TYPES.length / weaponButtonsPerRow);
     const weaponTotalWidth = weaponButtonWidth * weaponButtonsPerRow + weaponSpacing * (weaponButtonsPerRow - 1);
     const weaponStartX = GAME_CONFIG.WIDTH / 2 - weaponTotalWidth / 2 + weaponButtonWidth / 2;
 
@@ -1076,6 +1078,7 @@ export class MainScene extends Phaser.Scene {
       meteora: 'メテオラ',
       viper: 'バイパー',
       red: 'レッドバレット',
+      hound: 'ハウンド',
     };
     // Short names for compact mobile
     const weaponNamesShort: Record<BulletType, string> = {
@@ -1083,6 +1086,7 @@ export class MainScene extends Phaser.Scene {
       meteora: 'メテオラ',
       viper: 'バイパー',
       red: 'レッド',
+      hound: 'ハウンド',
     };
 
     const startButtonY = layoutCenterY + (this.isMobileMode ? (isCompactLayout ? 180 : 210) : 320);
@@ -2430,15 +2434,15 @@ focusTarget: 'player',
       this.tryDeployShield();
     }
 
-    // Continuous fire while holding (except for viper which fires on click)
+    // Continuous fire while holding (except for viper/hound which fires on click)
     const isDesktopFiring = this.input.activePointer.isDown && !this.input.activePointer.rightButtonDown();
     const isMobileFiring = this.mobileInput.attacking;
     
     if (isDesktopFiring || isMobileFiring) {
-      if (this.gameState.currentBulletType !== 'viper') {
+      if (this.gameState.currentBulletType !== 'viper' && this.gameState.currentBulletType !== 'hound') {
         this.tryFireBullet();
       } else if (isMobileFiring) {
-        // Allow viper to fire on mobile hold
+        // Allow viper/hound to fire on mobile hold
         this.tryFireBullet();
       }
     }
@@ -2460,6 +2464,8 @@ focusTarget: 'player',
       cost = GAME_CONFIG.METEORA_COST;
     } else if (bulletType === 'viper') {
       cost = GAME_CONFIG.VIPER_COST;
+    } else if (bulletType === 'hound') {
+      cost = GAME_CONFIG.HOUND_COST;
     } else {
       cost = GAME_CONFIG.RED_BULLET_COST;
     }
@@ -2528,6 +2534,19 @@ focusTarget: 'player',
         GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
         GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier,
         viperPath
+      );
+    } else if (bulletType === 'hound') {
+      // Hound - guided bullet
+      bullet = new Bullet(
+        this,
+        this.player.x + fireDirection.x * 20,
+        this.player.y + fireDirection.y * 20,
+        baseAngle,
+        'hound',
+        true,
+        GAME_CONFIG.HOUND_TRION_DAMAGE * damageScale,
+        GAME_CONFIG.HOUND_SHIELD_DAMAGE * damageScale,
+        GAME_CONFIG.HOUND_SPEED * bulletSpeedMultiplier
       );
     } else {
       bullet = new Bullet(
@@ -2765,7 +2784,7 @@ focusTarget: 'player',
     return {
       pattern: 'mixed',
       delayedShotChance: 0.3,
-      bulletWeights: { asteroid: 0.45, meteora: 0.3, viper: 0.25 },
+      bulletWeights: { asteroid: 0.4, meteora: 0.3, viper: 0.2, hound: 0.1 },
     };
   }
 
@@ -2791,14 +2810,16 @@ focusTarget: 'player',
     let useDelayedShot = Phaser.Math.FloatBetween(0, 1) < behavior.delayedShotChance;
 
     if (behavior.pattern === 'mixed') {
-      const weights = behavior.bulletWeights ?? { asteroid: 0.45, meteora: 0.3, viper: 0.25 };
+      const weights = behavior.bulletWeights ?? { asteroid: 0.4, meteora: 0.3, viper: 0.2, hound: 0.1 };
       const roll = Phaser.Math.FloatBetween(0, 1);
       if (roll < weights.asteroid) {
         bulletType = 'asteroid';
       } else if (roll < weights.asteroid + weights.meteora) {
         bulletType = 'meteora';
-      } else {
+      } else if (roll < weights.asteroid + weights.meteora + weights.viper) {
         bulletType = 'viper';
+      } else {
+        bulletType = 'hound';
       }
     } else if (behavior.pattern === 'meteoraBarrage') {
       bulletType = 'meteora';
@@ -2854,11 +2875,18 @@ focusTarget: 'player',
       fireData.x,
       fireData.y,
       fireData.angle,
-      'viper',
+      bulletType,
       false,
-      GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
-      GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
-      enemy.boss.getBulletSpeed(time, GAME_CONFIG.VIPER_SPEED)
+      bulletType === 'hound'
+        ? GAME_CONFIG.HOUND_TRION_DAMAGE * damageScale
+        : GAME_CONFIG.VIPER_TRION_DAMAGE * damageScale,
+      bulletType === 'hound'
+        ? GAME_CONFIG.HOUND_SHIELD_DAMAGE * damageScale
+        : GAME_CONFIG.VIPER_SHIELD_DAMAGE * damageScale,
+      enemy.boss.getBulletSpeed(
+        time,
+        bulletType === 'hound' ? GAME_CONFIG.HOUND_SPEED : GAME_CONFIG.VIPER_SPEED
+      )
     );
     this.bossBullets.push(bullet);
     this.trimBulletPool(this.bossBullets, this.maxBossBullets);

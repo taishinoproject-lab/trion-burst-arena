@@ -191,6 +191,8 @@ export class PvpScene extends Phaser.Scene {
         return 'バイパー';
       case 'red':
         return 'レッドバレット';
+      case 'hound':
+        return 'ハウンド';
       default:
         return type;
     }
@@ -777,6 +779,9 @@ export class PvpScene extends Phaser.Scene {
     if (bulletType === 'viper') {
       return GAME_CONFIG.VIPER_COST;
     }
+    if (bulletType === 'hound') {
+      return GAME_CONFIG.HOUND_COST;
+    }
     return GAME_CONFIG.RED_BULLET_COST;
   }
 
@@ -803,6 +808,13 @@ export class PvpScene extends Phaser.Scene {
         trionDamage: GAME_CONFIG.VIPER_TRION_DAMAGE,
         shieldDamage: GAME_CONFIG.VIPER_SHIELD_DAMAGE,
         speed: GAME_CONFIG.VIPER_SPEED * bulletSpeedMultiplier,
+      };
+    }
+    if (bulletType === 'hound') {
+      return {
+        trionDamage: GAME_CONFIG.HOUND_TRION_DAMAGE,
+        shieldDamage: GAME_CONFIG.HOUND_SHIELD_DAMAGE,
+        speed: GAME_CONFIG.HOUND_SPEED * bulletSpeedMultiplier,
       };
     }
     return {
