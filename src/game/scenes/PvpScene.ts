@@ -123,6 +123,7 @@ export class PvpScene extends Phaser.Scene {
   private player2BulletText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
   private damageTexts: Phaser.GameObjects.Text[] = [];
+  private isMobileMode = false;
 
   private wKey!: Phaser.Input.Keyboard.Key;
   private aKey!: Phaser.Input.Keyboard.Key;
@@ -169,6 +170,10 @@ export class PvpScene extends Phaser.Scene {
 
   constructor() {
     super({ key: 'PvpScene' });
+  }
+
+  public setMobileMode(mobile: boolean) {
+    this.isMobileMode = mobile;
   }
 
   private getBulletDisplayName(type: BulletType) {
@@ -274,14 +279,18 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private createUI() {
-    const barWidth = 220;
-    const barHeight = 16;
-    const barY = 24;
-    const barMarginX = 24;
+    const isMobile = this.isMobileMode;
+    const barWidth = isMobile ? 140 : 220;
+    const barHeight = isMobile ? 12 : 16;
+    const barY = isMobile ? 16 : 24;
+    const barMarginX = isMobile ? 12 : 24;
+    const labelFontSize = isMobile ? '10px' : '14px';
+    const bulletFontSize = isMobile ? '10px' : '14px';
+    
     const backButtonX = GAME_CONFIG.WIDTH / 2;
-    const backButtonY = 32;
-    const backButtonWidth = 120;
-    const backButtonHeight = 36;
+    const backButtonY = isMobile ? 22 : 32;
+    const backButtonWidth = isMobile ? 80 : 120;
+    const backButtonHeight = isMobile ? 26 : 36;
     const backButton = this.add.rectangle(
       backButtonX,
       backButtonY,
@@ -293,7 +302,7 @@ export class PvpScene extends Phaser.Scene {
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     const backText = this.add.text(backButtonX, backButtonY, '戻る', {
       fontFamily: 'Arial',
-      fontSize: '14px',
+      fontSize: isMobile ? '11px' : '14px',
       color: '#ffffff',
     });
     backText.setOrigin(0.5);
@@ -303,41 +312,41 @@ export class PvpScene extends Phaser.Scene {
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
-    this.add.text(barMarginX, barY - 18, 'P1 トリオン', {
+    this.add.text(barMarginX, barY - (isMobile ? 10 : 18), 'P1 トリオン', {
       fontFamily: 'Arial',
-      fontSize: '14px',
+      fontSize: labelFontSize,
       color: '#00ffd5',
     });
-    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - 18, 'P2 トリオン', {
+    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - (isMobile ? 10 : 18), 'P2 トリオン', {
       fontFamily: 'Arial',
-      fontSize: '14px',
+      fontSize: labelFontSize,
       color: '#ff6b6b',
     });
 
     this.player1TrionBar = this.add.graphics();
     this.player2TrionBar = this.add.graphics();
 
-    this.player1BulletText = this.add.text(24, 48, '', {
+    this.player1BulletText = this.add.text(barMarginX, barY + barHeight + (isMobile ? 4 : 8), '', {
       fontFamily: 'Arial',
-      fontSize: '14px',
+      fontSize: bulletFontSize,
       color: '#b6fff0',
     });
-    this.player2BulletText = this.add.text(GAME_CONFIG.WIDTH - 24, 48, '', {
+    this.player2BulletText = this.add.text(GAME_CONFIG.WIDTH - barMarginX, barY + barHeight + (isMobile ? 4 : 8), '', {
       fontFamily: 'Arial',
-      fontSize: '14px',
+      fontSize: bulletFontSize,
       color: '#ffd0d0',
     }).setOrigin(1, 0);
 
     this.winnerText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2, '', {
       fontFamily: 'Arial',
-      fontSize: '48px',
+      fontSize: isMobile ? '32px' : '48px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.instructionText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 32, 'R: リスタート', {
+    this.instructionText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - (isMobile ? 20 : 32), 'R: リスタート', {
       fontFamily: 'Arial',
-      fontSize: '14px',
+      fontSize: isMobile ? '10px' : '14px',
       color: '#6b7280',
     }).setOrigin(0.5);
 
@@ -345,10 +354,11 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private updateUI() {
-    const barWidth = 220;
-    const barHeight = 16;
-    const barY = 24;
-    const barMarginX = 24;
+    const isMobile = this.isMobileMode;
+    const barWidth = isMobile ? 140 : 220;
+    const barHeight = isMobile ? 12 : 16;
+    const barY = isMobile ? 16 : 24;
+    const barMarginX = isMobile ? 12 : 24;
     const player1Ratio = Math.max(0, this.player1Trion / GAME_CONFIG.PLAYER_TRION_MAX);
     const player2Ratio = Math.max(0, this.player2Trion / GAME_CONFIG.PLAYER_TRION_MAX);
     this.player1TrionBar.clear();
@@ -372,8 +382,10 @@ export class PvpScene extends Phaser.Scene {
     );
     this.player2TrionBar.lineStyle(2, 0xff6b6b, 0.6);
     this.player2TrionBar.strokeRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
-    this.player1BulletText.setText(`P1 弾: ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player1BulletIndex])}`);
-    this.player2BulletText.setText(`P2 弾: ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player2BulletIndex])}`);
+    const p1Label = isMobile ? 'P1:' : 'P1 弾:';
+    const p2Label = isMobile ? 'P2:' : 'P2 弾:';
+    this.player1BulletText.setText(`${p1Label} ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player1BulletIndex])}`);
+    this.player2BulletText.setText(`${p2Label} ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player2BulletIndex])}`);
   }
 
   private getPlayer1Movement() {
