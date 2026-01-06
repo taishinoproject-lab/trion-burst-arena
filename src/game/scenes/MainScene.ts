@@ -820,7 +820,7 @@ export class MainScene extends Phaser.Scene {
     );
     detailText.setOrigin(0.5);
     const handleDetail = () => {
-      this.showCommandDetailInstructions();
+      this.showCommandDetailInstructions('boss');
     };
     detailButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
     detailText.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
@@ -1069,7 +1069,7 @@ export class MainScene extends Phaser.Scene {
     this.setInstructionsContent(instructionElements, true);
   }
 
-  private showCommandDetailInstructions() {
+  private showCommandDetailInstructions(returnTarget: 'boss' | 'twoPlayer' = 'boss') {
     const { layoutCenterY, isCompactLayout } = this.getInstructionLayout();
     const verticalOffset = this.isMobileMode ? -10 : -30;
     const titleY = layoutCenterY - (this.isMobileMode ? 220 : 210) + verticalOffset;
@@ -1104,6 +1104,10 @@ export class MainScene extends Phaser.Scene {
     });
     backText.setOrigin(0.5);
     const handleBack = () => {
+      if (returnTarget === 'twoPlayer') {
+        this.showTwoPlayerInstructions();
+        return;
+      }
       this.showBossSetupInstructions();
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
@@ -1202,6 +1206,7 @@ export class MainScene extends Phaser.Scene {
     const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 - 220;
     const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : GAME_CONFIG.WIDTH / 2 + 220;
     const startButtonY = layoutCenterY + (this.isMobileMode ? 200 : 180);
+    const detailButtonY = startButtonY - (this.isMobileMode ? 90 : 70);
 
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '2Pモード', {
       fontSize: this.isMobileMode ? '42px' : '28px',
@@ -1280,6 +1285,27 @@ export class MainScene extends Phaser.Scene {
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
 
+    const detailButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      detailButtonY,
+      actionButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    detailButton.setStrokeStyle(2, 0x4ad6ff, 0.9);
+    const detailText = this.add.text(GAME_CONFIG.WIDTH / 2, detailButtonY, 'トリガーの詳細', {
+      fontSize: this.isMobileMode ? '24px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    detailText.setOrigin(0.5);
+    const handleDetail = () => {
+      this.showCommandDetailInstructions('twoPlayer');
+    };
+    detailButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
+    detailText.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
+
     const startButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       startButtonY,
@@ -1309,6 +1335,8 @@ export class MainScene extends Phaser.Scene {
       playerTwoText,
       backButton,
       backText,
+      detailButton,
+      detailText,
       startButton,
       startText,
     ];

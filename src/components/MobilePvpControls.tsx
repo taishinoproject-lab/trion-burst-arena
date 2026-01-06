@@ -229,7 +229,7 @@ export const MobilePvpControls = ({
           <ActionButton
             label="射撃"
             accent="#00ffd5"
-            rotateDegrees={-90}
+            rotateDegrees={180}
             pressed={p1Attacking}
             onTouchStart={() => {
               setP1Attacking(true);
@@ -243,19 +243,19 @@ export const MobilePvpControls = ({
           <ActionButton
             label="シールド"
             accent="#4ad6ff"
-            rotateDegrees={-90}
+            rotateDegrees={180}
             onTouchStart={() => onShield('p1', false)}
           />
           <ActionButton
             label="広域"
             accent="#b464ff"
-            rotateDegrees={-90}
+            rotateDegrees={180}
             onTouchStart={() => onShield('p1', true)}
           />
           <ActionButton
             label="切替"
             accent="#ffc864"
-            rotateDegrees={-90}
+            rotateDegrees={180}
             onTouchStart={() => onCycleBullet('p1')}
           />
         </div>
@@ -273,7 +273,7 @@ export const MobilePvpControls = ({
           <ActionButton
             label="射撃"
             accent="#ff6b6b"
-            rotateDegrees={90}
+            rotateDegrees={180}
             pressed={p2Attacking}
             onTouchStart={() => {
               setP2Attacking(true);
@@ -287,19 +287,19 @@ export const MobilePvpControls = ({
           <ActionButton
             label="シールド"
             accent="#ff9aa2"
-            rotateDegrees={90}
+            rotateDegrees={180}
             onTouchStart={() => onShield('p2', false)}
           />
           <ActionButton
             label="広域"
             accent="#ff7ab6"
-            rotateDegrees={90}
+            rotateDegrees={180}
             onTouchStart={() => onShield('p2', true)}
           />
           <ActionButton
             label="切替"
             accent="#ffd166"
-            rotateDegrees={90}
+            rotateDegrees={180}
             onTouchStart={() => onCycleBullet('p2')}
           />
         </div>
