@@ -2002,7 +2002,7 @@ focusTarget: 'player',
         false,
         GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
         GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
-        GAME_CONFIG.BOSS_BULLET_SPEED
+        GAME_CONFIG.BOSS_BULLET_SPEED * GAME_CONFIG.ASTEROID_SPEED_MULTIPLIER
       );
       this.bossBullets.push(bullet);
       this.trimBulletPool(this.bossBullets, this.maxBossBullets);
@@ -2252,6 +2252,9 @@ focusTarget: 'player',
     const damageScale = this.getDamageScale();
     let bullet: Bullet;
     if (bulletType === 'asteroid') {
+      const asteroidDamage = this.gameState.delayedAsteroidEnabled
+        ? GAME_CONFIG.ASTEROID_DELAY_TRION_DAMAGE
+        : GAME_CONFIG.ASTEROID_TRION_DAMAGE;
       bullet = new Bullet(
         this,
         this.player.x + fireDirection.x * 20,
@@ -2259,9 +2262,9 @@ focusTarget: 'player',
         baseAngle,
         'asteroid',
         true,
-        GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+        asteroidDamage * damageScale,
         GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
-        GAME_CONFIG.BULLET_SPEED * bulletSpeedMultiplier
+        GAME_CONFIG.BULLET_SPEED * GAME_CONFIG.ASTEROID_SPEED_MULTIPLIER * bulletSpeedMultiplier
       );
     } else if (bulletType === 'meteora') {
       bullet = new Bullet(
@@ -2536,6 +2539,9 @@ focusTarget: 'player',
     }
 
     if (bulletType === 'asteroid') {
+      const asteroidDamage = useDelayedShot
+        ? GAME_CONFIG.ASTEROID_DELAY_TRION_DAMAGE
+        : GAME_CONFIG.ASTEROID_TRION_DAMAGE;
       const bullet = new Bullet(
         this,
         fireData.x,
@@ -2543,9 +2549,9 @@ focusTarget: 'player',
         fireData.angle,
         'asteroid',
         false,
-        GAME_CONFIG.ASTEROID_TRION_DAMAGE * damageScale,
+        asteroidDamage * damageScale,
         GAME_CONFIG.ASTEROID_SHIELD_DAMAGE * damageScale,
-        bulletSpeed
+        bulletSpeed * GAME_CONFIG.ASTEROID_SPEED_MULTIPLIER
       );
       this.bossBullets.push(bullet);
       this.trimBulletPool(this.bossBullets, this.maxBossBullets);
