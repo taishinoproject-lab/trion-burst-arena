@@ -2112,7 +2112,9 @@ export class MainScene extends Phaser.Scene {
     const noteText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
       descriptionBounds.bottom + (this.isMobileMode ? 26 : 18),
-      '※遅延/弾道切替は各プレイヤー側の切替ボタンで操作できます。',
+      aiEnabled
+        ? '※遅延/弾道切替は切替ボタンで操作できます。'
+        : '※遅延/弾道切替は各プレイヤー側の切替ボタンで操作できます。',
       {
         fontSize: this.isMobileMode ? '18px' : '12px',
         color: '#cccccc',
@@ -2127,39 +2129,44 @@ export class MainScene extends Phaser.Scene {
     const noteBounds = noteText.getBounds();
     const instructionTopY = noteBounds.bottom + (this.isMobileMode ? 36 : 22);
 
+    const playerOneX = aiEnabled ? GAME_CONFIG.WIDTH / 2 : leftX;
+    const playerOneAlign = aiEnabled ? 'center' : 'left';
     const playerOneText = this.add.text(
-      leftX,
+      playerOneX,
       instructionTopY,
       'プレイヤー1\n移動: WASD\n攻撃: F\n武器切替: Q/E\nシールド(正面): SPACE\n全方位シールド: SHIFT + SPACE',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: this.isMobileMode ? 'left' : 'left',
+        align: playerOneAlign,
         lineSpacing: 6,
-        wordWrap: this.isMobileMode ? { width: GAME_CONFIG.WIDTH * 0.42 } : undefined,
+        wordWrap: this.isMobileMode ? { width: aiEnabled ? GAME_CONFIG.WIDTH * 0.7 : GAME_CONFIG.WIDTH * 0.42 } : undefined,
       }
     );
-    playerOneText.setOrigin(this.isMobileMode ? 0 : 0, 0);
+    playerOneText.setOrigin(aiEnabled ? 0.5 : 0, 0);
 
-    const playerTwoText = this.add.text(
-      rightX,
-      instructionTopY + instructionGapY,
-      'プレイヤー2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: L',
-      {
-        fontSize: this.isMobileMode ? '22px' : '16px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        align: this.isMobileMode ? 'right' : 'left',
-        lineSpacing: 6,
-        wordWrap: this.isMobileMode ? { width: GAME_CONFIG.WIDTH * 0.42 } : undefined,
-      }
-    );
-    playerTwoText.setOrigin(this.isMobileMode ? 1 : 0, 0);
+    let playerTwoText: Phaser.GameObjects.Text | null = null;
+    if (!aiEnabled) {
+      playerTwoText = this.add.text(
+        rightX,
+        instructionTopY + instructionGapY,
+        'プレイヤー2\n移動: ↑↓←→\n攻撃: ENTER\n武器切替: O/P\nシールド(正面): SHIFT\n全方位シールド: L',
+        {
+          fontSize: this.isMobileMode ? '22px' : '16px',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          align: this.isMobileMode ? 'right' : 'left',
+          lineSpacing: 6,
+          wordWrap: this.isMobileMode ? { width: GAME_CONFIG.WIDTH * 0.42 } : undefined,
+        }
+      );
+      playerTwoText.setOrigin(this.isMobileMode ? 1 : 0, 0);
+    }
 
     const instructionBottomY = Math.max(
       playerOneText.getBounds().bottom,
-      playerTwoText.getBounds().bottom
+      playerTwoText?.getBounds().bottom ?? 0
     );
     const detailButtonY = this.isMobileMode
       ? instructionBottomY + 80
@@ -2267,11 +2274,16 @@ export class MainScene extends Phaser.Scene {
     );
 
     const triggerTitleY = dividerY + (this.isMobileMode ? 26 : 18);
-    const triggerTitle = this.add.text(GAME_CONFIG.WIDTH / 2, triggerTitleY, 'トリガー選択 (各3つ)', {
-      fontSize: this.isMobileMode ? '20px' : '16px',
-      color: '#00ffd5',
-      fontFamily: 'monospace',
-    });
+    const triggerTitle = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      triggerTitleY,
+      aiEnabled ? 'トリガー選択 (P1のみ)' : 'トリガー選択 (各3つ)',
+      {
+        fontSize: this.isMobileMode ? '20px' : '16px',
+        color: '#00ffd5',
+        fontFamily: 'monospace',
+      }
+    );
     triggerTitle.setOrigin(0.5);
 
     const triggerSectionTop = triggerTitleY + (this.isMobileMode ? 28 : 22);
@@ -2295,7 +2307,11 @@ export class MainScene extends Phaser.Scene {
       description,
       noteText,
       playerOneText,
-      playerTwoText,
+    ];
+    if (playerTwoText) {
+      instructionElements.push(playerTwoText);
+    }
+    instructionElements.push(
       backButton,
       backText,
       detailButton,
@@ -2303,8 +2319,8 @@ export class MainScene extends Phaser.Scene {
       viperButton,
       viperText,
       divider,
-      triggerTitle,
-    ];
+      triggerTitle
+    );
 
     const triggerSelectors: Array<{
       statusText: Phaser.GameObjects.Text;
@@ -2380,10 +2396,15 @@ export class MainScene extends Phaser.Scene {
       });
     };
 
-    buildTriggerSelector('p1', leftX, triggerSectionTop);
-    buildTriggerSelector('p2', rightX, triggerSectionTop);
+    const triggerCenterX = aiEnabled ? GAME_CONFIG.WIDTH / 2 : leftX;
+    buildTriggerSelector('p1', triggerCenterX, triggerSectionTop);
+    if (!aiEnabled) {
+      buildTriggerSelector('p2', rightX, triggerSectionTop);
+    }
     updateTriggerSelector('p1');
-    updateTriggerSelector('p2');
+    if (!aiEnabled) {
+      updateTriggerSelector('p2');
+    }
 
     const triggerSectionBottom = Math.max(
       ...triggerSelectors.map((selector) => selector.bottomY)
@@ -2412,7 +2433,7 @@ export class MainScene extends Phaser.Scene {
     const updateStartButtonState = () => {
       const canStart =
         this.pvpSelectedBulletTypes.p1.length === 3 &&
-        this.pvpSelectedBulletTypes.p2.length === 3;
+        (aiEnabled || this.pvpSelectedBulletTypes.p2.length === 3);
       const alpha = canStart ? 1 : 0.45;
       startButton.setAlpha(alpha);
       startText.setAlpha(alpha);
@@ -2420,10 +2441,10 @@ export class MainScene extends Phaser.Scene {
     updateStartButtonState();
 
     const handleStart = () => {
-      if (
-        this.pvpSelectedBulletTypes.p1.length !== 3 ||
-        this.pvpSelectedBulletTypes.p2.length !== 3
-      ) {
+      if (this.pvpSelectedBulletTypes.p1.length !== 3) {
+        return;
+      }
+      if (!aiEnabled && this.pvpSelectedBulletTypes.p2.length !== 3) {
         return;
       }
       this.scene.start('PvpScene', {
