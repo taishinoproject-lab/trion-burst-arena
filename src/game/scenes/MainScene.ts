@@ -1092,7 +1092,25 @@ export class MainScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
 
-    const instructionElements: Phaser.GameObjects.GameObject[] = [title];
+    const description = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      titleY + (this.isMobileMode ? (isCompactLayout ? 34 : 40) : 36),
+      'トリガーというのはエネルギートリオンを使って敵を攻撃する武器のことです。\n' +
+        'それぞれのトリガーは特性があって、うまく組み合わせて使ってください。\n' +
+        'トリガーの詳細な使用が知りたい人はトリガーの詳細を見てください。\n' +
+        'Viperは軌道が選択できるので、Viperの軌道が選択したい人はViperの設定を押してください。',
+      {
+        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+        color: '#b8c6d6',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: this.isMobileMode ? GAME_CONFIG.WIDTH * 0.84 : 560 },
+      }
+    );
+    description.setOrigin(0.5, 0);
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [title, description];
 
     const backButtonX = this.isMobileMode ? (isCompactLayout ? 80 : 100) : 110;
     const backButtonY = this.isMobileMode ? (isCompactLayout ? 46 : 56) : 60;
@@ -1120,7 +1138,7 @@ export class MainScene extends Phaser.Scene {
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     instructionElements.push(backButton, backText);
 
-    const detailButtonY = titleY + (this.isMobileMode ? 50 : 60);
+    const detailButtonY = description.getBounds().bottom + (this.isMobileMode ? 24 : 28);
     const detailButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       detailButtonY,
@@ -1148,20 +1166,18 @@ export class MainScene extends Phaser.Scene {
     detailText.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
     instructionElements.push(detailButton, detailText);
 
-    const viperButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH - 130 : GAME_CONFIG.WIDTH - 200;
-    const viperButtonWidth = this.isMobileMode ? (isCompactLayout ? 170 : 190) : 170;
-    const viperButtonHeight = this.isMobileMode ? (isCompactLayout ? 44 : 52) : 40;
+    const viperButtonY = detailButtonY + (this.isMobileMode ? (isCompactLayout ? 50 : 58) : 52);
     const viperButton = this.add.rectangle(
-      viperButtonX,
-      detailButtonY,
-      viperButtonWidth,
-      viperButtonHeight,
+      GAME_CONFIG.WIDTH / 2,
+      viperButtonY,
+      actionButtonWidth,
+      actionButtonHeight,
       0x1a1a3a,
       0.95
     );
     viperButton.setStrokeStyle(2, 0x4ad6ff, 0.9);
-    const viperText = this.add.text(viperButtonX, detailButtonY, 'バイパー設定', {
-      fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '14px',
+    const viperText = this.add.text(GAME_CONFIG.WIDTH / 2, viperButtonY, 'バイパー設定', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -1173,7 +1189,7 @@ export class MainScene extends Phaser.Scene {
     viperText.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
     instructionElements.push(viperButton, viperText);
 
-    const weaponStatusY = detailButtonY + (this.isMobileMode ? (isCompactLayout ? 60 : 70) : 90);
+    const weaponStatusY = viperButtonY + (this.isMobileMode ? (isCompactLayout ? 60 : 70) : 80);
     const weaponStatus = this.add.text(GAME_CONFIG.WIDTH / 2, weaponStatusY, '', {
       fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '14px',
       color: '#ffffff',
