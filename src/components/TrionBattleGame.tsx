@@ -31,6 +31,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     p2: null,
   });
   const [pvpTrionStatus, setPvpTrionStatus] = useState<{ p1: number; p2: number; max: number } | null>(null);
+  const [isPvpGameOver, setIsPvpGameOver] = useState(false);
   const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
   const [loadingDelayDone, setLoadingDelayDone] = useState(false);
   const fullscreenAttemptedRef = useRef(false);
@@ -162,6 +163,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         setCurrentBulletType(null);
         setPvpBulletTypes({ p1: null, p2: null });
         setPvpTrionStatus(null);
+        setIsPvpGameOver(false);
         sceneRef.current = null;
         if (scene.scene.key === 'PvpScene') {
           const pvpScene = scene as PvpScene;
@@ -169,11 +171,14 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
           pvpScene.events.on('pvp-bullet-changed', handlePvpBulletChange);
           pvpScene.events.off('pvp-trion-changed', handlePvpTrionChange);
           pvpScene.events.on('pvp-trion-changed', handlePvpTrionChange);
+          pvpScene.events.off('pvp-game-over');
+          pvpScene.events.on('pvp-game-over', setIsPvpGameOver);
           setPvpBulletTypes({
             p1: pvpScene.getCurrentBulletType('p1'),
             p2: pvpScene.getCurrentBulletType('p2'),
           });
           setPvpTrionStatus(pvpScene.getTrionStatus());
+          setIsPvpGameOver(false);
           pvpSceneRef.current = pvpScene;
         } else {
           pvpSceneRef.current = null;
@@ -370,7 +375,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         onWideShield={handleWideShield}
       />
       <MobilePvpControls
-        visible={isMobile && activeSceneKey === 'PvpScene'}
+        visible={isMobile && activeSceneKey === 'PvpScene' && !isPvpGameOver}
         onMove={handlePvpMove}
         onAttack={handlePvpAttack}
         onShield={handlePvpShield}

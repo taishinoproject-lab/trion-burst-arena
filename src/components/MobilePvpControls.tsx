@@ -22,6 +22,23 @@ interface JoystickProps {
   displayRotation?: number;
 }
 
+const getBulletDisplayName = (type?: BulletType | null) => {
+  switch (type) {
+    case 'asteroid':
+      return 'アステロイド';
+    case 'meteora':
+      return 'メテオラ';
+    case 'viper':
+      return 'バイパー';
+    case 'red':
+      return 'レッドバレット';
+    case 'hound':
+      return 'ハウンド';
+    default:
+      return '未装備';
+  }
+};
+
 const Joystick = ({ label, accent, onMove, displayRotation = 0 }: JoystickProps) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
@@ -205,17 +222,24 @@ const TrionMeter = ({
   accent,
   value,
   max,
+  bulletLabel,
   className,
 }: {
   label: string;
   accent: string;
   value: number;
   max: number;
+  bulletLabel?: string;
   className?: string;
 }) => {
   const ratio = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
   return (
     <div className={`flex flex-col items-center gap-1 ${className ?? ''}`}>
+      {bulletLabel && (
+        <div className="text-[10px] font-mono tracking-wider" style={{ color: `${accent}aa` }}>
+          {bulletLabel}
+        </div>
+      )}
       <div className="text-[11px] font-mono tracking-wider" style={{ color: `${accent}cc` }}>
         {label}
       </div>
@@ -262,27 +286,40 @@ export const MobilePvpControls = ({
   const p1DelayLabel = currentBulletType?.p1 === 'viper' ? '弾道切替' : '遅延';
   const p2DelayLabel = currentBulletType?.p2 === 'viper' ? '弾道切替' : '遅延';
   const trionMax = trionStatus?.max ?? 1;
+  const p1BulletLabel = `P1 弾: ${getBulletDisplayName(currentBulletType?.p1)}`;
+  const p2BulletLabel = `P2 弾: ${getBulletDisplayName(currentBulletType?.p2)}`;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-[70]">
       <div
+        className="absolute pointer-events-none"
+        style={{
+          left: 'calc(2rem + env(safe-area-inset-left))',
+          top: '28%',
+          transform: 'rotate(-90deg)',
+          transformOrigin: 'center',
+        }}
+      >
+        <TrionMeter
+          label="P1 トリオン"
+          accent="#00ffd5"
+          value={trionStatus?.p1 ?? trionMax}
+          max={trionMax}
+          bulletLabel={p1BulletLabel}
+          className="rotate-180"
+        />
+      </div>
+      <div
         className="absolute pointer-events-auto"
         style={{
           left: 'calc(0.5rem + env(safe-area-inset-left))',
-          top: '50%',
+          top: '55%',
           transform: 'translateY(-50%) rotate(-90deg)',
           transformOrigin: 'center',
         }}
       >
         <div className="flex flex-col items-center gap-3">
-          <TrionMeter
-            label="P1 トリオン"
-            accent="#00ffd5"
-            value={trionStatus?.p1 ?? trionMax}
-            max={trionMax}
-            className="rotate-180"
-          />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
                 label="射撃"
@@ -368,23 +405,34 @@ export const MobilePvpControls = ({
       </div>
 
       <div
+        className="absolute pointer-events-none"
+        style={{
+          right: 'calc(2rem + env(safe-area-inset-right))',
+          top: '28%',
+          transform: 'rotate(90deg)',
+          transformOrigin: 'center',
+        }}
+      >
+        <TrionMeter
+          label="P2 トリオン"
+          accent="#ff6b6b"
+          value={trionStatus?.p2 ?? trionMax}
+          max={trionMax}
+          bulletLabel={p2BulletLabel}
+          className="rotate-180"
+        />
+      </div>
+      <div
         className="absolute pointer-events-auto"
         style={{
           right: 'calc(0.5rem + env(safe-area-inset-right))',
-          top: '50%',
+          top: '55%',
           transform: 'translateY(-50%) rotate(90deg)',
           transformOrigin: 'center',
         }}
       >
         <div className="flex flex-col items-center gap-3">
-          <TrionMeter
-            label="P2 トリオン"
-            accent="#ff6b6b"
-            value={trionStatus?.p2 ?? trionMax}
-            max={trionMax}
-            className="rotate-180"
-          />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
                 label="射撃"

@@ -272,6 +272,7 @@ export class PvpScene extends Phaser.Scene {
     this.createUI();
     this.emitBulletTypeChanged('p1');
     this.emitBulletTypeChanged('p2');
+    this.events.emit('pvp-game-over', false);
   }
 
   update(_time: number, delta: number) {
@@ -789,6 +790,7 @@ export class PvpScene extends Phaser.Scene {
       const winner = this.player1Trion <= 0 ? 'P2 勝利' : 'P1 勝利';
       this.winnerText.setText(winner);
       this.showGameOverButtons();
+      this.events.emit('pvp-game-over', true);
     }
   }
 
