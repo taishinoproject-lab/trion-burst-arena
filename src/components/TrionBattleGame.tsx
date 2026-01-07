@@ -339,11 +339,11 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   const handlePvpRestart = useCallback(() => {
-    pvpSceneRef.current?.scene.restart();
+    pvpSceneRef.current?.returnToSetup();
   }, []);
 
   const handlePvpBack = useCallback(() => {
-    pvpSceneRef.current?.scene.start('MainScene', { instructionStartMode: 'twoPlayer' });
+    pvpSceneRef.current?.returnToSetup();
   }, []);
 
   return (

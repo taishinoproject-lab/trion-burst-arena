@@ -158,7 +158,7 @@ export class MainScene extends Phaser.Scene {
   private instructionsBackground?: Phaser.GameObjects.Rectangle;
   private tutorialSteps: TutorialStep[] = [];
   private tutorialStepIndex = 0;
-  private instructionStartMode: 'modeSelect' | 'twoPlayer' = 'modeSelect';
+  private instructionStartMode: 'modeSelect' | 'boss' | 'twoPlayer' = 'modeSelect';
   private tutorialShieldFireActive = false;
   private tutorialShieldFireEvent?: Phaser.Time.TimerEvent;
   private tutorialEnemyMovement: 'none' | 'sideToSide' = 'none';
@@ -178,6 +178,10 @@ export class MainScene extends Phaser.Scene {
     viperSettingsOpened: false,
     viperModeHits: [false, false, false] as boolean[],
     summaryAcknowledged: false,
+  };
+  private pvpSelectedBulletTypes: { p1: BulletType[]; p2: BulletType[] } = {
+    p1: ['asteroid', 'meteora', 'viper'],
+    p2: ['asteroid', 'meteora', 'viper'],
   };
 
   private getBossMaxTrion() {
@@ -221,8 +225,17 @@ export class MainScene extends Phaser.Scene {
     super({ key: 'MainScene' });
   }
 
-  init(data?: { instructionStartMode?: 'modeSelect' | 'twoPlayer' }) {
+  init(data?: {
+    instructionStartMode?: 'modeSelect' | 'boss' | 'twoPlayer';
+    pvpSelectedBulletTypes?: { p1: BulletType[]; p2: BulletType[] };
+  }) {
     this.instructionStartMode = data?.instructionStartMode ?? 'modeSelect';
+    if (data?.pvpSelectedBulletTypes) {
+      this.pvpSelectedBulletTypes = {
+        p1: [...data.pvpSelectedBulletTypes.p1],
+        p2: [...data.pvpSelectedBulletTypes.p2],
+      };
+    }
     const mobileFromRegistry = this.registry.get('isMobile');
     if (typeof mobileFromRegistry === 'boolean') {
       this.isMobileMode = mobileFromRegistry;
@@ -472,6 +485,10 @@ export class MainScene extends Phaser.Scene {
       this.showTwoPlayerInstructions();
       return;
     }
+    if (this.instructionStartMode === 'boss') {
+      this.showBossSetupInstructions();
+      return;
+    }
     this.showModeSelectInstructions();
   }
 
@@ -533,6 +550,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private showModeSelectInstructions() {
+    this.instructionStartMode = 'modeSelect';
     const { layoutCenterY, actionButtonHeight, isCompactLayout } = this.getInstructionLayout();
     const mobileScale = this.isMobileMode ? 3 : 1;
     const layoutBaseY = this.isMobileMode
@@ -892,6 +910,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private showBossSetupInstructions() {
+    this.instructionStartMode = 'boss';
     const { isCompactLayout, layoutCenterY, actionButtonWidth, actionButtonHeight } =
       this.getInstructionLayout();
     // Adjust positions for mobile
@@ -987,7 +1006,7 @@ export class MainScene extends Phaser.Scene {
     detailText.setInteractive({ useHandCursor: true }).on('pointerdown', handleDetail);
     instructionElements.push(detailButton, detailText);
 
-    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, '難易度選択', {
+    const difficultyLabel = this.add.text(GAME_CONFIG.WIDTH / 2, difficultyLabelY, 'レベル選択', {
       fontSize: this.isMobileMode ? (isCompactLayout ? '18px' : '22px') : '18px',
       color: '#00ffd5',
       fontFamily: 'monospace',
@@ -1669,6 +1688,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private showTwoPlayerInstructions() {
+    this.instructionStartMode = 'twoPlayer';
     const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
     const titleY = layoutCenterY - (this.isMobileMode ? 220 : 220);
     const instructionGapY = this.isMobileMode ? 0 : 0;
@@ -1768,9 +1788,6 @@ export class MainScene extends Phaser.Scene {
     const detailButtonY = this.isMobileMode
       ? instructionBottomY + 80
       : layoutCenterY + 110;
-    const startButtonY = this.isMobileMode
-      ? detailButtonY + 120
-      : layoutCenterY + 180;
 
     const backButtonX = this.isMobileMode ? 120 : 110;
     const backButtonY = this.isMobileMode ? 70 : 60;
@@ -1848,6 +1865,155 @@ export class MainScene extends Phaser.Scene {
     viperButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
     viperText.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
 
+    const normalizeSelection = (types: BulletType[]) => {
+      const unique = Array.from(new Set(types)).filter((type) => AVAILABLE_BULLET_TYPES.includes(type));
+      const filled = [...unique];
+      AVAILABLE_BULLET_TYPES.forEach((type) => {
+        if (filled.length < 3 && !filled.includes(type)) {
+          filled.push(type);
+        }
+      });
+      return filled.slice(0, 3);
+    };
+    this.pvpSelectedBulletTypes = {
+      p1: normalizeSelection(this.pvpSelectedBulletTypes.p1),
+      p2: normalizeSelection(this.pvpSelectedBulletTypes.p2),
+    };
+
+    const dividerY = detailButtonY + (this.isMobileMode ? 60 : 50);
+    const divider = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      dividerY,
+      this.isMobileMode ? GAME_CONFIG.WIDTH * 0.82 : 520,
+      2,
+      0x3b3b52,
+      0.7
+    );
+
+    const triggerTitleY = dividerY + (this.isMobileMode ? 26 : 18);
+    const triggerTitle = this.add.text(GAME_CONFIG.WIDTH / 2, triggerTitleY, 'トリガー選択 (各3つ)', {
+      fontSize: this.isMobileMode ? '20px' : '16px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+    });
+    triggerTitle.setOrigin(0.5);
+
+    const triggerSectionTop = triggerTitleY + (this.isMobileMode ? 28 : 22);
+    const triggerButtonWidth = this.isMobileMode ? 120 : 110;
+    const triggerButtonHeight = this.isMobileMode ? 40 : 34;
+    const triggerButtonSpacing = this.isMobileMode ? 10 : 12;
+    const triggerRowSpacing = this.isMobileMode ? 14 : 12;
+    const triggerButtonsPerRow = 3;
+
+    const triggerNames: Record<BulletType, string> = {
+      asteroid: 'アステロイド',
+      meteora: 'メテオラ',
+      viper: 'バイパー',
+      red: 'レッド',
+      hound: 'ハウンド',
+    };
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [
+      title,
+      description,
+      noteText,
+      deviceNote,
+      playerOneText,
+      playerTwoText,
+      backButton,
+      backText,
+      detailButton,
+      detailText,
+      viperButton,
+      viperText,
+      divider,
+      triggerTitle,
+    ];
+
+    const triggerSelectors: Array<{
+      statusText: Phaser.GameObjects.Text;
+      buttons: { type: BulletType; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[];
+      player: 'p1' | 'p2';
+      bottomY: number;
+    }> = [];
+
+    const buildTriggerSelector = (player: 'p1' | 'p2', centerX: number, startY: number) => {
+      const statusText = this.add.text(centerX, startY, '', {
+        fontSize: this.isMobileMode ? '18px' : '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      });
+      statusText.setOrigin(0.5);
+
+      const buttonRowWidth =
+        triggerButtonWidth * triggerButtonsPerRow +
+        triggerButtonSpacing * (triggerButtonsPerRow - 1);
+      const startX = centerX - buttonRowWidth / 2 + triggerButtonWidth / 2;
+      const buttons: { type: BulletType; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }[] = [];
+
+      AVAILABLE_BULLET_TYPES.forEach((type, index) => {
+        const row = Math.floor(index / triggerButtonsPerRow);
+        const col = index % triggerButtonsPerRow;
+        const x = startX + col * (triggerButtonWidth + triggerButtonSpacing);
+        const y = startY + (this.isMobileMode ? 26 : 20) + row * (triggerButtonHeight + triggerRowSpacing);
+
+        const bg = this.add.rectangle(x, y, triggerButtonWidth, triggerButtonHeight, 0x1a1a3a, 0.9);
+        bg.setStrokeStyle(2, 0x444444, 0.5);
+        const label = this.add.text(x, y, triggerNames[type], {
+          fontSize: this.isMobileMode ? '14px' : '12px',
+          color: '#aaaaaa',
+          fontFamily: 'monospace',
+        });
+        label.setOrigin(0.5);
+
+        const toggleSelection = () => {
+          const selected = this.pvpSelectedBulletTypes[player];
+          if (selected.includes(type)) {
+            this.pvpSelectedBulletTypes[player] = selected.filter((item) => item !== type);
+          } else if (selected.length < 3) {
+            this.pvpSelectedBulletTypes[player] = [...selected, type];
+          }
+          updateTriggerSelector(player);
+          updateStartButtonState();
+        };
+        bg.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+        label.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+        buttons.push({ type, bg, label });
+      });
+
+      const bottomY =
+        startY +
+        (this.isMobileMode ? 26 : 20) +
+        Math.ceil(AVAILABLE_BULLET_TYPES.length / triggerButtonsPerRow) *
+          (triggerButtonHeight + triggerRowSpacing) -
+        triggerRowSpacing;
+
+      triggerSelectors.push({ statusText, buttons, player, bottomY });
+      instructionElements.push(statusText, ...buttons.flatMap(({ bg, label }) => [bg, label]));
+    };
+
+    const updateTriggerSelector = (player: 'p1' | 'p2') => {
+      const selector = triggerSelectors.find((item) => item.player === player);
+      if (!selector) return;
+      const selected = this.pvpSelectedBulletTypes[player];
+      selector.statusText.setText(`${player === 'p1' ? 'P1' : 'P2'} 選択中: ${selected.length}/3`);
+      selector.buttons.forEach(({ type, bg, label }) => {
+        const isSelected = selected.includes(type);
+        bg.setStrokeStyle(2, isSelected ? GAME_CONFIG.BULLET_COLOR : 0x444444, isSelected ? 0.9 : 0.5);
+        label.setColor(isSelected ? '#00ffd5' : '#aaaaaa');
+      });
+    };
+
+    buildTriggerSelector('p1', leftX, triggerSectionTop);
+    buildTriggerSelector('p2', rightX, triggerSectionTop);
+    updateTriggerSelector('p1');
+    updateTriggerSelector('p2');
+
+    const triggerSectionBottom = Math.max(
+      ...triggerSelectors.map((selector) => selector.bottomY)
+    );
+
+    const startButtonY = triggerSectionBottom + (this.isMobileMode ? 70 : 60);
     const startButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
       startButtonY,
@@ -1864,28 +2030,31 @@ export class MainScene extends Phaser.Scene {
     });
     startText.setOrigin(0.5);
 
+    const updateStartButtonState = () => {
+      const canStart =
+        this.pvpSelectedBulletTypes.p1.length === 3 &&
+        this.pvpSelectedBulletTypes.p2.length === 3;
+      startButton.setAlpha(canStart ? 1 : 0.45);
+      startText.setAlpha(canStart ? 1 : 0.45);
+    };
+    updateStartButtonState();
+
     const handleStart = () => {
-      this.scene.start('PvpScene');
+      if (
+        this.pvpSelectedBulletTypes.p1.length !== 3 ||
+        this.pvpSelectedBulletTypes.p2.length !== 3
+      ) {
+        return;
+      }
+      this.scene.start('PvpScene', {
+        p1BulletTypes: this.pvpSelectedBulletTypes.p1,
+        p2BulletTypes: this.pvpSelectedBulletTypes.p2,
+      });
     };
     startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
     startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
 
-    const instructionElements: Phaser.GameObjects.GameObject[] = [
-      title,
-      description,
-      noteText,
-      deviceNote,
-      playerOneText,
-      playerTwoText,
-      backButton,
-      backText,
-      detailButton,
-      detailText,
-      viperButton,
-      viperText,
-      startButton,
-      startText,
-    ];
+    instructionElements.push(startButton, startText);
 
     this.setInstructionsContent(instructionElements, true);
   }
@@ -2006,6 +2175,13 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private restartToInstructionMenu() {
+    this.scene.restart({
+      instructionStartMode: this.instructionStartMode,
+      pvpSelectedBulletTypes: this.pvpSelectedBulletTypes,
+    });
+  }
+
   private showTutorialOverlay() {
     if (!this.tutorialHelpText) return;
     this.updateTutorialHelpText();
@@ -2035,7 +2211,7 @@ export class MainScene extends Phaser.Scene {
 
     const handleBack = () => {
       this.tutorialProgress.summaryAcknowledged = true;
-      this.scene.restart();
+      this.restartToInstructionMenu();
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
@@ -2763,7 +2939,7 @@ focusTarget: 'player',
   update(time: number, delta: number) {
     if (this.gameState.isGameOver) {
       if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
-        this.scene.restart();
+        this.restartToInstructionMenu();
       }
       return;
     }
@@ -2774,7 +2950,7 @@ focusTarget: 'player',
     
     // Handle restart
     if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
-      this.scene.restart();
+      this.restartToInstructionMenu();
       return;
     }
     
@@ -3987,7 +4163,7 @@ focusTarget: 'player',
     }
 
     const handleRestart = () => {
-      this.scene.restart();
+      this.restartToInstructionMenu();
     };
 
     restartButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
