@@ -18,9 +18,10 @@ interface JoystickProps {
   label: string;
   accent: string;
   onMove: (x: number, y: number) => void;
+  displayRotation?: number;
 }
 
-const Joystick = ({ label, accent, onMove }: JoystickProps) => {
+const Joystick = ({ label, accent, onMove, displayRotation = 0 }: JoystickProps) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -57,7 +58,10 @@ const Joystick = ({ label, accent, onMove }: JoystickProps) => {
         dy = (dy / distance) * joystickRadius;
       }
 
-      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      const rotationRadians = (displayRotation * Math.PI) / 180;
+      const rotatedX = dx * Math.cos(rotationRadians) - dy * Math.sin(rotationRadians);
+      const rotatedY = dx * Math.sin(rotationRadians) + dy * Math.cos(rotationRadians);
+      knob.style.transform = `translate(${rotatedX}px, ${rotatedY}px)`;
       onMove(dx / joystickRadius, dy / joystickRadius);
     };
 
@@ -153,6 +157,7 @@ const ActionButton = ({
   onTouchEnd,
   className,
   children,
+  contentClassName,
 }: {
   label: string;
   accent: string;
@@ -161,6 +166,7 @@ const ActionButton = ({
   onTouchEnd?: () => void;
   className?: string;
   children?: ReactNode;
+  contentClassName?: string;
 }) => (
   <button
     onTouchStart={(event) => {
@@ -186,7 +192,7 @@ const ActionButton = ({
     }}
     type="button"
   >
-    <span className="flex flex-col items-center justify-center gap-1">
+    <span className={`flex flex-col items-center justify-center gap-1 ${contentClassName ?? ''}`}>
       {children}
       <span>{label}</span>
     </span>
@@ -222,13 +228,13 @@ export const MobilePvpControls = ({
         }}
       >
         <div className="flex items-center gap-4">
-          <Joystick label="P1 移動" accent="#00ffd5" onMove={(x, y) => onMove('p1', x, y)} />
           <div className="grid grid-cols-2 gap-3">
             <ActionButton
               label="射撃"
               accent="#00ffd5"
               pressed={p1Attacking}
               className="col-span-1 row-span-2 w-[84px] h-[112px]"
+              contentClassName="rotate-180"
               onTouchStart={() => {
                 setP1Attacking(true);
                 onAttack('p1', true);
@@ -250,6 +256,7 @@ export const MobilePvpControls = ({
               label="切替"
               accent="#ffc864"
               className="w-16 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onCycleBullet('p1')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -263,6 +270,7 @@ export const MobilePvpControls = ({
               label="シールド"
               accent="#4ad6ff"
               className="w-16 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onShield('p1', false)}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -273,6 +281,7 @@ export const MobilePvpControls = ({
               label={p1DelayLabel}
               accent="#00ffd5"
               className="col-span-2 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onDelayToggle('p1')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -284,6 +293,7 @@ export const MobilePvpControls = ({
               label="広域シールド"
               accent="#b464ff"
               className="col-span-2 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onShield('p1', true)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -292,6 +302,12 @@ export const MobilePvpControls = ({
               </svg>
             </ActionButton>
           </div>
+          <Joystick
+            label="P1 移動"
+            accent="#00ffd5"
+            displayRotation={90}
+            onMove={(x, y) => onMove('p1', x, y)}
+          />
         </div>
       </div>
 
@@ -311,6 +327,7 @@ export const MobilePvpControls = ({
               accent="#ff6b6b"
               pressed={p2Attacking}
               className="col-span-1 row-span-2 w-[84px] h-[112px]"
+              contentClassName="rotate-180"
               onTouchStart={() => {
                 setP2Attacking(true);
                 onAttack('p2', true);
@@ -332,6 +349,7 @@ export const MobilePvpControls = ({
               label="切替"
               accent="#ffc864"
               className="w-16 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onCycleBullet('p2')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -345,6 +363,7 @@ export const MobilePvpControls = ({
               label="シールド"
               accent="#4ad6ff"
               className="w-16 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onShield('p2', false)}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -355,6 +374,7 @@ export const MobilePvpControls = ({
               label={p2DelayLabel}
               accent="#00ffd5"
               className="col-span-2 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onDelayToggle('p2')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -366,6 +386,7 @@ export const MobilePvpControls = ({
               label="広域シールド"
               accent="#b464ff"
               className="col-span-2 h-12 text-[10px]"
+              contentClassName="rotate-180"
               onTouchStart={() => onShield('p2', true)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -374,7 +395,12 @@ export const MobilePvpControls = ({
               </svg>
             </ActionButton>
           </div>
-          <Joystick label="P2 移動" accent="#ff6b6b" onMove={(x, y) => onMove('p2', x, y)} />
+          <Joystick
+            label="P2 移動"
+            accent="#ff6b6b"
+            displayRotation={-90}
+            onMove={(x, y) => onMove('p2', x, y)}
+          />
         </div>
       </div>
     </div>
