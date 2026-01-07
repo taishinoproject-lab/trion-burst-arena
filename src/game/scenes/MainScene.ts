@@ -1886,8 +1886,7 @@ export class MainScene extends Phaser.Scene {
   private showTwoPlayerInstructions() {
     this.instructionStartMode = 'twoPlayer';
     const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
-    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 220);
-    const instructionGapY = this.isMobileMode ? 0 : 0;
+    const titleY = layoutCenterY - (this.isMobileMode ? 240 : 220);
     const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.28 : GAME_CONFIG.WIDTH / 2 - 220;
     const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.72 : GAME_CONFIG.WIDTH / 2 + 220;
 
@@ -1900,8 +1899,198 @@ export class MainScene extends Phaser.Scene {
 
     const description = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      layoutCenterY - (this.isMobileMode ? 130 : 140),
-      '2人対戦モード。\n相手のトリオン(体力)を0にすると勝利。\n攻撃やシールドでトリオンを消費するので、\n動きながらうまく管理しよう。',
+      layoutCenterY - (this.isMobileMode ? 160 : 150),
+      '2人対戦モードです。\n相手のトリオン(体力)を0にすると勝利。\n攻撃やシールドでトリオンを消費するので、\n動きながらうまく管理しよう。',
+      {
+        fontSize: this.isMobileMode ? '22px' : '16px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: this.isMobileMode ? 10 : 6,
+      }
+    );
+    description.setOrigin(0.5);
+
+    const descriptionBounds = description.getBounds();
+    const deviceNote = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      descriptionBounds.bottom + (this.isMobileMode ? 26 : 18),
+      '※iPad/タブレットでの操作がいちばん楽しいです。パソコンでもOK。\nスマホは操作がかなり難しいかもしれません。ごめんなさい！',
+      {
+        fontSize: this.isMobileMode ? '18px' : '12px',
+        color: '#cbd5f5',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 4,
+        wordWrap: { width: GAME_CONFIG.WIDTH * 0.9 },
+      }
+    );
+    deviceNote.setOrigin(0.5);
+
+    const deviceNoteBounds = deviceNote.getBounds();
+    const selectionTitle = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      deviceNoteBounds.bottom + (this.isMobileMode ? 26 : 18),
+      '対戦相手を選んでください',
+      {
+        fontSize: this.isMobileMode ? '22px' : '16px',
+        color: '#00ffd5',
+        fontFamily: 'monospace',
+      }
+    );
+    selectionTitle.setOrigin(0.5);
+
+    const selectionTopY = selectionTitle.getBounds().bottom + (this.isMobileMode ? 24 : 18);
+    const modeButtonWidth = this.isMobileMode ? actionButtonWidth * 0.9 : 200;
+
+    const friendButton = this.add.rectangle(
+      leftX,
+      selectionTopY,
+      modeButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    friendButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const friendText = this.add.text(leftX, selectionTopY, '友達と対戦', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    friendText.setOrigin(0.5);
+
+    const friendDesc = this.add.text(
+      leftX,
+      selectionTopY + (this.isMobileMode ? 46 : 38),
+      '同じPC/iPadを2人で操作して遊ぶ\nローカル対戦モードです。',
+      {
+        fontSize: this.isMobileMode ? '18px' : '12px',
+        color: '#cccccc',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 4,
+        wordWrap: { width: modeButtonWidth + 40 },
+      }
+    );
+    friendDesc.setOrigin(0.5, 0);
+
+    const aiButton = this.add.rectangle(
+      rightX,
+      selectionTopY,
+      modeButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    aiButton.setStrokeStyle(3, 0xff9f1c, 0.9);
+    const aiText = this.add.text(rightX, selectionTopY, 'AIと対戦', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    aiText.setOrigin(0.5);
+
+    const aiDesc = this.add.text(
+      rightX,
+      selectionTopY + (this.isMobileMode ? 46 : 38),
+      'AIと対戦できるモードです。',
+      {
+        fontSize: this.isMobileMode ? '18px' : '12px',
+        color: '#cccccc',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 4,
+        wordWrap: { width: modeButtonWidth + 40 },
+      }
+    );
+    aiDesc.setOrigin(0.5, 0);
+
+    const backButtonX = this.isMobileMode ? 120 : 110;
+    const backButtonY = this.isMobileMode ? 70 : 60;
+    const backButtonWidth = this.isMobileMode ? 200 : 150;
+    const backButtonHeight = this.isMobileMode ? 60 : 44;
+    const backButton = this.add.rectangle(
+      backButtonX,
+      backButtonY,
+      backButtonWidth,
+      backButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    backText.setOrigin(0.5);
+    const handleBack = () => {
+      this.showModeSelectInstructions();
+    };
+    backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+
+    const handleFriend = () => {
+      this.showTwoPlayerSetup(false);
+    };
+    const handleAi = () => {
+      this.showTwoPlayerSetup(true);
+    };
+    friendButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleFriend);
+    friendText.setInteractive({ useHandCursor: true }).on('pointerdown', handleFriend);
+    aiButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleAi);
+    aiText.setInteractive({ useHandCursor: true }).on('pointerdown', handleAi);
+
+    const instructionElements: Phaser.GameObjects.GameObject[] = [
+      title,
+      description,
+      deviceNote,
+      selectionTitle,
+      friendButton,
+      friendText,
+      friendDesc,
+      aiButton,
+      aiText,
+      aiDesc,
+      backButton,
+      backText,
+    ];
+
+    this.setInstructionsContent(instructionElements, true);
+  }
+
+  private showTwoPlayerSetup(aiEnabled: boolean) {
+    this.instructionStartMode = 'twoPlayer';
+    this.pvpAiEnabled = aiEnabled;
+    const { layoutCenterY, actionButtonWidth, actionButtonHeight } = this.getInstructionLayout();
+    const titleY = layoutCenterY - (this.isMobileMode ? 220 : 220);
+    const instructionGapY = this.isMobileMode ? 0 : 0;
+    const leftX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.28 : GAME_CONFIG.WIDTH / 2 - 220;
+    const rightX = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.72 : GAME_CONFIG.WIDTH / 2 + 220;
+
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '2Pモード', {
+      fontSize: this.isMobileMode ? '42px' : '28px',
+      color: '#ffd166',
+      fontFamily: 'monospace',
+    });
+    title.setOrigin(0.5);
+
+    const modeText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      titleY + (this.isMobileMode ? 40 : 30),
+      `対戦方式: ${aiEnabled ? 'AIと対戦' : '友達と対戦'}`,
+      {
+        fontSize: this.isMobileMode ? '20px' : '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      }
+    );
+    modeText.setOrigin(0.5);
+
+    const description = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      layoutCenterY - (this.isMobileMode ? 120 : 130),
+      '相手のトリオン(体力)を0にすると勝利。\n攻撃やシールドでトリオンを消費するので、\n動きながらうまく管理しよう。',
       {
         fontSize: this.isMobileMode ? '22px' : '16px',
         color: '#ffffff',
@@ -1929,23 +2118,7 @@ export class MainScene extends Phaser.Scene {
     noteText.setOrigin(0.5);
 
     const noteBounds = noteText.getBounds();
-    const deviceNote = this.add.text(
-      GAME_CONFIG.WIDTH / 2,
-      noteBounds.bottom + (this.isMobileMode ? 18 : 12),
-      '※iPad/タブレットでの操作が最も快適です。スマホは操作しづらい場合があります。',
-      {
-        fontSize: this.isMobileMode ? '18px' : '12px',
-        color: '#cbd5f5',
-        fontFamily: 'monospace',
-        align: 'center',
-        lineSpacing: 4,
-        wordWrap: { width: GAME_CONFIG.WIDTH * 0.9 },
-      }
-    );
-    deviceNote.setOrigin(0.5);
-
-    const deviceNoteBounds = deviceNote.getBounds();
-    const instructionTopY = deviceNoteBounds.bottom + (this.isMobileMode ? 36 : 22);
+    const instructionTopY = noteBounds.bottom + (this.isMobileMode ? 36 : 22);
 
     const playerOneText = this.add.text(
       leftX,
@@ -2005,7 +2178,7 @@ export class MainScene extends Phaser.Scene {
     });
     backText.setOrigin(0.5);
     const handleBack = () => {
-      this.showModeSelectInstructions();
+      this.showTwoPlayerInstructions();
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
@@ -2111,9 +2284,9 @@ export class MainScene extends Phaser.Scene {
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [
       title,
+      modeText,
       description,
       noteText,
-      deviceNote,
       playerOneText,
       playerTwoText,
       backButton,
@@ -2210,75 +2383,52 @@ export class MainScene extends Phaser.Scene {
     );
 
     const startButtonY = triggerSectionBottom + (this.isMobileMode ? 70 : 60);
-    const startButtonGap = this.isMobileMode ? 20 : 18;
-    const startButtonWidth = this.isMobileMode ? actionButtonWidth * 0.75 : 160;
-    const leftStartX = GAME_CONFIG.WIDTH / 2 - startButtonWidth / 2 - startButtonGap / 2;
-    const rightStartX = GAME_CONFIG.WIDTH / 2 + startButtonWidth / 2 + startButtonGap / 2;
+    const startButtonWidth = this.isMobileMode ? actionButtonWidth * 0.75 : 180;
+    const startButtonX = GAME_CONFIG.WIDTH / 2;
 
-    const friendStartButton = this.add.rectangle(
-      leftStartX,
+    const startButton = this.add.rectangle(
+      startButtonX,
       startButtonY,
       startButtonWidth,
       actionButtonHeight,
       0x1a1a3a,
       0.95
     );
-    friendStartButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const friendStartText = this.add.text(leftStartX, startButtonY, '友達と対戦', {
+    startButton.setStrokeStyle(3, aiEnabled ? 0xff9f1c : GAME_CONFIG.BULLET_COLOR, 0.9);
+    const startText = this.add.text(startButtonX, startButtonY, '対戦開始', {
       fontSize: this.isMobileMode ? '22px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
-    friendStartText.setOrigin(0.5);
-
-    const aiStartButton = this.add.rectangle(
-      rightStartX,
-      startButtonY,
-      startButtonWidth,
-      actionButtonHeight,
-      0x1a1a3a,
-      0.95
-    );
-    aiStartButton.setStrokeStyle(3, 0xff9f1c, 0.9);
-    const aiStartText = this.add.text(rightStartX, startButtonY, 'AIと対戦', {
-      fontSize: this.isMobileMode ? '22px' : '16px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    });
-    aiStartText.setOrigin(0.5);
+    startText.setOrigin(0.5);
 
     const updateStartButtonState = () => {
       const canStart =
         this.pvpSelectedBulletTypes.p1.length === 3 &&
         this.pvpSelectedBulletTypes.p2.length === 3;
       const alpha = canStart ? 1 : 0.45;
-      friendStartButton.setAlpha(alpha);
-      friendStartText.setAlpha(alpha);
-      aiStartButton.setAlpha(alpha);
-      aiStartText.setAlpha(alpha);
+      startButton.setAlpha(alpha);
+      startText.setAlpha(alpha);
     };
     updateStartButtonState();
 
-    const handleStart = (aiEnabled: boolean) => {
+    const handleStart = () => {
       if (
         this.pvpSelectedBulletTypes.p1.length !== 3 ||
         this.pvpSelectedBulletTypes.p2.length !== 3
       ) {
         return;
       }
-      this.pvpAiEnabled = aiEnabled;
       this.scene.start('PvpScene', {
         p1BulletTypes: this.pvpSelectedBulletTypes.p1,
         p2BulletTypes: this.pvpSelectedBulletTypes.p2,
-        aiEnabled,
+        aiEnabled: this.pvpAiEnabled,
       });
     };
-    friendStartButton.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(false));
-    friendStartText.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(false));
-    aiStartButton.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(true));
-    aiStartText.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(true));
+    startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
+    startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
 
-    instructionElements.push(friendStartButton, friendStartText, aiStartButton, aiStartText);
+    instructionElements.push(startButton, startText);
 
     this.setInstructionsContent(instructionElements, true);
   }
