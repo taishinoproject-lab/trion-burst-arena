@@ -128,6 +128,10 @@ export class PvpScene extends Phaser.Scene {
   private player2Trion = GAME_CONFIG.PLAYER_TRION_MAX;
   private player1BulletIndex = 0;
   private player2BulletIndex = 0;
+  private playerBulletTypes: { p1: BulletType[]; p2: BulletType[] } = {
+    p1: AVAILABLE_BULLET_TYPES.slice(0, 3),
+    p2: AVAILABLE_BULLET_TYPES.slice(0, 3),
+  };
   private gameOver = false;
   private winnerText!: Phaser.GameObjects.Text;
   private player1TrionBar!: Phaser.GameObjects.Graphics;
@@ -217,15 +221,40 @@ export class PvpScene extends Phaser.Scene {
     super({ key: 'PvpScene' });
   }
 
-  init() {
+  init(data?: { p1BulletTypes?: BulletType[]; p2BulletTypes?: BulletType[] }) {
     const mobileFromRegistry = this.registry.get('isMobile');
     if (typeof mobileFromRegistry === 'boolean') {
       this.isMobileMode = mobileFromRegistry;
     }
+    const normalizeSelection = (types?: BulletType[]) => {
+      const unique = Array.from(new Set(types ?? []))
+        .filter((type) => AVAILABLE_BULLET_TYPES.includes(type));
+      const filled = [...unique];
+      AVAILABLE_BULLET_TYPES.forEach((type) => {
+        if (filled.length < 3 && !filled.includes(type)) {
+          filled.push(type);
+        }
+      });
+      return filled.slice(0, 3);
+    };
+    this.playerBulletTypes = {
+      p1: normalizeSelection(data?.p1BulletTypes),
+      p2: normalizeSelection(data?.p2BulletTypes),
+    };
   }
 
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
+  }
+
+  public returnToSetup() {
+    this.scene.start('MainScene', {
+      instructionStartMode: 'twoPlayer',
+      pvpSelectedBulletTypes: {
+        p1: [...this.playerBulletTypes.p1],
+        p2: [...this.playerBulletTypes.p2],
+      },
+    });
   }
 
   private getBulletDisplayName(type: BulletType) {
@@ -278,7 +307,7 @@ export class PvpScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (this.gameOver) {
       if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
-        this.scene.restart();
+        this.returnToSetup();
       }
       return;
     }
@@ -381,7 +410,7 @@ export class PvpScene extends Phaser.Scene {
     });
     backText.setOrigin(0.5);
     const handleBack = () => {
-      this.scene.start('MainScene', { instructionStartMode: 'twoPlayer' });
+      this.returnToSetup();
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
@@ -426,11 +455,16 @@ export class PvpScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.instructionText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - (isMobile ? 20 : 32), 'R: リスタート', {
+    this.instructionText = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      GAME_CONFIG.HEIGHT - (isMobile ? 20 : 32),
+      'R: 設定に戻る',
+      {
       fontFamily: 'Arial',
       fontSize: isMobile ? '10px' : '14px',
       color: '#6b7280',
-    }).setOrigin(0.5);
+      }
+    ).setOrigin(0.5);
 
     const gameOverButtonWidth = isMobile ? 160 : 200;
     const gameOverButtonHeight = isMobile ? 46 : 54;
@@ -472,7 +506,7 @@ export class PvpScene extends Phaser.Scene {
     backOverlayText.setOrigin(0.5);
 
     const handleRestart = () => {
-      this.scene.restart();
+      this.returnToSetup();
     };
     restartButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
     restartText.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
@@ -524,8 +558,8 @@ export class PvpScene extends Phaser.Scene {
     }
     const p1Label = isMobile ? 'P1:' : 'P1 弾:';
     const p2Label = isMobile ? 'P2:' : 'P2 弾:';
-    this.player1BulletText.setText(`${p1Label} ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player1BulletIndex])}`);
-    this.player2BulletText.setText(`${p2Label} ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player2BulletIndex])}`);
+    this.player1BulletText.setText(`${p1Label} ${this.getBulletDisplayName(this.getBulletTypeForPlayer('p1'))}`);
+    this.player2BulletText.setText(`${p2Label} ${this.getBulletDisplayName(this.getBulletTypeForPlayer('p2'))}`);
     this.emitTrionStatus();
   }
 
@@ -593,15 +627,15 @@ export class PvpScene extends Phaser.Scene {
 
   private handleInput() {
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
-      this.player1BulletIndex = this.getPrevBulletIndex(this.player1BulletIndex);
+      this.player1BulletIndex = this.getPrevBulletIndex(this.player1BulletIndex, 'p1');
       this.emitBulletTypeChanged('p1');
     }
     if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
-      this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
+      this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex, 'p1');
       this.emitBulletTypeChanged('p1');
     }
     if (this.mobileInput.p1.cycleQueued) {
-      this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex);
+      this.player1BulletIndex = this.getNextBulletIndex(this.player1BulletIndex, 'p1');
       this.mobileInput.p1.cycleQueued = false;
       this.emitBulletTypeChanged('p1');
     }
@@ -613,18 +647,18 @@ export class PvpScene extends Phaser.Scene {
       this.player2CycleNext = true;
     }
     if (this.mobileInput.p2.cycleQueued) {
-      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex);
+      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
       this.mobileInput.p2.cycleQueued = false;
       this.emitBulletTypeChanged('p2');
     }
 
     if (this.player2CyclePrev) {
-      this.player2BulletIndex = this.getPrevBulletIndex(this.player2BulletIndex);
+      this.player2BulletIndex = this.getPrevBulletIndex(this.player2BulletIndex, 'p2');
       this.player2CyclePrev = false;
       this.emitBulletTypeChanged('p2');
     }
     if (this.player2CycleNext) {
-      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex);
+      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
       this.player2CycleNext = false;
       this.emitBulletTypeChanged('p2');
     }
@@ -1026,12 +1060,12 @@ export class PvpScene extends Phaser.Scene {
     };
   }
 
-  private getNextBulletIndex(index: number) {
-    return (index + 1) % AVAILABLE_BULLET_TYPES.length;
+  private getNextBulletIndex(index: number, player: 'p1' | 'p2') {
+    return (index + 1) % this.playerBulletTypes[player].length;
   }
 
-  private getPrevBulletIndex(index: number) {
-    return (index - 1 + AVAILABLE_BULLET_TYPES.length) % AVAILABLE_BULLET_TYPES.length;
+  private getPrevBulletIndex(index: number, player: 'p1' | 'p2') {
+    return (index - 1 + this.playerBulletTypes[player].length) % this.playerBulletTypes[player].length;
   }
 
   private emitBulletTypeChanged(player: 'p1' | 'p2') {
@@ -1043,7 +1077,7 @@ export class PvpScene extends Phaser.Scene {
 
   private getBulletTypeForPlayer(player: 'p1' | 'p2') {
     const index = player === 'p1' ? this.player1BulletIndex : this.player2BulletIndex;
-    return AVAILABLE_BULLET_TYPES[index];
+    return this.playerBulletTypes[player][index] ?? AVAILABLE_BULLET_TYPES[0];
   }
 
   private toggleDelayedAsteroidMode(player: 'p1' | 'p2') {
