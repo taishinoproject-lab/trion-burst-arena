@@ -20,6 +20,7 @@ interface JoystickProps {
   accent: string;
   onMove: (x: number, y: number) => void;
   displayRotation?: number;
+  labelRotationDeg?: number;
 }
 
 const getBulletDisplayName = (type?: BulletType | null) => {
@@ -39,7 +40,13 @@ const getBulletDisplayName = (type?: BulletType | null) => {
   }
 };
 
-const Joystick = ({ label, accent, onMove, displayRotation = 0 }: JoystickProps) => {
+const Joystick = ({
+  label,
+  accent,
+  onMove,
+  displayRotation = 0,
+  labelRotationDeg = 0,
+}: JoystickProps) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -161,7 +168,15 @@ const Joystick = ({ label, accent, onMove, displayRotation = 0 }: JoystickProps)
         className="text-center text-[12px] font-mono tracking-wider"
         style={{ color: `${accent}cc` }}
       >
-        <span className="inline-block">{label}</span>
+        <span
+          className="inline-block"
+          style={{
+            transform: labelRotationDeg ? `rotate(${labelRotationDeg}deg)` : undefined,
+            transformOrigin: 'center',
+          }}
+        >
+          {label}
+        </span>
       </div>
     </div>
   );
@@ -224,6 +239,8 @@ const TrionMeter = ({
   max,
   bulletLabel,
   className,
+  textRotationDeg = 0,
+  barRotationDeg = 0,
 }: {
   label: string;
   accent: string;
@@ -231,17 +248,26 @@ const TrionMeter = ({
   max: number;
   bulletLabel?: string;
   className?: string;
+  textRotationDeg?: number;
+  barRotationDeg?: number;
 }) => {
   const ratio = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
+  const textRotationStyle = textRotationDeg
+    ? { transform: `rotate(${textRotationDeg}deg)`, transformOrigin: 'center' }
+    : undefined;
   return (
     <div className={`flex flex-col items-center gap-1 ${className ?? ''}`}>
       {bulletLabel && (
         <div className="text-[10px] font-mono tracking-wider" style={{ color: `${accent}bb` }}>
-          {bulletLabel}
+          <span className="inline-block" style={textRotationStyle}>
+            {bulletLabel}
+          </span>
         </div>
       )}
       <div className="text-[11px] font-mono tracking-wider" style={{ color: `${accent}dd` }}>
-        {label}
+        <span className="inline-block" style={textRotationStyle}>
+          {label}
+        </span>
       </div>
       <div
         className="relative overflow-hidden rounded-full border-2"
@@ -251,6 +277,8 @@ const TrionMeter = ({
           borderColor: `${accent}bb`,
           background: 'rgba(15, 15, 30, 0.92)',
           boxShadow: `0 0 14px ${accent}66`,
+          transform: barRotationDeg ? `rotate(${barRotationDeg}deg)` : undefined,
+          transformOrigin: 'center',
         }}
       >
         <div
@@ -261,7 +289,9 @@ const TrionMeter = ({
           }}
         />
         <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-white/90">
-          {Math.round(value)}/{max}
+          <span className="inline-block" style={textRotationStyle}>
+            {Math.round(value)}/{max}
+          </span>
         </div>
       </div>
     </div>
@@ -288,6 +318,12 @@ const LAYOUT = {
     rotate: '90deg',
   },
 };
+
+const P1_UI_TEXT_ROT = 90;
+const P2_UI_TEXT_ROT = -90;
+const P1_JOYSTICK_LABEL_ROT = 180;
+const P2_JOYSTICK_LABEL_ROT = 180;
+const TRION_BAR_ROTATION = 90;
 
 export const MobilePvpControls = ({
   visible,
@@ -332,6 +368,8 @@ export const MobilePvpControls = ({
               value={trionStatus?.p1 ?? trionMax}
               max={trionMax}
               bulletLabel={p1BulletLabel}
+              textRotationDeg={P1_UI_TEXT_ROT}
+              barRotationDeg={TRION_BAR_ROTATION}
             />
           </div>
           <div style={{ transform: `rotate(${LAYOUT.p1.rotate})`, transformOrigin: 'center' }}>
@@ -339,6 +377,7 @@ export const MobilePvpControls = ({
               label="P1 移動"
               accent="#00ffd5"
               displayRotation={90}
+              labelRotationDeg={P1_JOYSTICK_LABEL_ROT}
               onMove={(x, y) => onMove('p1', x, y)}
             />
           </div>
@@ -538,6 +577,8 @@ export const MobilePvpControls = ({
               value={trionStatus?.p2 ?? trionMax}
               max={trionMax}
               bulletLabel={p2BulletLabel}
+              textRotationDeg={P2_UI_TEXT_ROT}
+              barRotationDeg={TRION_BAR_ROTATION}
             />
           </div>
           <div style={{ transform: `rotate(${LAYOUT.p2.rotate})`, transformOrigin: 'center' }}>
@@ -545,6 +586,7 @@ export const MobilePvpControls = ({
               label="P2 移動"
               accent="#ff6b6b"
               displayRotation={-90}
+              labelRotationDeg={P2_JOYSTICK_LABEL_ROT}
               onMove={(x, y) => onMove('p2', x, y)}
             />
           </div>
