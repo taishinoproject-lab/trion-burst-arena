@@ -19,7 +19,8 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const pvpSceneRef = useRef<PvpScene | null>(null);
   const loadingLogoUrl = `${import.meta.env.BASE_URL}loading-logo.png`;
   const loadingCubeUrl = `${import.meta.env.BASE_URL}loading-cube.png`;
-  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+  const [deviceType, setDeviceType] = useState<'phone' | 'tablet' | 'desktop' | null>(null);
+  const [mobileScale, setMobileScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [activeSceneKey, setActiveSceneKey] = useState('MainScene');
@@ -35,22 +36,46 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
   const [loadingDelayDone, setLoadingDelayDone] = useState(false);
   const fullscreenAttemptedRef = useRef(false);
-  const isMobileResolved = isMobile !== null;
+  const isMobile = deviceType === 'phone' || deviceType === 'tablet';
+  const isMobileResolved = deviceType !== null;
   const showSplash = splashPhase !== 'ready';
   const showLogo = splashPhase === 'logo';
   const showLoading = splashPhase !== 'logo';
 
   useEffect(() => {
-    // Detect mobile/touch device
-    const checkMobile = () => {
+    const resolvePhoneScale = (aspect: number) => {
+      if (aspect < 1.95) return 1.06; // 9:16 (~1.78)
+      if (aspect < 2.2) return 1.04; // ~9:19.5 (~2.17)
+      return 1.03; // 20:9 (~2.22)
+    };
+
+    // Detect mobile/touch device and distinguish phone/tablet by aspect ratio.
+    const checkDevice = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const aspect = Math.max(width, height) / Math.min(width, height);
       const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       const hasCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-      const isCompactViewport = window.matchMedia?.('(max-width: 1366px)').matches ?? window.innerWidth < 1366;
-      setIsMobile((hasTouch || hasCoarsePointer) && isCompactViewport);
+      const isCompactViewport = window.matchMedia?.('(max-width: 1366px)').matches ?? width < 1366;
+      const isTouchDevice = (hasTouch || hasCoarsePointer) && isCompactViewport;
+
+      if (!isTouchDevice) {
+        setDeviceType('desktop');
+        return;
+      }
+
+      if (aspect <= 1.5) {
+        setDeviceType('tablet');
+        setMobileScale(1.02);
+        return;
+      }
+
+      setDeviceType('phone');
+      setMobileScale(resolvePhoneScale(aspect));
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
   }, []);
 
   useEffect(() => {
@@ -112,7 +137,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
   }, []);
 
   useEffect(() => {
-    if (!gameContainerRef.current || isMobile === null) return;
+    if (!gameContainerRef.current || deviceType === null) return;
     
     // Destroy existing game if isMobile changed
     if (gameRef.current) {
@@ -213,7 +238,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         sceneRef.current = null;
       }
     };
-  }, [handleBattleStateChange, isMobile]);
+  }, [deviceType, handleBattleStateChange, isMobile]);
 
   const handleFullscreenToggle = useCallback(async () => {
     if (!fullscreenRef.current || !canFullscreen) return;
@@ -345,7 +370,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
           maxWidth: '100%',
           ...(isMobile
             ? {
-                transform: 'scale(1.04)',
+                transform: `translateX(calc((env(safe-area-inset-right) - env(safe-area-inset-left)) / 2)) scale(${mobileScale})`,
                 transformOrigin: 'center center',
               }
             : {
