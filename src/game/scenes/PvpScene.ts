@@ -231,8 +231,15 @@ export class PvpScene extends Phaser.Scene {
     nextShieldCheck: 0,
     nextCycleCheck: 0,
     nextDelayToggle: 0,
+    nextTacticalDecision: 0,
   };
   private aiStrafeDirection = 1;
+  private aiTactics = {
+    desiredBullet: 'asteroid' as BulletType,
+    desiredViperMode: 0,
+    approachDistance: 300,
+    retreatDistance: 190,
+  };
   private static readonly TWO_PLAYER_RED_SLOW_DURATION = 10000;
   private static readonly TWO_PLAYER_RED_FREEZE_DURATION = 4000;
   constructor() {
@@ -331,8 +338,15 @@ export class PvpScene extends Phaser.Scene {
       nextShieldCheck: 0,
       nextCycleCheck: 0,
       nextDelayToggle: 0,
+      nextTacticalDecision: 0,
     };
     this.aiStrafeDirection = 1;
+    this.aiTactics = {
+      desiredBullet: 'asteroid',
+      desiredViperMode: 0,
+      approachDistance: 300,
+      retreatDistance: 190,
+    };
 
     this.setupInput();
     this.createUI();
@@ -667,10 +681,55 @@ export class PvpScene extends Phaser.Scene {
     const dx = this.player1.x - this.player2.x;
     const dy = this.player1.y - this.player2.y;
     const distance = Math.max(1, Math.hypot(dx, dy));
+    const trionRatio = this.player2Trion / GAME_CONFIG.PLAYER_TRION_MAX;
+    const shield = this.player1Shield?.active ? this.player1Shield : null;
+    const shieldType = shield?.type;
+    const reserveTrion = GAME_CONFIG.SHIELD_COST + 5;
+
+    if (now >= this.aiTimers.nextTacticalDecision) {
+      let preferred: BulletType[] = ['asteroid', 'viper', 'hound', 'meteora', 'red'];
+      let approachDistance = 300;
+      let retreatDistance = 190;
+      let desiredViperMode = 0;
+
+      if (shieldType === 'wide') {
+        preferred = ['meteora', 'asteroid', 'viper', 'hound', 'red'];
+        approachDistance = 360;
+        retreatDistance = 220;
+      } else if (shieldType === 'narrow') {
+        preferred = ['viper', 'asteroid', 'hound', 'meteora', 'red'];
+        approachDistance = 320;
+        retreatDistance = 190;
+        desiredViperMode = this.aiStrafeDirection === 1 ? 1 : 2;
+      } else if (distance < 240 && trionRatio > 0.35) {
+        preferred = ['red', 'hound', 'asteroid', 'viper', 'meteora'];
+        approachDistance = 240;
+        retreatDistance = 150;
+      } else {
+        preferred = ['hound', 'asteroid', 'viper', 'meteora', 'red'];
+        approachDistance = 320;
+        retreatDistance = 200;
+      }
+
+      const desiredBullet = this.pickAffordableBulletType(preferred, reserveTrion);
+      this.aiTactics = {
+        desiredBullet,
+        desiredViperMode,
+        approachDistance,
+        retreatDistance,
+      };
+      this.setPlayerBulletType('p2', desiredBullet);
+      if (desiredBullet === 'viper') {
+        this.setViperModeIndex('p2', desiredViperMode);
+      } else {
+        this.setViperModeIndex('p2', 0);
+      }
+
+      this.aiTimers.nextTacticalDecision = now + Phaser.Math.Between(520, 900);
+    }
 
     if (now >= this.aiTimers.nextMoveUpdate) {
-      const approachDistance = 300;
-      const retreatDistance = 190;
+      const { approachDistance, retreatDistance } = this.aiTactics;
       let moveAngle = Math.atan2(dy, dx);
 
       if (distance < retreatDistance) {
@@ -689,9 +748,15 @@ export class PvpScene extends Phaser.Scene {
 
     if (now >= this.aiTimers.nextAttackToggle) {
       const inRange = distance < 450;
-      const attackChance = inRange ? 0.7 : 0.2;
-      this.aiInput.attacking = Math.random() < attackChance;
-      this.aiTimers.nextAttackToggle = now + Phaser.Math.Between(320, 620);
+      const bulletCost = this.getBulletCost(this.aiTactics.desiredBullet);
+      const canAffordShot = this.player2Trion >= bulletCost + reserveTrion;
+      const aggression =
+        trionRatio < 0.25 ? 0.1 : trionRatio < 0.4 ? 0.3 : trionRatio < 0.65 ? 0.55 : 0.75;
+      const attackChance = (inRange ? 0.7 : 0.2) * aggression;
+      this.aiInput.attacking = canAffordShot && Math.random() < attackChance;
+      const baseMin = trionRatio < 0.4 ? 520 : 360;
+      const baseMax = trionRatio < 0.4 ? 860 : 640;
+      this.aiTimers.nextAttackToggle = now + Phaser.Math.Between(baseMin, baseMax);
     }
 
     if (now >= this.aiTimers.nextShieldCheck) {
@@ -710,19 +775,8 @@ export class PvpScene extends Phaser.Scene {
       this.aiTimers.nextShieldCheck = now + Phaser.Math.Between(900, 1400);
     }
 
-    if (now >= this.aiTimers.nextCycleCheck) {
-      if (Math.random() < 0.35) {
-        this.aiInput.cycleQueued = true;
-      }
-      this.aiTimers.nextCycleCheck = now + Phaser.Math.Between(1800, 2600);
-    }
-
-    if (now >= this.aiTimers.nextDelayToggle) {
-      if (Math.random() < 0.25) {
-        this.aiInput.delayToggleQueued = true;
-      }
-      this.aiTimers.nextDelayToggle = now + Phaser.Math.Between(2200, 3200);
-    }
+    this.aiInput.cycleQueued = false;
+    this.aiInput.delayToggleQueued = false;
 
     return { x: this.aiInput.moveX, y: this.aiInput.moveY };
   }
@@ -1207,12 +1261,51 @@ export class PvpScene extends Phaser.Scene {
     return this.playerBulletTypes[player][index] ?? AVAILABLE_BULLET_TYPES[0];
   }
 
+  private pickAffordableBulletType(preferences: BulletType[], reserveTrion: number) {
+    const available = this.playerBulletTypes.p2;
+    const filtered = preferences.filter((type) => available.includes(type));
+    const candidates = filtered.length > 0 ? filtered : available;
+    const budget = Math.max(0, this.player2Trion - reserveTrion);
+    const affordable = candidates.find((type) => this.getBulletCost(type) <= budget);
+    if (affordable) return affordable;
+    return candidates.reduce((best, current) => {
+      return this.getBulletCost(current) < this.getBulletCost(best) ? current : best;
+    }, candidates[0]);
+  }
+
+  private setPlayerBulletType(player: 'p1' | 'p2', bulletType: BulletType) {
+    const index = this.playerBulletTypes[player].indexOf(bulletType);
+    if (index === -1) return;
+    if (player === 'p1') {
+      if (this.player1BulletIndex !== index) {
+        this.player1BulletIndex = index;
+        this.emitBulletTypeChanged('p1');
+      }
+      return;
+    }
+    if (this.player2BulletIndex !== index) {
+      this.player2BulletIndex = index;
+      this.emitBulletTypeChanged('p2');
+    }
+  }
+
   private toggleDelayedAsteroidMode(player: 'p1' | 'p2') {
     if (player === 'p1') {
       this.player1DelayedAsteroidEnabled = !this.player1DelayedAsteroidEnabled;
       return;
     }
     this.player2DelayedAsteroidEnabled = !this.player2DelayedAsteroidEnabled;
+  }
+
+  private setViperModeIndex(player: 'p1' | 'p2', index: number) {
+    const modeCount = this.viperPathOffsets.length;
+    if (modeCount === 0) return;
+    const normalized = ((index % modeCount) + modeCount) % modeCount;
+    if (player === 'p1') {
+      this.player1ViperModeIndex = normalized;
+      return;
+    }
+    this.player2ViperModeIndex = normalized;
   }
 
   private cycleViperMode(player: 'p1' | 'p2') {
