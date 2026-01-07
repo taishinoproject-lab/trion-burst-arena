@@ -1569,19 +1569,20 @@ export class MainScene extends Phaser.Scene {
     const titleY = layoutCenterY - (this.isMobileMode ? 220 : 210) + verticalOffset;
     const contentY = titleY + (this.isMobileMode ? 60 : 54);
 
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, 'コマンド・トリガーの詳細', {
-      fontSize: this.isMobileMode ? '32px' : '22px',
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '◆ コマンド・トリガー詳細 ◆', {
+      fontSize: this.isMobileMode ? '28px' : '24px',
       color: '#00ffd5',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
     });
     title.setOrigin(0.5);
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [title];
 
-    const backButtonX = this.isMobileMode ? 120 : 110;
-    const backButtonY = this.isMobileMode ? 70 : 60;
-    const backButtonWidth = this.isMobileMode ? 200 : 150;
-    const backButtonHeight = this.isMobileMode ? 60 : 44;
+    const backButtonX = this.isMobileMode ? 100 : 110;
+    const backButtonY = this.isMobileMode ? 60 : 60;
+    const backButtonWidth = this.isMobileMode ? 160 : 150;
+    const backButtonHeight = this.isMobileMode ? 50 : 44;
     const backButton = this.add.rectangle(
       backButtonX,
       backButtonY,
@@ -1591,8 +1592,8 @@ export class MainScene extends Phaser.Scene {
       0.95
     );
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
-    const backText = this.add.text(backButtonX, backButtonY, '戻る', {
-      fontSize: this.isMobileMode ? '22px' : '16px',
+    const backText = this.add.text(backButtonX, backButtonY, '← 戻る', {
+      fontSize: this.isMobileMode ? '18px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -1608,93 +1609,276 @@ export class MainScene extends Phaser.Scene {
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     instructionElements.push(backButton, backText);
 
-    const delaySwitchLine =
+    // レスポンシブなフォントサイズとスペーシング
+    const baseFontSize = this.isMobileMode ? (isCompactLayout ? 14 : 16) : 13;
+    const headerFontSize = this.isMobileMode ? (isCompactLayout ? 16 : 18) : 15;
+    const lineHeight = this.isMobileMode ? (isCompactLayout ? 6 : 8) : 5;
+    const sectionGap = this.isMobileMode ? 20 : 16;
+    const contentWidth = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.88 : GAME_CONFIG.WIDTH * 0.9;
+    const leftMargin = (GAME_CONFIG.WIDTH - contentWidth) / 2;
+
+    let currentY = contentY;
+
+    // ━━ コマンド解説セクション ━━
+    const commandHeader = this.add.text(GAME_CONFIG.WIDTH / 2, currentY, '━━ 操作コマンド ━━', {
+      fontSize: `${headerFontSize + 2}px`,
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    commandHeader.setOrigin(0.5, 0);
+    instructionElements.push(commandHeader);
+    currentY += commandHeader.height + lineHeight + 4;
+
+    const delaySwitchDesc =
       returnTarget === 'twoPlayer'
-        ? '・遅延弾/弾道切替：アステロイドキーは遅延、バイパーキーは弾道切替。'
-        : '・遅延弾/弾道切替（Q）：アステロイドは遅延、バイパーは弾道切替。';
+        ? 'アステロイドキーで遅延、バイパーキーで弾道切替'
+        : 'Q: アステロイドは遅延、バイパーは弾道切替';
 
-    const leftColumnLines = [
-      '━━ コマンド解説 ━━',
-      '・移動（WASDキー）：キャラクターを動かす基本操作。',
-      '・エイム（マウス）：狙いたい方向へマウスを動かす。',
-      '・射撃（左クリック/クリック）：弾を発射。',
-      '・弾種切替（E）：選んだ3種を順に切替。',
-      delaySwitchLine,
-      '・固定シールド（SPACE）：正面を守る高耐久シールド。',
-      '・全方位シールド（SHIFT+SPACE）：周囲を守るが耐久は低め。',
-      '',
-      '━━ 弾の種類と特徴 ━━',
-      `アステロイド（コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE} / 対シールド${GAME_CONFIG.ASTEROID_SHIELD_DAMAGE}）`,
-      '  標準弾。低コストで数を出せる。遅延設置（Q）で3秒静止させることが可能。',
-      `メテオラ（コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE} / 対シールド${GAME_CONFIG.METEORA_SHIELD_DAMAGE}）`,
-      '  爆風で範囲攻撃。シールド崩しが得意で固まっている弾の一掃にも。',
-      `バイパー（コスト${GAME_CONFIG.VIPER_COST} / 威力${GAME_CONFIG.VIPER_TRION_DAMAGE} / 対シールド${GAME_CONFIG.VIPER_SHIELD_DAMAGE}）`,
-      '  事前に引いた弾道で飛ぶ。戦闘中の誘導はできないが裏取りに強い。',
-      '  難易度画面の「バイパー設定」から弾道を編集。',
-      `レッドバレット（コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}）`,
-      `  命中で移動と弾速を減速。最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}回まで重ね掛け可能。2回ヒットで敵がフリーズ`,
-      '',
-      '━━ シールドの耐久値 ━━',
-      `固定シールド：耐久${GAME_CONFIG.SHIELD_NARROW_STRENGTH}。守れるのは正面だけだが強い。`,
-      `全方位シールド：耐久${GAME_CONFIG.SHIELD_WIDE_STRENGTH}。全周囲を守るが削れやすい。`,
-      `※シールドはどちらも破壊されるまで張り替えられない。→固定シールド展開中は背後が隙になる`,
-      '',
+    const commandLines = [
+      { key: '移動', desc: 'WASD キーでキャラクターを移動' },
+      { key: 'エイム', desc: 'マウスで照準を合わせる' },
+      { key: '射撃', desc: '左クリック / タップで発射' },
+      { key: '弾種切替', desc: 'E キーで選択した3種を順に切替' },
+      { key: '遅延/弾道', desc: delaySwitchDesc },
+      { key: '固定シールド', desc: 'SPACE で正面を守る（高耐久）' },
+      { key: '全方位シールド', desc: 'SHIFT+SPACE で全周囲を守る（低耐久）' },
     ];
 
-    const rightColumnLines = [
-      '━━ 初心者向け 戦略メモ ━━',
-      '・バイパーは事前に弾道を引けるので、シールドの裏を狙う動きが強い。',
-      '・メテオラはシールド破壊が得意。シールドでバイパーが通らない時などに有効。',
-      '・レッドバレットは2回当てると数秒フリーズ、正直かなり強い。ただ遅いので当て方が大事',
-      '・レッドバレットはシールド・弾を貫通する。個人的にはレッドバレット × バイパーが好き',
-      '・固定シールドは向きが変わらない。これは相手にも言えるのでチャンスになる。',
-      '・固定シールドを壊さないようにして背後に回るのがコツ（全方位シールドが出せないため）',
-      '・バイパー以外の弾は避け、バイパーは全方位シールドで防ぐ。敵が固定シールド展開中にバイパーで叩くのがおすすめ',
-      '',
-      `※数値は基準値。戦況に合わせて弾を使い分けよう。`,
+    commandLines.forEach((cmd) => {
+      const keyText = this.add.text(leftMargin, currentY, `▸ ${cmd.key}`, {
+        fontSize: `${baseFontSize}px`,
+        color: '#ffd166',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      });
+      const descText = this.add.text(leftMargin + (this.isMobileMode ? 140 : 120), currentY, cmd.desc, {
+        fontSize: `${baseFontSize}px`,
+        color: '#ffffff',
+        fontFamily: 'monospace',
+        wordWrap: { width: contentWidth - (this.isMobileMode ? 150 : 130) },
+      });
+      instructionElements.push(keyText, descText);
+      currentY += Math.max(keyText.height, descText.height) + lineHeight;
+    });
+
+    currentY += sectionGap;
+
+    // ━━ 弾種性能比較テーブル ━━
+    const bulletHeader = this.add.text(GAME_CONFIG.WIDTH / 2, currentY, '━━ 弾種性能比較 ━━', {
+      fontSize: `${headerFontSize + 2}px`,
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    bulletHeader.setOrigin(0.5, 0);
+    instructionElements.push(bulletHeader);
+    currentY += bulletHeader.height + lineHeight + 8;
+
+    // テーブルデータ
+    const tableData = [
+      { name: 'アステロイド', cost: GAME_CONFIG.ASTEROID_COST, damage: GAME_CONFIG.ASTEROID_TRION_DAMAGE, shield: GAME_CONFIG.ASTEROID_SHIELD_DAMAGE, color: '#4ade80' },
+      { name: 'メテオラ', cost: GAME_CONFIG.METEORA_COST, damage: GAME_CONFIG.METEORA_TRION_DAMAGE, shield: GAME_CONFIG.METEORA_SHIELD_DAMAGE, color: '#f97316' },
+      { name: 'バイパー', cost: GAME_CONFIG.VIPER_COST, damage: GAME_CONFIG.VIPER_TRION_DAMAGE, shield: GAME_CONFIG.VIPER_SHIELD_DAMAGE, color: '#a78bfa' },
+      { name: 'レッドバレット', cost: GAME_CONFIG.RED_BULLET_COST, damage: GAME_CONFIG.RED_BULLET_TRION_DAMAGE, shield: 0, color: '#ef4444' },
+      { name: 'ハウンド', cost: GAME_CONFIG.HOUND_COST, damage: GAME_CONFIG.HOUND_TRION_DAMAGE, shield: GAME_CONFIG.HOUND_SHIELD_DAMAGE, color: '#60a5fa' },
     ];
 
-    if (this.isMobileMode) {
-      const commandText = [...leftColumnLines, ...rightColumnLines].join('\n');
-      const commandDetail = this.add.text(GAME_CONFIG.WIDTH / 2, contentY, commandText, {
-        fontSize: isCompactLayout ? '18px' : '20px',
+    // テーブルレイアウト設定
+    const tableWidth = this.isMobileMode ? contentWidth : Math.min(contentWidth, 600);
+    const tableStartX = (GAME_CONFIG.WIDTH - tableWidth) / 2;
+    const colWidths = this.isMobileMode 
+      ? [tableWidth * 0.35, tableWidth * 0.2, tableWidth * 0.22, tableWidth * 0.23]
+      : [tableWidth * 0.32, tableWidth * 0.2, tableWidth * 0.24, tableWidth * 0.24];
+    const rowHeight = this.isMobileMode ? 28 : 24;
+    const tableFontSize = this.isMobileMode ? (isCompactLayout ? 12 : 14) : 12;
+
+    // テーブルヘッダー背景
+    const headerBg = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      currentY + rowHeight / 2,
+      tableWidth,
+      rowHeight,
+      0x1a3a4a,
+      0.8
+    );
+    instructionElements.push(headerBg);
+
+    // ヘッダーテキスト
+    const headers = ['弾種', 'コスト', '威力', '対シールド'];
+    let headerX = tableStartX;
+    headers.forEach((header, i) => {
+      const headerText = this.add.text(headerX + colWidths[i] / 2, currentY + rowHeight / 2, header, {
+        fontSize: `${tableFontSize}px`,
+        color: '#00ffd5',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      });
+      headerText.setOrigin(0.5);
+      instructionElements.push(headerText);
+      headerX += colWidths[i];
+    });
+    currentY += rowHeight;
+
+    // テーブル行
+    tableData.forEach((row, rowIndex) => {
+      // 交互の行背景
+      if (rowIndex % 2 === 0) {
+        const rowBg = this.add.rectangle(
+          GAME_CONFIG.WIDTH / 2,
+          currentY + rowHeight / 2,
+          tableWidth,
+          rowHeight,
+          0x0a1a2a,
+          0.5
+        );
+        instructionElements.push(rowBg);
+      }
+
+      let cellX = tableStartX;
+      const cells = [row.name, `${row.cost}`, `${row.damage}`, row.shield > 0 ? `${row.shield}` : '貫通'];
+      cells.forEach((cell, i) => {
+        const cellColor = i === 0 ? row.color : (cell === '貫通' ? '#ef4444' : '#ffffff');
+        const cellText = this.add.text(cellX + colWidths[i] / 2, currentY + rowHeight / 2, cell, {
+          fontSize: `${tableFontSize}px`,
+          color: cellColor,
+          fontFamily: 'monospace',
+          fontStyle: i === 0 ? 'bold' : 'normal',
+        });
+        cellText.setOrigin(0.5);
+        instructionElements.push(cellText);
+        cellX += colWidths[i];
+      });
+      currentY += rowHeight;
+    });
+
+    // テーブル枠線
+    const tableBorder = this.add.graphics();
+    tableBorder.lineStyle(1, 0x00ffd5, 0.5);
+    const tableTop = contentY + bulletHeader.height + lineHeight + 8;
+    tableBorder.strokeRect(tableStartX, tableTop, tableWidth, rowHeight * (tableData.length + 1));
+    instructionElements.push(tableBorder);
+
+    currentY += sectionGap;
+
+    // ━━ 弾種詳細説明 ━━
+    const detailHeader = this.add.text(GAME_CONFIG.WIDTH / 2, currentY, '━━ 弾種の特徴 ━━', {
+      fontSize: `${headerFontSize + 2}px`,
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    detailHeader.setOrigin(0.5, 0);
+    instructionElements.push(detailHeader);
+    currentY += detailHeader.height + lineHeight + 4;
+
+    const bulletDetails = [
+      { name: 'アステロイド', desc: '標準弾。低コストで連射向き。Qキーで3秒間静止させる遅延弾に。', color: '#4ade80' },
+      { name: 'メテオラ', desc: '爆風で範囲攻撃。シールド破壊が得意。密集した敵弾も一掃可能。', color: '#f97316' },
+      { name: 'バイパー', desc: '設定した弾道で飛ぶ。誘導なしだが裏取りに最適。設定画面で弾道編集。', color: '#a78bfa' },
+      { name: 'レッドバレット', desc: `命中で減速。最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}回重ね掛け、2回でフリーズ。シールド貫通。`, color: '#ef4444' },
+      { name: 'ハウンド', desc: '敵を追尾する誘導弾。命中精度が高いが威力は控えめ。', color: '#60a5fa' },
+    ];
+
+    bulletDetails.forEach((bullet) => {
+      const nameText = this.add.text(leftMargin, currentY, `● ${bullet.name}`, {
+        fontSize: `${baseFontSize}px`,
+        color: bullet.color,
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      });
+      instructionElements.push(nameText);
+      currentY += nameText.height + 2;
+
+      const descText = this.add.text(leftMargin + 16, currentY, bullet.desc, {
+        fontSize: `${baseFontSize - 1}px`,
+        color: '#cccccc',
+        fontFamily: 'monospace',
+        wordWrap: { width: contentWidth - 20 },
+        lineSpacing: 2,
+      });
+      instructionElements.push(descText);
+      currentY += descText.height + lineHeight + 2;
+    });
+
+    currentY += sectionGap - 8;
+
+    // ━━ シールド情報 ━━
+    const shieldHeader = this.add.text(GAME_CONFIG.WIDTH / 2, currentY, '━━ シールド耐久 ━━', {
+      fontSize: `${headerFontSize + 2}px`,
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    shieldHeader.setOrigin(0.5, 0);
+    instructionElements.push(shieldHeader);
+    currentY += shieldHeader.height + lineHeight + 4;
+
+    const shieldInfo = [
+      { name: '固定シールド', value: GAME_CONFIG.SHIELD_NARROW_STRENGTH, desc: '正面のみだが高耐久', color: '#38bdf8' },
+      { name: '全方位シールド', value: GAME_CONFIG.SHIELD_WIDE_STRENGTH, desc: '全周囲だが削れやすい', color: '#818cf8' },
+    ];
+
+    shieldInfo.forEach((shield) => {
+      const shieldLine = this.add.text(
+        leftMargin,
+        currentY,
+        `▸ ${shield.name}（耐久${shield.value}）: ${shield.desc}`,
+        {
+          fontSize: `${baseFontSize}px`,
+          color: shield.color,
+          fontFamily: 'monospace',
+          wordWrap: { width: contentWidth },
+        }
+      );
+      instructionElements.push(shieldLine);
+      currentY += shieldLine.height + lineHeight;
+    });
+
+    const shieldNote = this.add.text(
+      leftMargin,
+      currentY,
+      '※ シールドは破壊されるまで張り替え不可。固定シールド中は背後が隙に。',
+      {
+        fontSize: `${baseFontSize - 1}px`,
+        color: '#888888',
+        fontFamily: 'monospace',
+        wordWrap: { width: contentWidth },
+      }
+    );
+    instructionElements.push(shieldNote);
+    currentY += shieldNote.height + sectionGap;
+
+    // ━━ 戦略メモ ━━
+    const strategyHeader = this.add.text(GAME_CONFIG.WIDTH / 2, currentY, '━━ 初心者向け戦略メモ ━━', {
+      fontSize: `${headerFontSize + 2}px`,
+      color: '#ffd166',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    strategyHeader.setOrigin(0.5, 0);
+    instructionElements.push(strategyHeader);
+    currentY += strategyHeader.height + lineHeight + 4;
+
+    const strategies = [
+      'バイパーは弾道を事前設定できるので、シールドの裏を狙う動きが強力。',
+      'メテオラはシールド破壊が得意。バイパーが通らない時に有効。',
+      'レッドバレット2回命中でフリーズ。遅いので当て方が大事。',
+      'レッドバレットはシールド・弾を貫通。バイパーとの組合せがおすすめ。',
+      '固定シールドの向きは固定。敵のシールド方向を見て背後を狙おう。',
+    ];
+
+    strategies.forEach((strategy, i) => {
+      const strategyText = this.add.text(leftMargin, currentY, `${i + 1}. ${strategy}`, {
+        fontSize: `${baseFontSize - 1}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
-        align: 'left',
-        lineSpacing: 10,
-        wordWrap: { width: 560 },
+        wordWrap: { width: contentWidth - 10 },
+        lineSpacing: 2,
       });
-      commandDetail.setOrigin(0.5, 0);
-      instructionElements.push(commandDetail);
-    } else {
-      const columnGap = 40;
-      const columnWidth = 520;
-      const totalWidth = columnWidth * 2 + columnGap;
-      const leftX = GAME_CONFIG.WIDTH / 2 - totalWidth / 2;
-      const rightX = leftX + columnWidth + columnGap;
-
-      const leftText = this.add.text(leftX, contentY, leftColumnLines.join('\n'), {
-        fontSize: '14px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        align: 'left',
-        lineSpacing: 6,
-        wordWrap: { width: columnWidth },
-      });
-      leftText.setOrigin(0, 0);
-
-      const rightText = this.add.text(rightX, contentY, rightColumnLines.join('\n'), {
-        fontSize: '14px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-        align: 'left',
-        lineSpacing: 6,
-        wordWrap: { width: columnWidth },
-      });
-      rightText.setOrigin(0, 0);
-
-      instructionElements.push(leftText, rightText);
-    }
+      instructionElements.push(strategyText);
+      currentY += strategyText.height + lineHeight;
+    });
 
     this.setInstructionsContent(instructionElements, true);
   }
