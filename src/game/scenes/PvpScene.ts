@@ -554,6 +554,9 @@ export class PvpScene extends Phaser.Scene {
   }
 
   private showGameOverButtons() {
+    if (this.isMobileMode) {
+      return;
+    }
     this.restartButton?.setVisible(true);
     this.restartButtonText?.setVisible(true);
     this.gameOverBackButton?.setVisible(true);

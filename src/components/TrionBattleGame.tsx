@@ -338,6 +338,14 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     }
   }, []);
 
+  const handlePvpRestart = useCallback(() => {
+    pvpSceneRef.current?.scene.restart();
+  }, []);
+
+  const handlePvpBack = useCallback(() => {
+    pvpSceneRef.current?.scene.start('MainScene', { instructionStartMode: 'twoPlayer' });
+  }, []);
+
   return (
     <div
       ref={fullscreenRef}
@@ -412,6 +420,32 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         currentBulletType={pvpBulletTypes}
         trionStatus={pvpTrionStatus ?? undefined}
       />
+      {isMobile && activeSceneKey === 'PvpScene' && isPvpGameOver && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto flex gap-4">
+            <button
+              type="button"
+              onClick={handlePvpRestart}
+              className="rounded-2xl px-6 py-3 text-sm font-semibold text-white shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0, 255, 213, 0.95), rgba(0, 180, 150, 0.95))',
+              }}
+            >
+              リスタート
+            </button>
+            <button
+              type="button"
+              onClick={handlePvpBack}
+              className="rounded-2xl px-6 py-3 text-sm font-semibold text-white shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 128, 128, 0.95), rgba(255, 90, 90, 0.95))',
+              }}
+            >
+              戻る
+            </button>
+          </div>
+        </div>
+      )}
       <div
         className="fixed inset-0 z-[70] flex items-center justify-center bg-black transition-opacity duration-500"
         style={{
