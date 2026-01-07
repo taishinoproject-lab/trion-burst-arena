@@ -536,34 +536,39 @@ export class MainScene extends Phaser.Scene {
     const { layoutCenterY, actionButtonHeight, isCompactLayout } = this.getInstructionLayout();
     const mobileScale = this.isMobileMode ? 3 : 1;
     const layoutBaseY = this.isMobileMode
-      ? layoutCenterY + (isCompactLayout ? 120 : 140)
+      ? layoutCenterY + (isCompactLayout ? 80 : 100)
       : layoutCenterY;
     const titleY =
       layoutBaseY -
-      (this.isMobileMode ? (isCompactLayout ? 160 : 180) * mobileScale : 230);
-    const overviewTextY =
-      layoutBaseY -
-      (this.isMobileMode ? (isCompactLayout ? 60 : 80) * mobileScale : 130);
+      (this.isMobileMode ? (isCompactLayout ? 60 : 80) * mobileScale : 230);
+    const infoTextY =
+      this.isMobileMode
+        ? titleY + (isCompactLayout ? 38 : 45) * mobileScale
+        : layoutBaseY - 130;
     const modeLabelY =
       layoutBaseY +
-      (this.isMobileMode ? (isCompactLayout ? 30 : 50) * mobileScale : 10);
+      (this.isMobileMode ? (isCompactLayout ? 20 : 30) * mobileScale : 10);
     const buttonY =
-      layoutBaseY +
-      (this.isMobileMode ? (isCompactLayout ? 90 : 110) * mobileScale : 90);
-    const buttonSpacing = this.isMobileMode ? 20 * mobileScale : 30;
-    // Larger buttons for mobile - use vertical stack layout
+      this.isMobileMode
+        ? modeLabelY + (isCompactLayout ? 45 : 55) * mobileScale
+        : layoutBaseY + 90;
+    const buttonSpacing = this.isMobileMode ? (isCompactLayout ? 12 : 16) * mobileScale : 30;
+    // Larger buttons for mobile - use horizontal layout
     const baseButtonWidth = this.isMobileMode ? (isCompactLayout ? 200 : 220) : 200;
     const baseButtonHeight = this.isMobileMode ? (isCompactLayout ? 56 : 64) : 60;
+    const mobileButtonAreaWidth = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.66 : 0;
     const buttonWidth = this.isMobileMode
-      ? Math.min(baseButtonWidth * mobileScale, GAME_CONFIG.WIDTH * 0.9)
+      ? Math.min(baseButtonWidth * mobileScale, (mobileButtonAreaWidth - buttonSpacing) / 2)
       : baseButtonWidth;
     const buttonHeight = this.isMobileMode ? baseButtonHeight * mobileScale : baseButtonHeight;
-    const totalButtonWidth = this.isMobileMode ? buttonWidth : buttonWidth * 2 + buttonSpacing;
+    const totalButtonWidth = buttonWidth * 2 + buttonSpacing;
     const firstButtonX = this.isMobileMode
-      ? GAME_CONFIG.WIDTH / 2
+      ? GAME_CONFIG.WIDTH / 2 - buttonWidth / 2 - buttonSpacing / 2
       : GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
-    const secondButtonX = this.isMobileMode ? GAME_CONFIG.WIDTH / 2 : firstButtonX + buttonWidth + buttonSpacing;
-    const secondButtonY = this.isMobileMode ? buttonY + buttonHeight + buttonSpacing : buttonY;
+    const secondButtonX = this.isMobileMode
+      ? GAME_CONFIG.WIDTH / 2 + buttonWidth / 2 + buttonSpacing / 2
+      : firstButtonX + buttonWidth + buttonSpacing;
+    const secondButtonY = buttonY;
 
     const instructionElements: Phaser.GameObjects.GameObject[] = [];
 
@@ -629,14 +634,14 @@ export class MainScene extends Phaser.Scene {
 
     // Overview text with better styling - smaller on mobile
     const overviewFontSize = this.isMobileMode
-      ? `${(isCompactLayout ? 14 : 16) * mobileScale}px`
+      ? `${(isCompactLayout ? 12 : 14) * mobileScale}px`
       : '15px';
     const overviewLineSpacing = this.isMobileMode ? (isCompactLayout ? 6 : 8) * mobileScale : 8;
     const overviewText = this.add.text(
       GAME_CONFIG.WIDTH / 2,
-      overviewTextY,
+      infoTextY,
       this.isMobileMode 
-        ? '━━━ 概要 ━━━\n► トリオン = エネルギー\n► 0で敗北 | トリガー = 武器'
+        ? '※ モバイル版は全画面表示ボタンを押し、\n横画面でお楽しみください'
         : '\n\n\n━━━ システム概要 ━━━\n' +
           '► トリオン = 生体エネルギー\n' +
           '► 攻撃・防御・被弾で減少 → 0で敗北\n' +
@@ -655,7 +660,7 @@ export class MainScene extends Phaser.Scene {
 
     // Mode select label with decorative elements
     const modeLabelWidth = this.isMobileMode
-      ? Math.min((isCompactLayout ? 180 : 200) * mobileScale, GAME_CONFIG.WIDTH * 0.8)
+      ? Math.min((isCompactLayout ? 160 : 180) * mobileScale, GAME_CONFIG.WIDTH * 0.66)
       : 240;
     const modeLabelBg = this.add.graphics();
     modeLabelBg.fillStyle(GAME_CONFIG.BULLET_COLOR, 0.1);
