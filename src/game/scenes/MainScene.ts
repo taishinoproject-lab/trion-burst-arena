@@ -549,7 +549,7 @@ export class MainScene extends Phaser.Scene {
     this.instructionsContent = this.add.container(0, 0, elements);
     this.instructionsOverlay.add(this.instructionsContent);
 
-    if (this.isMobileMode && enableScroll && this.instructionsBackground) {
+    if (enableScroll && this.instructionsBackground) {
       this.enableInstructionScroll(this.instructionsBackground, this.instructionsContent);
     }
   }
@@ -1616,6 +1616,7 @@ export class MainScene extends Phaser.Scene {
     const sectionGap = this.isMobileMode ? 20 : 16;
     const contentWidth = this.isMobileMode ? GAME_CONFIG.WIDTH * 0.88 : GAME_CONFIG.WIDTH * 0.9;
     const leftMargin = (GAME_CONFIG.WIDTH - contentWidth) / 2;
+    const centerX = GAME_CONFIG.WIDTH / 2;
 
     let currentY = contentY;
 
@@ -1646,20 +1647,16 @@ export class MainScene extends Phaser.Scene {
     ];
 
     commandLines.forEach((cmd) => {
-      const keyText = this.add.text(leftMargin, currentY, `▸ ${cmd.key}`, {
-        fontSize: `${baseFontSize}px`,
-        color: '#ffd166',
-        fontFamily: 'monospace',
-        fontStyle: 'bold',
-      });
-      const descText = this.add.text(leftMargin + (this.isMobileMode ? 140 : 120), currentY, cmd.desc, {
+      const commandText = this.add.text(centerX, currentY, `▸ ${cmd.key}：${cmd.desc}`, {
         fontSize: `${baseFontSize}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
-        wordWrap: { width: contentWidth - (this.isMobileMode ? 150 : 130) },
+        align: 'center',
+        wordWrap: { width: contentWidth },
       });
-      instructionElements.push(keyText, descText);
-      currentY += Math.max(keyText.height, descText.height) + lineHeight;
+      commandText.setOrigin(0.5, 0);
+      instructionElements.push(commandText);
+      currentY += commandText.height + lineHeight;
     });
 
     currentY += sectionGap;
@@ -1781,22 +1778,26 @@ export class MainScene extends Phaser.Scene {
     ];
 
     bulletDetails.forEach((bullet) => {
-      const nameText = this.add.text(leftMargin, currentY, `● ${bullet.name}`, {
+      const nameText = this.add.text(centerX, currentY, `● ${bullet.name}`, {
         fontSize: `${baseFontSize}px`,
         color: bullet.color,
         fontFamily: 'monospace',
         fontStyle: 'bold',
+        align: 'center',
       });
+      nameText.setOrigin(0.5, 0);
       instructionElements.push(nameText);
       currentY += nameText.height + 2;
 
-      const descText = this.add.text(leftMargin + 16, currentY, bullet.desc, {
+      const descText = this.add.text(centerX, currentY, bullet.desc, {
         fontSize: `${baseFontSize - 1}px`,
         color: '#cccccc',
         fontFamily: 'monospace',
         wordWrap: { width: contentWidth - 20 },
+        align: 'center',
         lineSpacing: 2,
       });
+      descText.setOrigin(0.5, 0);
       instructionElements.push(descText);
       currentY += descText.height + lineHeight + 2;
     });
@@ -1821,31 +1822,35 @@ export class MainScene extends Phaser.Scene {
 
     shieldInfo.forEach((shield) => {
       const shieldLine = this.add.text(
-        leftMargin,
+        centerX,
         currentY,
         `▸ ${shield.name}（耐久${shield.value}）: ${shield.desc}`,
         {
           fontSize: `${baseFontSize}px`,
           color: shield.color,
           fontFamily: 'monospace',
+          align: 'center',
           wordWrap: { width: contentWidth },
         }
       );
+      shieldLine.setOrigin(0.5, 0);
       instructionElements.push(shieldLine);
       currentY += shieldLine.height + lineHeight;
     });
 
     const shieldNote = this.add.text(
-      leftMargin,
+      centerX,
       currentY,
       '※ シールドは破壊されるまで張り替え不可。固定シールド中は背後が隙に。',
       {
         fontSize: `${baseFontSize - 1}px`,
         color: '#888888',
         fontFamily: 'monospace',
+        align: 'center',
         wordWrap: { width: contentWidth },
       }
     );
+    shieldNote.setOrigin(0.5, 0);
     instructionElements.push(shieldNote);
     currentY += shieldNote.height + sectionGap;
 
@@ -1869,13 +1874,15 @@ export class MainScene extends Phaser.Scene {
     ];
 
     strategies.forEach((strategy, i) => {
-      const strategyText = this.add.text(leftMargin, currentY, `${i + 1}. ${strategy}`, {
+      const strategyText = this.add.text(centerX, currentY, `${i + 1}. ${strategy}`, {
         fontSize: `${baseFontSize - 1}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
+        align: 'center',
         wordWrap: { width: contentWidth - 10 },
         lineSpacing: 2,
       });
+      strategyText.setOrigin(0.5, 0);
       instructionElements.push(strategyText);
       currentY += strategyText.height + lineHeight;
     });
@@ -2485,8 +2492,8 @@ export class MainScene extends Phaser.Scene {
     const contentBounds = content.getBounds();
     const isLandscapeMobile =
       this.isMobileMode && this.scale.displaySize.width > this.scale.displaySize.height;
-    const bottomPadding = this.isMobileMode ? (isLandscapeMobile ? 220 : 160) : 0;
-    const topPadding = this.isMobileMode ? (isLandscapeMobile ? 40 : 20) : 0;
+    const bottomPadding = this.isMobileMode ? (isLandscapeMobile ? 220 : 160) : 40;
+    const topPadding = this.isMobileMode ? (isLandscapeMobile ? 40 : 20) : 20;
     const minScrollY = Math.min(0, GAME_CONFIG.HEIGHT - (contentBounds.bottom + bottomPadding));
     const maxScrollY = Math.max(0, -contentBounds.top + topPadding);
 
@@ -2522,16 +2529,24 @@ export class MainScene extends Phaser.Scene {
       isDragging = false;
     };
 
+    const handleWheel = (_pointer: Phaser.Input.Pointer, _gameObjects: unknown, _deltaX: number, deltaY: number) => {
+      if (Math.abs(deltaY) < 1) return;
+      const nextY = Phaser.Math.Clamp(content.y - deltaY * 0.4, minScrollY, maxScrollY);
+      content.y = nextY;
+    };
+
     this.input.on('pointerdown', handlePointerDown);
     this.input.on('pointermove', handlePointerMove);
     this.input.on('pointerup', handlePointerUp);
     this.input.on('pointerupoutside', handlePointerUp);
+    this.input.on('wheel', handleWheel);
 
     this.instructionScrollCleanup = () => {
       this.input.off('pointerdown', handlePointerDown);
       this.input.off('pointermove', handlePointerMove);
       this.input.off('pointerup', handlePointerUp);
       this.input.off('pointerupoutside', handlePointerUp);
+      this.input.off('wheel', handleWheel);
       if (background.active && background.scene) {
         background.disableInteractive();
       }
