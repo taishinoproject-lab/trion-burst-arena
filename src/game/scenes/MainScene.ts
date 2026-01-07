@@ -1018,87 +1018,75 @@ export class MainScene extends Phaser.Scene {
     viperButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
     viperText.setInteractive({ useHandCursor: true }).on('pointerdown', handleViperSettings);
 
-    // Create smaller buttons for mobile - horizontal layout
-    const buttonWidth = this.isMobileMode ? (isCompactLayout ? 120 : 130) : 80;
-    const buttonHeight = this.isMobileMode ? (isCompactLayout ? 48 : 56) : 40;
-    const buttonY = difficultyLabelY + (this.isMobileMode ? (isCompactLayout ? 70 : 80) : 80);
-    const buttonSpacing = this.isMobileMode ? (isCompactLayout ? 12 : 16) : 20;
-    const totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
-    const firstButtonX = GAME_CONFIG.WIDTH / 2 - totalButtonWidth / 2 + buttonWidth / 2;
-    const easyButtonX = firstButtonX;
-    const middleButtonX = firstButtonX + buttonWidth + buttonSpacing;
-    const hardButtonX = middleButtonX + buttonWidth + buttonSpacing;
+    // Difficulty level selector (single box with arrows)
+    const selectorWidth = this.isMobileMode ? (isCompactLayout ? 190 : 210) : 200;
+    const selectorHeight = this.isMobileMode ? (isCompactLayout ? 48 : 56) : 44;
+    const selectorY = difficultyLabelY + (this.isMobileMode ? (isCompactLayout ? 70 : 80) : 80);
+    const selectorX = GAME_CONFIG.WIDTH / 2;
+    const arrowButtonSize = this.isMobileMode ? (isCompactLayout ? 32 : 36) : 32;
+    const arrowGap = this.isMobileMode ? (isCompactLayout ? 14 : 16) : 16;
+    const arrowOffset = selectorWidth / 2 + arrowButtonSize / 2 + arrowGap;
 
-    // Easy button
-    const easyBg = this.add.rectangle(
-      easyButtonX,
-      buttonY,
-      buttonWidth,
-      buttonHeight,
+    const difficultyLevels = [
+      { level: 0, difficulty: 'easy' as Difficulty, label: 'レベル0', color: GAME_CONFIG.BULLET_COLOR, textColor: '#00ffd5' },
+      { level: 1, difficulty: 'middle' as Difficulty, label: 'レベル1', color: 0xffd166, textColor: '#ffd166' },
+      { level: 2, difficulty: 'hard' as Difficulty, label: 'レベル2', color: 0xff6b6b, textColor: '#ff6b6b' },
+    ];
+    const initialLevelIndex = Math.max(
+      0,
+      difficultyLevels.findIndex((level) => level.difficulty === this.difficulty)
+    );
+    let selectedLevelIndex = initialLevelIndex;
+
+    const selectorBg = this.add.rectangle(
+      selectorX,
+      selectorY,
+      selectorWidth,
+      selectorHeight,
       0x1a1a3a,
       0.9
     );
-    easyBg.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.8);
-    
-    const diffBtnFontSize = this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '20px';
-    
-    const easyText = this.add.text(
-      easyButtonX,
-      buttonY,
-      'イージー',
-      {
-        fontSize: diffBtnFontSize,
-        color: this.difficulty === 'easy' ? '#00ffd5' : '#aaaaaa',
-        fontFamily: 'monospace',
-      }
-    );
-    easyText.setOrigin(0.5);
+    selectorBg.setStrokeStyle(3, difficultyLevels[selectedLevelIndex].color, 0.8);
 
-    // Middle button
-    const middleBg = this.add.rectangle(
-      middleButtonX,
-      buttonY,
-      buttonWidth,
-      buttonHeight,
+    const levelFontSize = this.isMobileMode ? (isCompactLayout ? '18px' : '20px') : '20px';
+    const levelText = this.add.text(selectorX, selectorY, difficultyLevels[selectedLevelIndex].label, {
+      fontSize: levelFontSize,
+      color: difficultyLevels[selectedLevelIndex].textColor,
+      fontFamily: 'monospace',
+    });
+    levelText.setOrigin(0.5);
+
+    const leftArrowBg = this.add.rectangle(
+      selectorX - arrowOffset,
+      selectorY,
+      arrowButtonSize,
+      arrowButtonSize,
       0x1a1a3a,
-      0.9
+      0.95
     );
-    middleBg.setStrokeStyle(3, 0xffd166, 0.8);
+    leftArrowBg.setStrokeStyle(2, 0x4ad6ff, 0.9);
+    const leftArrowText = this.add.text(selectorX - arrowOffset, selectorY, '◀', {
+      fontSize: this.isMobileMode ? '16px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    leftArrowText.setOrigin(0.5);
 
-    const middleText = this.add.text(
-      middleButtonX,
-      buttonY,
-      'ミドル',
-      {
-        fontSize: diffBtnFontSize,
-        color: this.difficulty === 'middle' ? '#ffd166' : '#aaaaaa',
-        fontFamily: 'monospace',
-      }
-    );
-    middleText.setOrigin(0.5);
-
-    // Hard button
-    const hardBg = this.add.rectangle(
-      hardButtonX,
-      buttonY,
-      buttonWidth,
-      buttonHeight,
+    const rightArrowBg = this.add.rectangle(
+      selectorX + arrowOffset,
+      selectorY,
+      arrowButtonSize,
+      arrowButtonSize,
       0x1a1a3a,
-      0.9
+      0.95
     );
-    hardBg.setStrokeStyle(3, 0xff6b6b, 0.8);
-    
-    const hardText = this.add.text(
-      hardButtonX,
-      buttonY,
-      'ハード',
-      {
-        fontSize: diffBtnFontSize,
-        color: this.difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa',
-        fontFamily: 'monospace',
-      }
-    );
-    hardText.setOrigin(0.5);
+    rightArrowBg.setStrokeStyle(2, 0x4ad6ff, 0.9);
+    const rightArrowText = this.add.text(selectorX + arrowOffset, selectorY, '▶', {
+      fontSize: this.isMobileMode ? '16px' : '18px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    rightArrowText.setOrigin(0.5);
 
     const promptText = !this.isMobileMode
       ? this.add.text(
@@ -1116,55 +1104,60 @@ export class MainScene extends Phaser.Scene {
       : null;
     promptText?.setOrigin(0.5);
 
-    const updateDifficultySelection = (difficulty: Difficulty) => {
-      this.difficulty = difficulty;
-      easyText.setColor(difficulty === 'easy' ? '#00ffd5' : '#aaaaaa');
-      middleText.setColor(difficulty === 'middle' ? '#ffd166' : '#aaaaaa');
-      hardText.setColor(difficulty === 'hard' ? '#ff6b6b' : '#aaaaaa');
-      easyBg.setStrokeStyle(3, difficulty === 'easy' ? GAME_CONFIG.BULLET_COLOR : 0x444444, 0.8);
-      middleBg.setStrokeStyle(3, difficulty === 'middle' ? 0xffd166 : 0x444444, 0.8);
-      hardBg.setStrokeStyle(3, difficulty === 'hard' ? 0xff6b6b : 0x444444, 0.8);
+    const updateDifficultySelection = (levelIndex: number) => {
+      selectedLevelIndex = Phaser.Math.Clamp(levelIndex, 0, difficultyLevels.length - 1);
+      const currentLevel = difficultyLevels[selectedLevelIndex];
+      this.difficulty = currentLevel.difficulty;
+      levelText.setText(currentLevel.label);
+      levelText.setColor(currentLevel.textColor);
+      selectorBg.setStrokeStyle(3, currentLevel.color, 0.8);
+      const isAtStart = selectedLevelIndex === 0;
+      const isAtEnd = selectedLevelIndex === difficultyLevels.length - 1;
+      const leftAlpha = isAtStart ? 0.4 : 1;
+      const rightAlpha = isAtEnd ? 0.4 : 1;
+      leftArrowBg.setAlpha(leftAlpha);
+      leftArrowText.setAlpha(leftAlpha);
+      rightArrowBg.setAlpha(rightAlpha);
+      rightArrowText.setAlpha(rightAlpha);
     };
 
-    // Make both background and text interactive for touch
-    easyBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      updateDifficultySelection('easy');
+    updateDifficultySelection(selectedLevelIndex);
+
+    const handleLevelChange = (direction: number) => {
+      updateDifficultySelection(selectedLevelIndex + direction);
+    };
+
+    leftArrowBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      handleLevelChange(-1);
     });
-    easyText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      updateDifficultySelection('easy');
+    leftArrowText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      handleLevelChange(-1);
     });
 
-    middleBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      updateDifficultySelection('middle');
+    rightArrowBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      handleLevelChange(1);
     });
-    middleText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      updateDifficultySelection('middle');
-    });
-
-    hardBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      updateDifficultySelection('hard');
-    });
-    hardText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      updateDifficultySelection('hard');
+    rightArrowText.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      handleLevelChange(1);
     });
 
     instructionElements.push(
       difficultyLabel,
       viperButton,
       viperText,
-      easyBg,
-      easyText,
-      middleBg,
-      middleText,
-      hardBg,
-      hardText
+      selectorBg,
+      levelText,
+      leftArrowBg,
+      leftArrowText,
+      rightArrowBg,
+      rightArrowText
     );
     if (promptText) {
       instructionElements.push(promptText);
     }
 
     const weaponStatusY = this.isMobileMode
-      ? buttonY + (isCompactLayout ? 52 : 60)
+      ? selectorY + (isCompactLayout ? 52 : 60)
       : layoutCenterY + 190;
     const weaponStatus = this.add.text(GAME_CONFIG.WIDTH / 2, weaponStatusY, '', {
       fontSize: this.isMobileMode ? (isCompactLayout ? '14px' : '16px') : '14px',
