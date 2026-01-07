@@ -344,7 +344,10 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
           height: isMobile ? '100%' : 'auto',
           maxWidth: '100%',
           ...(isMobile
-            ? {}
+            ? {
+                transform: 'scale(1.04)',
+                transformOrigin: 'center center',
+              }
             : {
                 aspectRatio: '16 / 9',
                 maxHeight: 'calc(100dvh - 9rem)',
