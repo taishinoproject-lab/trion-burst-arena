@@ -176,25 +176,25 @@ export class PvpScene extends Phaser.Scene {
   private player2ViperModeIndex = 0;
   private viperPathOffsets: ViperPathOffset[][] = [
     [
-      { x: 0, y: 0 },
-      { x: 0, y: 0 },
-      { x: 0, y: 0 },
-      { x: 0, y: 0 },
-      { x: 0, y: 0 },
+      { x: 60, y: 0 },
+      { x: 140, y: 0 },
+      { x: 220, y: 0 },
+      { x: 200, y: 0 },
+      { x: 160, y: 0 },
     ],
     [
-      { x: 60, y: 0 },
-      { x: 120, y: 0 },
-      { x: 120, y: 0 },
-      { x: 60, y: 0 },
-      { x: 0, y: 0 },
+      { x: -60, y: 0 },
+      { x: -140, y: 0 },
+      { x: -220, y: 0 },
+      { x: -200, y: 0 },
+      { x: -160, y: 0 },
     ],
     [
-      { x: -90, y: 0 },
-      { x: -40, y: 0 },
-      { x: 40, y: 0 },
-      { x: 90, y: 0 },
       { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 140, y: 0 },
+      { x: -80, y: 0 },
     ],
   ];
   private mobileInput = {
