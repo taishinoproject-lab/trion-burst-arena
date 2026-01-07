@@ -215,13 +215,31 @@ export class PvpScene extends Phaser.Scene {
       cycleQueued: false,
     },
   };
+  private aiEnabled = false;
+  private aiInput = {
+    moveX: 0,
+    moveY: 0,
+    attacking: false,
+    shieldQueued: false,
+    wideShieldQueued: false,
+    cycleQueued: false,
+    delayToggleQueued: false,
+  };
+  private aiTimers = {
+    nextMoveUpdate: 0,
+    nextAttackToggle: 0,
+    nextShieldCheck: 0,
+    nextCycleCheck: 0,
+    nextDelayToggle: 0,
+  };
+  private aiStrafeDirection = 1;
   private static readonly TWO_PLAYER_RED_SLOW_DURATION = 10000;
   private static readonly TWO_PLAYER_RED_FREEZE_DURATION = 4000;
   constructor() {
     super({ key: 'PvpScene' });
   }
 
-  init(data?: { p1BulletTypes?: BulletType[]; p2BulletTypes?: BulletType[] }) {
+  init(data?: { p1BulletTypes?: BulletType[]; p2BulletTypes?: BulletType[]; aiEnabled?: boolean }) {
     const mobileFromRegistry = this.registry.get('isMobile');
     if (typeof mobileFromRegistry === 'boolean') {
       this.isMobileMode = mobileFromRegistry;
@@ -241,6 +259,7 @@ export class PvpScene extends Phaser.Scene {
       p1: normalizeSelection(data?.p1BulletTypes),
       p2: normalizeSelection(data?.p2BulletTypes),
     };
+    this.aiEnabled = Boolean(data?.aiEnabled);
   }
 
   public setMobileMode(mobile: boolean) {
@@ -254,6 +273,7 @@ export class PvpScene extends Phaser.Scene {
         p1: [...this.playerBulletTypes.p1],
         p2: [...this.playerBulletTypes.p2],
       },
+      pvpAiEnabled: this.aiEnabled,
     });
   }
 
@@ -296,6 +316,23 @@ export class PvpScene extends Phaser.Scene {
     this.player2DelayedAsteroidEnabled = false;
     this.player1ViperModeIndex = 0;
     this.player2ViperModeIndex = 0;
+    this.aiInput = {
+      moveX: 0,
+      moveY: 0,
+      attacking: false,
+      shieldQueued: false,
+      wideShieldQueued: false,
+      cycleQueued: false,
+      delayToggleQueued: false,
+    };
+    this.aiTimers = {
+      nextMoveUpdate: 0,
+      nextAttackToggle: 0,
+      nextShieldCheck: 0,
+      nextCycleCheck: 0,
+      nextDelayToggle: 0,
+    };
+    this.aiStrafeDirection = 1;
 
     this.setupInput();
     this.createUI();
@@ -313,7 +350,7 @@ export class PvpScene extends Phaser.Scene {
     }
 
     const player1Move = this.getPlayer1Movement();
-    const player2Move = this.getPlayer2Movement();
+    const player2Move = this.aiEnabled ? this.updateAiBehavior() : this.getPlayer2Movement();
     this.player1.updateMovement(delta, player1Move.x, player1Move.y);
     this.player2.updateMovement(delta, player2Move.x, player2Move.y);
 
@@ -625,6 +662,71 @@ export class PvpScene extends Phaser.Scene {
     return { x: moveX, y: moveY };
   }
 
+  private updateAiBehavior() {
+    const now = this.time.now;
+    const dx = this.player1.x - this.player2.x;
+    const dy = this.player1.y - this.player2.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+
+    if (now >= this.aiTimers.nextMoveUpdate) {
+      const approachDistance = 300;
+      const retreatDistance = 190;
+      let moveAngle = Math.atan2(dy, dx);
+
+      if (distance < retreatDistance) {
+        moveAngle += Math.PI;
+      } else if (distance <= approachDistance) {
+        this.aiStrafeDirection = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+        moveAngle += (Math.PI / 2) * this.aiStrafeDirection;
+      }
+
+      const moveX = Math.cos(moveAngle);
+      const moveY = Math.sin(moveAngle);
+      this.aiInput.moveX = Math.abs(moveX) < 0.15 ? 0 : Math.sign(moveX);
+      this.aiInput.moveY = Math.abs(moveY) < 0.15 ? 0 : Math.sign(moveY);
+      this.aiTimers.nextMoveUpdate = now + Phaser.Math.Between(260, 520);
+    }
+
+    if (now >= this.aiTimers.nextAttackToggle) {
+      const inRange = distance < 450;
+      const attackChance = inRange ? 0.7 : 0.2;
+      this.aiInput.attacking = Math.random() < attackChance;
+      this.aiTimers.nextAttackToggle = now + Phaser.Math.Between(320, 620);
+    }
+
+    if (now >= this.aiTimers.nextShieldCheck) {
+      const shieldAvailable = !this.player2Shield?.active && this.player2Trion >= GAME_CONFIG.SHIELD_COST;
+      const shouldShield =
+        shieldAvailable &&
+        (distance < 260 || this.player2Trion < GAME_CONFIG.PLAYER_TRION_MAX * 0.6) &&
+        Math.random() < 0.35;
+      if (shouldShield) {
+        if (distance < 220 && Math.random() < 0.55) {
+          this.aiInput.wideShieldQueued = true;
+        } else {
+          this.aiInput.shieldQueued = true;
+        }
+      }
+      this.aiTimers.nextShieldCheck = now + Phaser.Math.Between(900, 1400);
+    }
+
+    if (now >= this.aiTimers.nextCycleCheck) {
+      if (Math.random() < 0.35) {
+        this.aiInput.cycleQueued = true;
+      }
+      this.aiTimers.nextCycleCheck = now + Phaser.Math.Between(1800, 2600);
+    }
+
+    if (now >= this.aiTimers.nextDelayToggle) {
+      if (Math.random() < 0.25) {
+        this.aiInput.delayToggleQueued = true;
+      }
+      this.aiTimers.nextDelayToggle = now + Phaser.Math.Between(2200, 3200);
+    }
+
+    return { x: this.aiInput.moveX, y: this.aiInput.moveY };
+  }
+
   private handleInput() {
     if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
       this.player1BulletIndex = this.getPrevBulletIndex(this.player1BulletIndex, 'p1');
@@ -640,26 +742,32 @@ export class PvpScene extends Phaser.Scene {
       this.emitBulletTypeChanged('p1');
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.oKey)) {
-      this.player2CyclePrev = true;
-    }
-    if (Phaser.Input.Keyboard.JustDown(this.pKey)) {
-      this.player2CycleNext = true;
-    }
-    if (this.mobileInput.p2.cycleQueued) {
-      this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
-      this.mobileInput.p2.cycleQueued = false;
-      this.emitBulletTypeChanged('p2');
-    }
+    if (!this.aiEnabled) {
+      if (Phaser.Input.Keyboard.JustDown(this.oKey)) {
+        this.player2CyclePrev = true;
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.pKey)) {
+        this.player2CycleNext = true;
+      }
+      if (this.mobileInput.p2.cycleQueued) {
+        this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
+        this.mobileInput.p2.cycleQueued = false;
+        this.emitBulletTypeChanged('p2');
+      }
 
-    if (this.player2CyclePrev) {
-      this.player2BulletIndex = this.getPrevBulletIndex(this.player2BulletIndex, 'p2');
-      this.player2CyclePrev = false;
-      this.emitBulletTypeChanged('p2');
-    }
-    if (this.player2CycleNext) {
+      if (this.player2CyclePrev) {
+        this.player2BulletIndex = this.getPrevBulletIndex(this.player2BulletIndex, 'p2');
+        this.player2CyclePrev = false;
+        this.emitBulletTypeChanged('p2');
+      }
+      if (this.player2CycleNext) {
+        this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
+        this.player2CycleNext = false;
+        this.emitBulletTypeChanged('p2');
+      }
+    } else if (this.aiInput.cycleQueued) {
       this.player2BulletIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
-      this.player2CycleNext = false;
+      this.aiInput.cycleQueued = false;
       this.emitBulletTypeChanged('p2');
     }
 
@@ -676,32 +784,51 @@ export class PvpScene extends Phaser.Scene {
       this.mobileInput.p1.wideShieldQueued = false;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
-      this.tryDeployShield('p2', 'narrow');
-    }
-    if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
-      this.tryDeployShield('p2', 'wide');
-    }
-    if (this.mobileInput.p2.shieldQueued) {
-      this.tryDeployShield('p2', 'narrow');
-      this.mobileInput.p2.shieldQueued = false;
-    }
-    if (this.mobileInput.p2.wideShieldQueued) {
-      this.tryDeployShield('p2', 'wide');
-      this.mobileInput.p2.wideShieldQueued = false;
+    if (!this.aiEnabled) {
+      if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !this.spaceKey.isDown) {
+        this.tryDeployShield('p2', 'narrow');
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
+        this.tryDeployShield('p2', 'wide');
+      }
+      if (this.mobileInput.p2.shieldQueued) {
+        this.tryDeployShield('p2', 'narrow');
+        this.mobileInput.p2.shieldQueued = false;
+      }
+      if (this.mobileInput.p2.wideShieldQueued) {
+        this.tryDeployShield('p2', 'wide');
+        this.mobileInput.p2.wideShieldQueued = false;
+      }
+    } else {
+      if (this.aiInput.shieldQueued) {
+        this.tryDeployShield('p2', 'narrow');
+        this.aiInput.shieldQueued = false;
+      }
+      if (this.aiInput.wideShieldQueued) {
+        this.tryDeployShield('p2', 'wide');
+        this.aiInput.wideShieldQueued = false;
+      }
     }
 
     if (this.fKey.isDown) {
       this.tryFireBullet('p1');
     }
-    if (this.enterKey.isDown) {
+    if (!this.aiEnabled && this.enterKey.isDown) {
       this.tryFireBullet('p2');
     }
     if (this.mobileInput.p1.attacking) {
       this.tryFireBullet('p1');
     }
-    if (this.mobileInput.p2.attacking) {
+    if (!this.aiEnabled && this.mobileInput.p2.attacking) {
       this.tryFireBullet('p2');
+    }
+    if (this.aiEnabled && this.aiInput.attacking) {
+      this.tryFireBullet('p2');
+    }
+
+    if (this.aiEnabled && this.aiInput.delayToggleQueued) {
+      this.triggerMobileDelayToggle('p2');
+      this.aiInput.delayToggleQueued = false;
     }
   }
 

@@ -183,6 +183,7 @@ export class MainScene extends Phaser.Scene {
     p1: ['asteroid', 'meteora', 'viper'],
     p2: ['asteroid', 'meteora', 'viper'],
   };
+  private pvpAiEnabled = false;
 
   private getBossMaxTrion() {
     return this.difficulty === 'hard' ? GAME_CONFIG.BOSS_TRION_MAX * 2 : GAME_CONFIG.BOSS_TRION_MAX;
@@ -228,6 +229,7 @@ export class MainScene extends Phaser.Scene {
   init(data?: {
     instructionStartMode?: 'modeSelect' | 'boss' | 'twoPlayer';
     pvpSelectedBulletTypes?: { p1: BulletType[]; p2: BulletType[] };
+    pvpAiEnabled?: boolean;
   }) {
     this.instructionStartMode = data?.instructionStartMode ?? 'modeSelect';
     if (data?.pvpSelectedBulletTypes) {
@@ -235,6 +237,9 @@ export class MainScene extends Phaser.Scene {
         p1: [...data.pvpSelectedBulletTypes.p1],
         p2: [...data.pvpSelectedBulletTypes.p2],
       };
+    }
+    if (typeof data?.pvpAiEnabled === 'boolean') {
+      this.pvpAiEnabled = data.pvpAiEnabled;
     }
     const mobileFromRegistry = this.registry.get('isMobile');
     if (typeof mobileFromRegistry === 'boolean') {
@@ -2021,47 +2026,75 @@ export class MainScene extends Phaser.Scene {
     );
 
     const startButtonY = triggerSectionBottom + (this.isMobileMode ? 70 : 60);
-    const startButton = this.add.rectangle(
-      GAME_CONFIG.WIDTH / 2,
+    const startButtonGap = this.isMobileMode ? 20 : 18;
+    const startButtonWidth = this.isMobileMode ? actionButtonWidth * 0.75 : 160;
+    const leftStartX = GAME_CONFIG.WIDTH / 2 - startButtonWidth / 2 - startButtonGap / 2;
+    const rightStartX = GAME_CONFIG.WIDTH / 2 + startButtonWidth / 2 + startButtonGap / 2;
+
+    const friendStartButton = this.add.rectangle(
+      leftStartX,
       startButtonY,
-      actionButtonWidth,
+      startButtonWidth,
       actionButtonHeight,
       0x1a1a3a,
       0.95
     );
-    startButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
-    const startText = this.add.text(GAME_CONFIG.WIDTH / 2, startButtonY, 'スタート', {
-      fontSize: this.isMobileMode ? '26px' : '20px',
+    friendStartButton.setStrokeStyle(3, GAME_CONFIG.BULLET_COLOR, 0.9);
+    const friendStartText = this.add.text(leftStartX, startButtonY, '友達と対戦', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
-    startText.setOrigin(0.5);
+    friendStartText.setOrigin(0.5);
+
+    const aiStartButton = this.add.rectangle(
+      rightStartX,
+      startButtonY,
+      startButtonWidth,
+      actionButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    aiStartButton.setStrokeStyle(3, 0xff9f1c, 0.9);
+    const aiStartText = this.add.text(rightStartX, startButtonY, 'AIと対戦', {
+      fontSize: this.isMobileMode ? '22px' : '16px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    aiStartText.setOrigin(0.5);
 
     const updateStartButtonState = () => {
       const canStart =
         this.pvpSelectedBulletTypes.p1.length === 3 &&
         this.pvpSelectedBulletTypes.p2.length === 3;
-      startButton.setAlpha(canStart ? 1 : 0.45);
-      startText.setAlpha(canStart ? 1 : 0.45);
+      const alpha = canStart ? 1 : 0.45;
+      friendStartButton.setAlpha(alpha);
+      friendStartText.setAlpha(alpha);
+      aiStartButton.setAlpha(alpha);
+      aiStartText.setAlpha(alpha);
     };
     updateStartButtonState();
 
-    const handleStart = () => {
+    const handleStart = (aiEnabled: boolean) => {
       if (
         this.pvpSelectedBulletTypes.p1.length !== 3 ||
         this.pvpSelectedBulletTypes.p2.length !== 3
       ) {
         return;
       }
+      this.pvpAiEnabled = aiEnabled;
       this.scene.start('PvpScene', {
         p1BulletTypes: this.pvpSelectedBulletTypes.p1,
         p2BulletTypes: this.pvpSelectedBulletTypes.p2,
+        aiEnabled,
       });
     };
-    startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
-    startText.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
+    friendStartButton.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(false));
+    friendStartText.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(false));
+    aiStartButton.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(true));
+    aiStartText.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleStart(true));
 
-    instructionElements.push(startButton, startText);
+    instructionElements.push(friendStartButton, friendStartText, aiStartButton, aiStartText);
 
     this.setInstructionsContent(instructionElements, true);
   }
@@ -2186,6 +2219,7 @@ export class MainScene extends Phaser.Scene {
     this.scene.restart({
       instructionStartMode: this.instructionStartMode,
       pvpSelectedBulletTypes: this.pvpSelectedBulletTypes,
+      pvpAiEnabled: this.pvpAiEnabled,
     });
   }
 
