@@ -3729,6 +3729,9 @@ focusTarget: 'player',
       bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED * 1.1,
       shieldCooldown: 1400,
       color: 0xffa94d,
+      movementPattern: 'orbit',
+      orbitRadius: 200,
+      orbitSpeed: 1.6,
     };
     const boss = new Boss(this, GAME_CONFIG.WIDTH * 0.25, 200, config);
     this.extraEnemies.push({
@@ -3738,7 +3741,7 @@ focusTarget: 'player',
       behavior: {
         pattern: 'delayedAsteroid',
         delayedShotChance: 0.85,
-        redShotChance: 0.15,
+        redShotChance: 0.2,
       },
     });
   }

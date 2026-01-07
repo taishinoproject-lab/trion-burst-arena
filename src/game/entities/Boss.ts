@@ -9,6 +9,10 @@ export interface BossConfig {
   bulletSpeed: number;
   shieldCooldown: number;
   color: number;
+  movementPattern: 'wander' | 'orbit';
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitDirection: 1 | -1;
 }
 
 export class Boss {
@@ -24,6 +28,7 @@ export class Boss {
   private targetX: number;
   private targetY: number;
   private moveTimer: number = 0;
+  private orbitAngle: number = 0;
   
   // Shooting
   private lastFireTime: number = 0;
@@ -50,12 +55,17 @@ export class Boss {
       bulletSpeed: GAME_CONFIG.BOSS_BULLET_SPEED,
       shieldCooldown: GAME_CONFIG.BOSS_SHIELD_COOLDOWN,
       color: GAME_CONFIG.BOSS_COLOR,
+      movementPattern: 'wander',
+      orbitRadius: 200,
+      orbitSpeed: 1.3,
+      orbitDirection: Math.random() < 0.5 ? -1 : 1,
       ...config,
     };
     this.x = x;
     this.y = y;
     this.targetX = x;
     this.targetY = y;
+    this.orbitAngle = Phaser.Math.Angle.Between(x, y, this.targetX + 1, this.targetY);
     
     // Create boss visual (larger circle with inner ring)
     this.body = scene.add.circle(0, 0, this.config.radius, this.config.color);
@@ -77,10 +87,14 @@ export class Boss {
 
   update(delta: number, playerX: number, playerY: number, currentTime: number) {
     // Update movement target periodically
-    this.moveTimer += delta;
-    if (this.moveTimer > 2000) {
-      this.moveTimer = 0;
-      this.pickNewTarget(playerX, playerY);
+    if (this.config.movementPattern === 'orbit') {
+      this.updateOrbitTarget(delta, playerX, playerY);
+    } else {
+      this.moveTimer += delta;
+      if (this.moveTimer > 2000) {
+        this.moveTimer = 0;
+        this.pickNewTarget(playerX, playerY);
+      }
     }
     
     // Move towards target
@@ -101,10 +115,14 @@ export class Boss {
       this.y += (dy / dist) * speed;
     }
     
-    // Clamp to screen bounds (upper portion)
+    // Clamp to screen bounds
     const padding = this.config.radius;
-    this.x = Phaser.Math.Clamp(this.x, padding + 100, GAME_CONFIG.WIDTH - padding - 100);
-    this.y = Phaser.Math.Clamp(this.y, padding + 100, GAME_CONFIG.HEIGHT * 0.5);
+    const xMin = padding + 100;
+    const xMax = GAME_CONFIG.WIDTH - padding - 100;
+    const yMin = padding + 100;
+    const yMax = this.config.movementPattern === 'orbit' ? GAME_CONFIG.HEIGHT - padding - 100 : GAME_CONFIG.HEIGHT * 0.5;
+    this.x = Phaser.Math.Clamp(this.x, xMin, xMax);
+    this.y = Phaser.Math.Clamp(this.y, yMin, yMax);
     
     // Update sprite position
     this.sprite.setPosition(this.x, this.y);
@@ -153,6 +171,13 @@ export class Boss {
     
     this.targetX = playerX + offsetX;
     this.targetY = Math.min(playerY - 150 + offsetY, GAME_CONFIG.HEIGHT * 0.4);
+  }
+
+  private updateOrbitTarget(delta: number, playerX: number, playerY: number) {
+    const orbitStep = (delta / 1000) * this.config.orbitSpeed * this.config.orbitDirection;
+    this.orbitAngle += orbitStep;
+    this.targetX = playerX + Math.cos(this.orbitAngle) * this.config.orbitRadius;
+    this.targetY = playerY + Math.sin(this.orbitAngle) * this.config.orbitRadius;
   }
 
   fire(currentTime: number): { x: number; y: number; angle: number } | null {
