@@ -294,8 +294,8 @@ export const MobilePvpControls = ({
       <div
         className="absolute pointer-events-none"
         style={{
-          left: 'calc(3rem + env(safe-area-inset-left))',
-          top: '75%',
+          left: 'calc(8rem + env(safe-area-inset-left)t',
+          top: '20%',
           transform: 'rotate(-90deg)',
           transformOrigin: 'center',
         }}
@@ -407,8 +407,8 @@ export const MobilePvpControls = ({
       <div
         className="absolute pointer-events-none"
         style={{
-          right: 'calc(2rem + env(safe-area-inset-right))',
-          top: '28%',
+          right: 'calc(8rem + env(safe-area-inset-right)t',
+          top: '70%',
           transform: 'rotate(90deg)',
           transformOrigin: 'center',
         }}
