@@ -925,8 +925,7 @@ export class PvpScene extends Phaser.Scene {
     const lastFireTime = isPlayer1 ? this.player1LastFireTime : this.player2LastFireTime;
     if (now - lastFireTime < fireInterval) return;
 
-    const bulletIndex = isPlayer1 ? this.player1BulletIndex : this.player2BulletIndex;
-    const bulletType = AVAILABLE_BULLET_TYPES[bulletIndex];
+    const bulletType = this.getBulletTypeForPlayer(player);
     const cost = this.getBulletCost(bulletType);
     const trion = isPlayer1 ? this.player1Trion : this.player2Trion;
     const delayedAsteroidEnabled = this.isDelayedAsteroidEnabled(player);
