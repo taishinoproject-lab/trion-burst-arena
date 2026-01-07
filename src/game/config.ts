@@ -37,7 +37,7 @@ export const createGameConfig = (
     },
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: GAME_CONFIG.WIDTH,
     height: GAME_CONFIG.HEIGHT,
