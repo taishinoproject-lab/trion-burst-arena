@@ -289,14 +289,21 @@ const TrionMeter = ({
         </div>
       </div>
       <div
-        className="pointer-events-none absolute flex flex-col gap-1 text-[10px] font-mono tracking-wider"
+        className="pointer-events-none absolute flex flex-col gap-2 text-[11px] font-mono tracking-wider"
         style={{
           color: `${accent}ee`,
           transform: `translate(${labelOffsetX}px, ${labelOffsetY}px)`,
         }}
       >
         {bulletLabel && (
-          <span className="inline-block text-white/90" style={textRotationStyle}>
+          <span
+            className="inline-block text-[12px] font-semibold"
+            style={{
+              ...textRotationStyle,
+              color: `${accent}`,
+              textShadow: `0 0 8px ${accent}cc`,
+            }}
+          >
             {bulletLabel}
           </span>
         )}
@@ -315,7 +322,7 @@ const LAYOUT = {
     buttonBottom: '6%',
     buttonLeft: 'calc(1.5rem + env(safe-area-inset-left))',
     meterOffsetX: 56,
-    meterOffsetY: -52,
+    meterOffsetY: -24,
     rotate: '-90deg',
   },
   p2: {
@@ -335,8 +342,8 @@ const P1_JOYSTICK_LABEL_ROT = 180;
 const P2_JOYSTICK_LABEL_ROT = 180;
 const TRION_BAR_ROTATION = 90;
 const TRION_LABEL_OFFSET = {
-  p1: { x: 44, y: 0 },
-  p2: { x: -44, y: 0 },
+  p1: { x: 44, y: 10 },
+  p2: { x: -44, y: 10 },
 };
 
 export const MobilePvpControls = ({
