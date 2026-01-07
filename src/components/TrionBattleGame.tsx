@@ -30,6 +30,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     p1: null,
     p2: null,
   });
+  const [pvpTrionStatus, setPvpTrionStatus] = useState<{ p1: number; p2: number; max: number } | null>(null);
   const [splashPhase, setSplashPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
   const [loadingDelayDone, setLoadingDelayDone] = useState(false);
   const fullscreenAttemptedRef = useRef(false);
@@ -105,6 +106,10 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     }));
   }, []);
 
+  const handlePvpTrionChange = useCallback((payload: { p1: number; p2: number; max: number }) => {
+    setPvpTrionStatus(payload);
+  }, []);
+
   useEffect(() => {
     if (!gameContainerRef.current || isMobile === null) return;
     
@@ -128,12 +133,13 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     gameRef.current = gameInstance;
 
     const handleSceneStart = (scene: Phaser.Scene) => {
-      setActiveSceneKey(scene.scene.key);
-      if (scene.scene.key === 'MainScene') {
-        const mainScene = scene as MainScene;
-        if (pvpSceneRef.current) {
-          pvpSceneRef.current.events.off('pvp-bullet-changed', handlePvpBulletChange);
-        }
+        setActiveSceneKey(scene.scene.key);
+        if (scene.scene.key === 'MainScene') {
+          const mainScene = scene as MainScene;
+          if (pvpSceneRef.current) {
+            pvpSceneRef.current.events.off('pvp-bullet-changed', handlePvpBulletChange);
+            pvpSceneRef.current.events.off('pvp-trion-changed', handlePvpTrionChange);
+          }
         mainScene.events.off('battle-state-changed', handleBattleStateChange);
         mainScene.events.on('battle-state-changed', handleBattleStateChange);
         mainScene.events.off('tutorial-state-changed');
@@ -155,15 +161,19 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         setIsTutorialActive(false);
         setCurrentBulletType(null);
         setPvpBulletTypes({ p1: null, p2: null });
+        setPvpTrionStatus(null);
         sceneRef.current = null;
         if (scene.scene.key === 'PvpScene') {
           const pvpScene = scene as PvpScene;
           pvpScene.events.off('pvp-bullet-changed', handlePvpBulletChange);
           pvpScene.events.on('pvp-bullet-changed', handlePvpBulletChange);
+          pvpScene.events.off('pvp-trion-changed', handlePvpTrionChange);
+          pvpScene.events.on('pvp-trion-changed', handlePvpTrionChange);
           setPvpBulletTypes({
             p1: pvpScene.getCurrentBulletType('p1'),
             p2: pvpScene.getCurrentBulletType('p2'),
           });
+          setPvpTrionStatus(pvpScene.getTrionStatus());
           pvpSceneRef.current = pvpScene;
         } else {
           pvpSceneRef.current = null;
@@ -367,6 +377,7 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
         onCycleBullet={handlePvpCycle}
         onDelayToggle={handlePvpDelayToggle}
         currentBulletType={pvpBulletTypes}
+        trionStatus={pvpTrionStatus ?? undefined}
       />
       <div
         className="fixed inset-0 z-[70] flex items-center justify-center bg-black transition-opacity duration-500"

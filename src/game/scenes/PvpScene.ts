@@ -135,8 +135,15 @@ export class PvpScene extends Phaser.Scene {
   private player1BulletText!: Phaser.GameObjects.Text;
   private player2BulletText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
+  private backButton?: Phaser.GameObjects.Rectangle;
+  private backButtonText?: Phaser.GameObjects.Text;
+  private restartButton?: Phaser.GameObjects.Rectangle;
+  private restartButtonText?: Phaser.GameObjects.Text;
+  private gameOverBackButton?: Phaser.GameObjects.Rectangle;
+  private gameOverBackText?: Phaser.GameObjects.Text;
   private damageTexts: Phaser.GameObjects.Text[] = [];
   private isMobileMode = false;
+  private lastTrionEmit = { p1: -1, p2: -1 };
 
   private wKey!: Phaser.Input.Keyboard.Key;
   private aKey!: Phaser.Input.Keyboard.Key;
@@ -354,9 +361,9 @@ export class PvpScene extends Phaser.Scene {
     const bulletFontSize = isMobile ? '10px' : '14px';
     
     const backButtonX = GAME_CONFIG.WIDTH / 2;
-    const backButtonY = isMobile ? 22 : 32;
-    const backButtonWidth = isMobile ? 80 : 120;
-    const backButtonHeight = isMobile ? 26 : 36;
+    const backButtonY = isMobile ? 28 : 36;
+    const backButtonWidth = isMobile ? 140 : 160;
+    const backButtonHeight = isMobile ? 40 : 44;
     const backButton = this.add.rectangle(
       backButtonX,
       backButtonY,
@@ -368,7 +375,7 @@ export class PvpScene extends Phaser.Scene {
     backButton.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
     const backText = this.add.text(backButtonX, backButtonY, '戻る', {
       fontFamily: 'Arial',
-      fontSize: isMobile ? '11px' : '14px',
+      fontSize: isMobile ? '14px' : '16px',
       color: '#ffffff',
     });
     backText.setOrigin(0.5);
@@ -377,20 +384,28 @@ export class PvpScene extends Phaser.Scene {
     };
     backButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
     backText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    this.backButton = backButton;
+    this.backButtonText = backText;
 
-    this.add.text(barMarginX, barY - (isMobile ? 10 : 18), 'P1 トリオン', {
-      fontFamily: 'Arial',
-      fontSize: labelFontSize,
-      color: '#00ffd5',
-    });
-    this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - (isMobile ? 10 : 18), 'P2 トリオン', {
-      fontFamily: 'Arial',
-      fontSize: labelFontSize,
-      color: '#ff6b6b',
-    });
+    if (!isMobile) {
+      this.add.text(barMarginX, barY - (isMobile ? 10 : 18), 'P1 トリオン', {
+        fontFamily: 'Arial',
+        fontSize: labelFontSize,
+        color: '#00ffd5',
+      });
+      this.add.text(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY - (isMobile ? 10 : 18), 'P2 トリオン', {
+        fontFamily: 'Arial',
+        fontSize: labelFontSize,
+        color: '#ff6b6b',
+      });
+    }
 
     this.player1TrionBar = this.add.graphics();
     this.player2TrionBar = this.add.graphics();
+    if (isMobile) {
+      this.player1TrionBar.setVisible(false);
+      this.player2TrionBar.setVisible(false);
+    }
 
     this.player1BulletText = this.add.text(barMarginX, barY + barHeight + (isMobile ? 4 : 8), '', {
       fontFamily: 'Arial',
@@ -416,6 +431,62 @@ export class PvpScene extends Phaser.Scene {
       color: '#6b7280',
     }).setOrigin(0.5);
 
+    const gameOverButtonWidth = isMobile ? 160 : 200;
+    const gameOverButtonHeight = isMobile ? 46 : 54;
+    const gameOverButtonY = GAME_CONFIG.HEIGHT / 2 + (isMobile ? 70 : 90);
+    const gameOverButtonGap = isMobile ? 14 : 20;
+    const gameOverLeftX = GAME_CONFIG.WIDTH / 2 - gameOverButtonWidth / 2 - gameOverButtonGap;
+    const gameOverRightX = GAME_CONFIG.WIDTH / 2 + gameOverButtonWidth / 2 + gameOverButtonGap;
+
+    const restartButton = this.add.rectangle(
+      gameOverLeftX,
+      gameOverButtonY,
+      gameOverButtonWidth,
+      gameOverButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    restartButton.setStrokeStyle(2, 0x00ffd5, 0.8);
+    const restartText = this.add.text(gameOverLeftX, gameOverButtonY, 'リスタート', {
+      fontFamily: 'Arial',
+      fontSize: isMobile ? '14px' : '16px',
+      color: '#ffffff',
+    });
+    restartText.setOrigin(0.5);
+
+    const backButtonOverlay = this.add.rectangle(
+      gameOverRightX,
+      gameOverButtonY,
+      gameOverButtonWidth,
+      gameOverButtonHeight,
+      0x1a1a3a,
+      0.95
+    );
+    backButtonOverlay.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const backOverlayText = this.add.text(gameOverRightX, gameOverButtonY, '戻る', {
+      fontFamily: 'Arial',
+      fontSize: isMobile ? '14px' : '16px',
+      color: '#ffffff',
+    });
+    backOverlayText.setOrigin(0.5);
+
+    const handleRestart = () => {
+      this.scene.restart();
+    };
+    restartButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
+    restartText.setInteractive({ useHandCursor: true }).on('pointerdown', handleRestart);
+    backButtonOverlay.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+    backOverlayText.setInteractive({ useHandCursor: true }).on('pointerdown', handleBack);
+
+    restartButton.setVisible(false);
+    restartText.setVisible(false);
+    backButtonOverlay.setVisible(false);
+    backOverlayText.setVisible(false);
+    this.restartButton = restartButton;
+    this.restartButtonText = restartText;
+    this.gameOverBackButton = backButtonOverlay;
+    this.gameOverBackText = backOverlayText;
+
     this.updateUI();
   }
 
@@ -427,31 +498,65 @@ export class PvpScene extends Phaser.Scene {
     const barMarginX = isMobile ? 12 : 24;
     const player1Ratio = Math.max(0, this.player1Trion / GAME_CONFIG.PLAYER_TRION_MAX);
     const player2Ratio = Math.max(0, this.player2Trion / GAME_CONFIG.PLAYER_TRION_MAX);
-    this.player1TrionBar.clear();
-    this.player1TrionBar.fillStyle(0x222233, 0.9);
-    this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
-    this.player1TrionBar.fillStyle(0x00ffd5, 0.9);
-    this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth * player1Ratio, barHeight, 6);
-    this.player1TrionBar.lineStyle(2, 0x00ffd5, 0.6);
-    this.player1TrionBar.strokeRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
+    if (!isMobile) {
+      this.player1TrionBar.clear();
+      this.player1TrionBar.fillStyle(0x222233, 0.9);
+      this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
+      this.player1TrionBar.fillStyle(0x00ffd5, 0.9);
+      this.player1TrionBar.fillRoundedRect(barMarginX, barY, barWidth * player1Ratio, barHeight, 6);
+      this.player1TrionBar.lineStyle(2, 0x00ffd5, 0.6);
+      this.player1TrionBar.strokeRoundedRect(barMarginX, barY, barWidth, barHeight, 6);
 
-    this.player2TrionBar.clear();
-    this.player2TrionBar.fillStyle(0x222233, 0.9);
-    this.player2TrionBar.fillRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
-    this.player2TrionBar.fillStyle(0xff6b6b, 0.9);
-    this.player2TrionBar.fillRoundedRect(
-      GAME_CONFIG.WIDTH - barMarginX - barWidth,
-      barY,
-      barWidth * player2Ratio,
-      barHeight,
-      6
-    );
-    this.player2TrionBar.lineStyle(2, 0xff6b6b, 0.6);
-    this.player2TrionBar.strokeRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
+      this.player2TrionBar.clear();
+      this.player2TrionBar.fillStyle(0x222233, 0.9);
+      this.player2TrionBar.fillRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
+      this.player2TrionBar.fillStyle(0xff6b6b, 0.9);
+      this.player2TrionBar.fillRoundedRect(
+        GAME_CONFIG.WIDTH - barMarginX - barWidth,
+        barY,
+        barWidth * player2Ratio,
+        barHeight,
+        6
+      );
+      this.player2TrionBar.lineStyle(2, 0xff6b6b, 0.6);
+      this.player2TrionBar.strokeRoundedRect(GAME_CONFIG.WIDTH - barMarginX - barWidth, barY, barWidth, barHeight, 6);
+    }
     const p1Label = isMobile ? 'P1:' : 'P1 弾:';
     const p2Label = isMobile ? 'P2:' : 'P2 弾:';
     this.player1BulletText.setText(`${p1Label} ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player1BulletIndex])}`);
     this.player2BulletText.setText(`${p2Label} ${this.getBulletDisplayName(AVAILABLE_BULLET_TYPES[this.player2BulletIndex])}`);
+    this.emitTrionStatus();
+  }
+
+  private emitTrionStatus() {
+    const p1 = Math.max(0, this.player1Trion);
+    const p2 = Math.max(0, this.player2Trion);
+    const nextP1 = Math.round(p1);
+    const nextP2 = Math.round(p2);
+    if (nextP1 === this.lastTrionEmit.p1 && nextP2 === this.lastTrionEmit.p2) {
+      return;
+    }
+    this.lastTrionEmit = { p1: nextP1, p2: nextP2 };
+    this.events.emit('pvp-trion-changed', {
+      p1: nextP1,
+      p2: nextP2,
+      max: GAME_CONFIG.PLAYER_TRION_MAX,
+    });
+  }
+
+  public getTrionStatus() {
+    return {
+      p1: Math.max(0, Math.round(this.player1Trion)),
+      p2: Math.max(0, Math.round(this.player2Trion)),
+      max: GAME_CONFIG.PLAYER_TRION_MAX,
+    };
+  }
+
+  private showGameOverButtons() {
+    this.restartButton?.setVisible(true);
+    this.restartButtonText?.setVisible(true);
+    this.gameOverBackButton?.setVisible(true);
+    this.gameOverBackText?.setVisible(true);
   }
 
   private getPlayer1Movement() {
@@ -683,6 +788,7 @@ export class PvpScene extends Phaser.Scene {
       this.gameOver = true;
       const winner = this.player1Trion <= 0 ? 'P2 勝利' : 'P1 勝利';
       this.winnerText.setText(winner);
+      this.showGameOverButtons();
     }
   }
 
