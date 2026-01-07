@@ -241,6 +241,8 @@ const TrionMeter = ({
   className,
   textRotationDeg = 0,
   barRotationDeg = 0,
+  labelOffsetX = 0,
+  labelOffsetY = 0,
 }: {
   label: string;
   accent: string;
@@ -250,49 +252,57 @@ const TrionMeter = ({
   className?: string;
   textRotationDeg?: number;
   barRotationDeg?: number;
+  labelOffsetX?: number;
+  labelOffsetY?: number;
 }) => {
   const ratio = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
   const textRotationStyle = textRotationDeg
     ? { transform: `rotate(${textRotationDeg}deg)`, transformOrigin: 'center' }
     : undefined;
   return (
-    <div className={`flex flex-col items-center gap-1 ${className ?? ''}`}>
-      {bulletLabel && (
-        <div className="text-[10px] font-mono tracking-wider" style={{ color: `${accent}bb` }}>
-          <span className="inline-block" style={textRotationStyle}>
-            {bulletLabel}
-          </span>
-        </div>
-      )}
-      <div className="text-[11px] font-mono tracking-wider" style={{ color: `${accent}dd` }}>
-        <span className="inline-block" style={textRotationStyle}>
-          {label}
-        </span>
-      </div>
-      <div
-        className="relative overflow-hidden rounded-full border-2"
-        style={{
-          width: 'clamp(220px, 30vw, 280px)',
-          height: '24px',
-          borderColor: `${accent}bb`,
-          background: 'rgba(15, 15, 30, 0.92)',
-          boxShadow: `0 0 14px ${accent}66`,
-          transform: barRotationDeg ? `rotate(${barRotationDeg}deg)` : undefined,
-          transformOrigin: 'center',
-        }}
-      >
+    <div className={`relative flex items-center justify-center ${className ?? ''}`}>
+      <div className="relative">
         <div
-          className="absolute inset-y-0 left-0 rounded-full"
+          className="relative overflow-hidden rounded-full border-2"
           style={{
-            width: `${ratio * 100}%`,
-            background: `linear-gradient(90deg, ${accent} 0%, ${accent}cc 100%)`,
+            width: 'clamp(220px, 30vw, 280px)',
+            height: '24px',
+            borderColor: `${accent}bb`,
+            background: 'rgba(15, 15, 30, 0.92)',
+            boxShadow: `0 0 14px ${accent}66`,
+            transform: barRotationDeg ? `rotate(${barRotationDeg}deg)` : undefined,
+            transformOrigin: 'center',
           }}
-        />
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-white/90">
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-full"
+            style={{
+              width: `${ratio * 100}%`,
+              background: `linear-gradient(90deg, ${accent} 0%, ${accent}cc 100%)`,
+            }}
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] font-mono text-white/90">
           <span className="inline-block" style={textRotationStyle}>
             {Math.round(value)}/{max}
           </span>
         </div>
+      </div>
+      <div
+        className="pointer-events-none absolute flex flex-col gap-1 text-[10px] font-mono tracking-wider"
+        style={{
+          color: `${accent}ee`,
+          transform: `translate(${labelOffsetX}px, ${labelOffsetY}px)`,
+        }}
+      >
+        {bulletLabel && (
+          <span className="inline-block text-white/90" style={textRotationStyle}>
+            {bulletLabel}
+          </span>
+        )}
+        <span className="inline-block text-white" style={textRotationStyle}>
+          {label}
+        </span>
       </div>
     </div>
   );
@@ -305,7 +315,7 @@ const LAYOUT = {
     buttonBottom: '6%',
     buttonLeft: 'calc(1.5rem + env(safe-area-inset-left))',
     meterOffsetX: 56,
-    meterOffsetY: -78,
+    meterOffsetY: -52,
     rotate: '-90deg',
   },
   p2: {
@@ -324,6 +334,10 @@ const P2_UI_TEXT_ROT = -90;
 const P1_JOYSTICK_LABEL_ROT = 180;
 const P2_JOYSTICK_LABEL_ROT = 180;
 const TRION_BAR_ROTATION = 90;
+const TRION_LABEL_OFFSET = {
+  p1: { x: 44, y: 0 },
+  p2: { x: -44, y: 0 },
+};
 
 export const MobilePvpControls = ({
   visible,
@@ -370,6 +384,8 @@ export const MobilePvpControls = ({
               bulletLabel={p1BulletLabel}
               textRotationDeg={P1_UI_TEXT_ROT}
               barRotationDeg={TRION_BAR_ROTATION}
+              labelOffsetX={TRION_LABEL_OFFSET.p1.x}
+              labelOffsetY={TRION_LABEL_OFFSET.p1.y}
             />
           </div>
           <div style={{ transform: `rotate(${LAYOUT.p1.rotate})`, transformOrigin: 'center' }}>
@@ -579,6 +595,8 @@ export const MobilePvpControls = ({
               bulletLabel={p2BulletLabel}
               textRotationDeg={P2_UI_TEXT_ROT}
               barRotationDeg={TRION_BAR_ROTATION}
+              labelOffsetX={TRION_LABEL_OFFSET.p2.x}
+              labelOffsetY={TRION_LABEL_OFFSET.p2.y}
             />
           </div>
           <div style={{ transform: `rotate(${LAYOUT.p2.rotate})`, transformOrigin: 'center' }}>
