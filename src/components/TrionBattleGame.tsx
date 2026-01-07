@@ -116,8 +116,8 @@ export const TrionBattleGame = ({ className }: TrionBattleGameProps) => {
     if (!document.fullscreenElement) {
       await fullscreenRef.current.requestFullscreen().catch(() => {});
     }
-    if (screen.orientation?.lock) {
-      await screen.orientation.lock('landscape').catch(() => {});
+    if ('lock' in screen.orientation) {
+      await (screen.orientation as any).lock('landscape').catch(() => {});
     }
   }, [canFullscreen]);
 
