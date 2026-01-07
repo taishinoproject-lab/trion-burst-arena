@@ -1720,7 +1720,23 @@ export class MainScene extends Phaser.Scene {
     noteText.setOrigin(0.5);
 
     const noteBounds = noteText.getBounds();
-    const instructionTopY = noteBounds.bottom + (this.isMobileMode ? 40 : 24);
+    const deviceNote = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      noteBounds.bottom + (this.isMobileMode ? 18 : 12),
+      '※iPad/タブレットでの操作が最も快適です。スマホは操作しづらい場合があります。',
+      {
+        fontSize: this.isMobileMode ? '18px' : '12px',
+        color: '#cbd5f5',
+        fontFamily: 'monospace',
+        align: 'center',
+        lineSpacing: 4,
+        wordWrap: { width: GAME_CONFIG.WIDTH * 0.9 },
+      }
+    );
+    deviceNote.setOrigin(0.5);
+
+    const deviceNoteBounds = deviceNote.getBounds();
+    const instructionTopY = deviceNoteBounds.bottom + (this.isMobileMode ? 36 : 22);
 
     const playerOneText = this.add.text(
       leftX,
@@ -1865,6 +1881,7 @@ export class MainScene extends Phaser.Scene {
       title,
       description,
       noteText,
+      deviceNote,
       playerOneText,
       playerTwoText,
       backButton,
