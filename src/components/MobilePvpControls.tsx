@@ -124,9 +124,9 @@ const Joystick = ({ label, accent, onMove, displayRotation = 0 }: JoystickProps)
         ref={joystickRef}
         className="relative w-28 h-28 rounded-full border-2 flex items-center justify-center"
         style={{
-          background: `linear-gradient(135deg, ${accent}22 0%, rgba(10, 10, 18, 0.9) 100%)`,
-          borderColor: `${accent}66`,
-          boxShadow: `0 0 18px ${accent}55, inset 0 0 24px ${accent}22`,
+          background: `linear-gradient(135deg, ${accent}33 0%, rgba(10, 10, 18, 0.94) 100%)`,
+          borderColor: `${accent}88`,
+          boxShadow: `0 0 22px ${accent}66, inset 0 0 28px ${accent}33`,
         }}
       >
         <div
@@ -159,7 +159,7 @@ const Joystick = ({ label, accent, onMove, displayRotation = 0 }: JoystickProps)
       </div>
       <div
         className="text-center text-[12px] font-mono tracking-wider"
-        style={{ color: `${accent}aa` }}
+        style={{ color: `${accent}cc` }}
       >
         <span className="inline-block">{label}</span>
       </div>
@@ -202,11 +202,11 @@ const ActionButton = ({
     className={`rounded-xl font-mono text-[11px] font-bold tracking-wide transition-all duration-100 flex items-center justify-center active:scale-95 ${className ?? ''}`}
     style={{
       background: pressed
-        ? `linear-gradient(135deg, ${accent}cc 0%, ${accent}ee 100%)`
-        : `linear-gradient(135deg, ${accent}33 0%, rgba(10, 10, 18, 0.92) 100%)`,
-      border: `2px solid ${accent}88`,
-      boxShadow: pressed ? `0 0 18px ${accent}aa` : `0 0 12px ${accent}44`,
-      color: pressed ? '#0a0a12' : accent,
+        ? `linear-gradient(135deg, ${accent}dd 0%, ${accent}ff 100%)`
+        : `linear-gradient(135deg, ${accent}44 0%, rgba(10, 10, 18, 0.95) 100%)`,
+      border: `2px solid ${accent}aa`,
+      boxShadow: pressed ? `0 0 20px ${accent}cc` : `0 0 14px ${accent}66`,
+      color: pressed ? '#0a0a12' : `${accent}ee`,
     }}
     type="button"
   >
@@ -236,11 +236,11 @@ const TrionMeter = ({
   return (
     <div className={`flex flex-col items-center gap-1 ${className ?? ''}`}>
       {bulletLabel && (
-        <div className="text-[10px] font-mono tracking-wider" style={{ color: `${accent}aa` }}>
+        <div className="text-[10px] font-mono tracking-wider" style={{ color: `${accent}bb` }}>
           {bulletLabel}
         </div>
       )}
-      <div className="text-[11px] font-mono tracking-wider" style={{ color: `${accent}cc` }}>
+      <div className="text-[11px] font-mono tracking-wider" style={{ color: `${accent}dd` }}>
         {label}
       </div>
       <div
@@ -248,9 +248,9 @@ const TrionMeter = ({
         style={{
           width: 'clamp(220px, 30vw, 280px)',
           height: '24px',
-          borderColor: `${accent}aa`,
-          background: 'rgba(20, 20, 35, 0.85)',
-          boxShadow: `0 0 12px ${accent}55`,
+          borderColor: `${accent}bb`,
+          background: 'rgba(15, 15, 30, 0.92)',
+          boxShadow: `0 0 14px ${accent}66`,
         }}
       >
         <div
@@ -260,12 +260,33 @@ const TrionMeter = ({
             background: `linear-gradient(90deg, ${accent} 0%, ${accent}cc 100%)`,
           }}
         />
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-white/80">
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-white/90">
           {Math.round(value)}/{max}
         </div>
       </div>
     </div>
   );
+};
+
+const LAYOUT = {
+  p1: {
+    joystickTop: '12%',
+    joystickLeft: 'calc(1.25rem + env(safe-area-inset-left))',
+    buttonBottom: '6%',
+    buttonLeft: 'calc(1.5rem + env(safe-area-inset-left))',
+    meterOffsetX: 56,
+    meterOffsetY: -78,
+    rotate: '-90deg',
+  },
+  p2: {
+    buttonTop: '10%',
+    buttonRight: 'calc(1.5rem + env(safe-area-inset-right))',
+    joystickBottom: '8%',
+    joystickRight: 'calc(1.25rem + env(safe-area-inset-right))',
+    meterOffsetX: -56,
+    meterOffsetY: -78,
+    rotate: '90deg',
+  },
 };
 
 export const MobilePvpControls = ({
@@ -292,33 +313,45 @@ export const MobilePvpControls = ({
   return (
     <div className="absolute inset-0 pointer-events-none z-[70]">
       <div
-        className="absolute pointer-events-none"
+        className="absolute pointer-events-auto"
         style={{
-          left: 'calc(8rem + env(safe-area-inset-left)t',
-          top: '20%',
-          transform: 'rotate(-90deg)',
-          transformOrigin: 'center',
+          left: LAYOUT.p1.joystickLeft,
+          top: LAYOUT.p1.joystickTop,
         }}
       >
-        <TrionMeter
-          label="P1 トリオン"
-          accent="#00ffd5"
-          value={trionStatus?.p1 ?? trionMax}
-          max={trionMax}
-          bulletLabel={p1BulletLabel}
-          className="rotate-180"
-        />
+        <div className="relative flex items-center justify-center">
+          <div
+            className="absolute left-1/2 top-0"
+            style={{
+              transform: `translate(-50%, 0) translate(${LAYOUT.p1.meterOffsetX}px, ${LAYOUT.p1.meterOffsetY}px)`,
+            }}
+          >
+            <TrionMeter
+              label="P1 トリオン"
+              accent="#00ffd5"
+              value={trionStatus?.p1 ?? trionMax}
+              max={trionMax}
+              bulletLabel={p1BulletLabel}
+            />
+          </div>
+          <div style={{ transform: `rotate(${LAYOUT.p1.rotate})`, transformOrigin: 'center' }}>
+            <Joystick
+              label="P1 移動"
+              accent="#00ffd5"
+              displayRotation={90}
+              onMove={(x, y) => onMove('p1', x, y)}
+            />
+          </div>
+        </div>
       </div>
       <div
         className="absolute pointer-events-auto"
         style={{
-          left: 'calc(0.5rem + env(safe-area-inset-left))',
-          top: '55%',
-          transform: 'translateY(-50%) rotate(-90deg)',
-          transformOrigin: 'center',
+          left: LAYOUT.p1.buttonLeft,
+          bottom: LAYOUT.p1.buttonBottom,
         }}
       >
-        <div className="flex flex-col items-center gap-3">
+        <div style={{ transform: `rotate(${LAYOUT.p1.rotate})`, transformOrigin: 'center' }}>
           <div className="flex items-center gap-6">
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
@@ -345,6 +378,18 @@ export const MobilePvpControls = ({
                 </svg>
               </ActionButton>
               <ActionButton
+                label={p1DelayLabel}
+                accent="#00ffd5"
+                className="w-16 h-12 text-[10px]"
+                contentClassName="rotate-180"
+                onTouchStart={() => onDelayToggle('p1')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 3" />
+                </svg>
+              </ActionButton>
+              <ActionButton
                 label="切替"
                 accent="#ffc864"
                 className="w-16 h-12 text-[10px]"
@@ -361,24 +406,12 @@ export const MobilePvpControls = ({
               <ActionButton
                 label="シールド"
                 accent="#4ad6ff"
-                className="w-16 h-12 text-[10px]"
+                className="col-span-2 h-12 text-[10px]"
                 contentClassName="rotate-180"
                 onTouchStart={() => onShield('p1', false)}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-              </ActionButton>
-              <ActionButton
-                label={p1DelayLabel}
-                accent="#00ffd5"
-                className="col-span-2 h-12 text-[10px]"
-                contentClassName="rotate-180"
-                onTouchStart={() => onDelayToggle('p1')}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 3" />
                 </svg>
               </ActionButton>
               <ActionButton
@@ -394,44 +427,18 @@ export const MobilePvpControls = ({
                 </svg>
               </ActionButton>
             </div>
-            <Joystick
-              label="P1 移動"
-              accent="#00ffd5"
-              displayRotation={90}
-              onMove={(x, y) => onMove('p1', x, y)}
-            />
           </div>
         </div>
       </div>
 
       <div
-        className="absolute pointer-events-none"
-        style={{
-          right: 'calc(8rem + env(safe-area-inset-right)t',
-          top: '70%',
-          transform: 'rotate(90deg)',
-          transformOrigin: 'center',
-        }}
-      >
-        <TrionMeter
-          label="P2 トリオン"
-          accent="#ff6b6b"
-          value={trionStatus?.p2 ?? trionMax}
-          max={trionMax}
-          bulletLabel={p2BulletLabel}
-          className="rotate-180"
-        />
-      </div>
-      <div
         className="absolute pointer-events-auto"
         style={{
-          right: 'calc(0.5rem + env(safe-area-inset-right))',
-          top: '55%',
-          transform: 'translateY(-50%) rotate(90deg)',
-          transformOrigin: 'center',
+          right: LAYOUT.p2.buttonRight,
+          top: LAYOUT.p2.buttonTop,
         }}
       >
-        <div className="flex flex-col items-center gap-3">
+        <div style={{ transform: `rotate(${LAYOUT.p2.rotate})`, transformOrigin: 'center' }}>
           <div className="flex items-center gap-6">
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
@@ -458,6 +465,18 @@ export const MobilePvpControls = ({
                 </svg>
               </ActionButton>
               <ActionButton
+                label={p2DelayLabel}
+                accent="#00ffd5"
+                className="w-16 h-12 text-[10px]"
+                contentClassName="rotate-180"
+                onTouchStart={() => onDelayToggle('p2')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 3" />
+                </svg>
+              </ActionButton>
+              <ActionButton
                 label="切替"
                 accent="#ffc864"
                 className="w-16 h-12 text-[10px]"
@@ -474,24 +493,12 @@ export const MobilePvpControls = ({
               <ActionButton
                 label="シールド"
                 accent="#4ad6ff"
-                className="w-16 h-12 text-[10px]"
+                className="col-span-2 h-12 text-[10px]"
                 contentClassName="rotate-180"
                 onTouchStart={() => onShield('p2', false)}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-              </ActionButton>
-              <ActionButton
-                label={p2DelayLabel}
-                accent="#00ffd5"
-                className="col-span-2 h-12 text-[10px]"
-                contentClassName="rotate-180"
-                onTouchStart={() => onDelayToggle('p2')}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 3" />
                 </svg>
               </ActionButton>
               <ActionButton
@@ -507,6 +514,33 @@ export const MobilePvpControls = ({
                 </svg>
               </ActionButton>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="absolute pointer-events-auto"
+        style={{
+          right: LAYOUT.p2.joystickRight,
+          bottom: LAYOUT.p2.joystickBottom,
+        }}
+      >
+        <div className="relative flex items-center justify-center">
+          <div
+            className="absolute left-1/2 top-0"
+            style={{
+              transform: `translate(-50%, 0) translate(${LAYOUT.p2.meterOffsetX}px, ${LAYOUT.p2.meterOffsetY}px)`,
+            }}
+          >
+            <TrionMeter
+              label="P2 トリオン"
+              accent="#ff6b6b"
+              value={trionStatus?.p2 ?? trionMax}
+              max={trionMax}
+              bulletLabel={p2BulletLabel}
+            />
+          </div>
+          <div style={{ transform: `rotate(${LAYOUT.p2.rotate})`, transformOrigin: 'center' }}>
             <Joystick
               label="P2 移動"
               accent="#ff6b6b"
