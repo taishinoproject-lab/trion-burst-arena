@@ -4331,14 +4331,18 @@ focusTarget: 'player',
         this.playerShield = null;
       }
     }
-    if (this.playerShield?.active) return;
-    
+
     // Check Trion
     if (this.gameState.playerTrion < GAME_CONFIG.SHIELD_COST) return;
-    
+
+    if (this.playerShield?.active) {
+      this.playerShield.destroy();
+      this.playerShield = null;
+    }
+
     // Consume Trion
     this.gameState.playerTrion -= GAME_CONFIG.SHIELD_COST;
-    
+
     const shieldType = this.shiftKey.isDown ? 'wide' : 'narrow';
     this.playerShield = new Shield(this, this.player.x, this.player.y, this.player.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
     if (this.isTutorialMode) {
