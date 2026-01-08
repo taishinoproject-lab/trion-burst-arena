@@ -5,6 +5,12 @@ import { Boss, BossConfig } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
 import { Shield, ShieldType } from '../entities/Shield';
 
+const UNLOCKED_TRIGGER_STORAGE_KEY = 'tba_unlocked_triggers_v1';
+const UNLOCKED_TRIGGER_STORAGE_VERSION = 1;
+const BASE_UNLOCKED_BULLET_TYPES: BulletType[] = ['asteroid', 'meteora'];
+const BULLET_UNLOCK_ORDER: BulletType[] = ['viper', 'hound', 'red'];
+const UNLOCKABLE_BULLET_TYPES: BulletType[] = [...BASE_UNLOCKED_BULLET_TYPES, ...BULLET_UNLOCK_ORDER];
+
 type EnemyPattern = 'mixed' | 'delayedAsteroid' | 'meteoraBarrage';
 
 interface EnemyBehavior {
@@ -67,6 +73,7 @@ export class MainScene extends Phaser.Scene {
   private readonly maxPlayerBullets = 240;
   private readonly maxBossBullets = 300;
   private isMobileMode = false;
+  private unlockedBulletTypes: BulletType[] = [...BASE_UNLOCKED_BULLET_TYPES];
   private selectedBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper'];
   private availableBulletTypes: BulletType[] = ['asteroid', 'meteora', 'viper', 'hound'];
   private isTutorialMode = false;
@@ -147,6 +154,9 @@ export class MainScene extends Phaser.Scene {
   private tutorialHelpHighlightTween?: Phaser.Tweens.Tween;
   private tutorialFocusHighlight?: Phaser.GameObjects.Graphics;
   private tutorialFocusHighlightTween?: Phaser.Tweens.Tween;
+  private tutorialObjectiveContainer?: Phaser.GameObjects.Container;
+  private tutorialObjectiveText?: Phaser.GameObjects.Text;
+  private tutorialObjectiveBackground?: Phaser.GameObjects.Rectangle;
   private tutorialBackButton?: Phaser.GameObjects.Rectangle;
   private tutorialBackText?: Phaser.GameObjects.Text;
   private tutorialBackButtonTween?: Phaser.Tweens.Tween;
@@ -209,6 +219,178 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private normalizeUnlockedBulletTypes(types: BulletType[]) {
+    const unlockedSet = new Set(
+      types.filter((type) => AVAILABLE_BULLET_TYPES.includes(type))
+    );
+    BASE_UNLOCKED_BULLET_TYPES.forEach((type) => unlockedSet.add(type));
+    return UNLOCKABLE_BULLET_TYPES.filter((type) => unlockedSet.has(type));
+  }
+
+  private loadUnlockedBulletTypes() {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return [...BASE_UNLOCKED_BULLET_TYPES];
+    }
+    try {
+      const raw = window.localStorage.getItem(UNLOCKED_TRIGGER_STORAGE_KEY);
+      if (!raw) return [...BASE_UNLOCKED_BULLET_TYPES];
+      const parsed = JSON.parse(raw) as {
+        version?: number;
+        unlocked?: BulletType[];
+      } | BulletType[];
+      if (Array.isArray(parsed)) {
+        return this.normalizeUnlockedBulletTypes(parsed);
+      }
+      if (parsed?.version !== UNLOCKED_TRIGGER_STORAGE_VERSION || !Array.isArray(parsed.unlocked)) {
+        return [...BASE_UNLOCKED_BULLET_TYPES];
+      }
+      return this.normalizeUnlockedBulletTypes(parsed.unlocked);
+    } catch (error) {
+      return [...BASE_UNLOCKED_BULLET_TYPES];
+    }
+  }
+
+  private saveUnlockedBulletTypes(types: BulletType[]) {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        UNLOCKED_TRIGGER_STORAGE_KEY,
+        JSON.stringify({ version: UNLOCKED_TRIGGER_STORAGE_VERSION, unlocked: types })
+      );
+    } catch (error) {
+      return;
+    }
+  }
+
+  private getDefaultSelectedBulletTypes() {
+    if (this.unlockedBulletTypes.length <= 3) {
+      return [...this.unlockedBulletTypes];
+    }
+    return this.unlockedBulletTypes.slice(0, 3);
+  }
+
+  private shouldRestrictTutorialBullets() {
+    return this.unlockedBulletTypes.every((type) => BASE_UNLOCKED_BULLET_TYPES.includes(type));
+  }
+
+  private getTutorialAllowedBulletTypes() {
+    if (this.shouldRestrictTutorialBullets()) {
+      return [...BASE_UNLOCKED_BULLET_TYPES];
+    }
+    return [...this.unlockedBulletTypes];
+  }
+
+  private filterTutorialSteps(steps: TutorialStep[], allowedBulletTypes: BulletType[]) {
+    const allowedSet = new Set(allowedBulletTypes);
+    return steps.filter((step) => !step.requiredBulletType || allowedSet.has(step.requiredBulletType));
+  }
+
+  private getAvailableSingleModeBulletTypes() {
+    const unlockedSet = new Set(this.unlockedBulletTypes);
+    const filtered = this.selectedBulletTypes.filter((type) => unlockedSet.has(type));
+    return filtered.length > 0 ? filtered : [...this.unlockedBulletTypes];
+  }
+
+  private setAvailableBulletTypes(types: BulletType[]) {
+    this.availableBulletTypes = [...types];
+    this.gameState.availableBulletTypes = [...types];
+    if (!this.availableBulletTypes.includes(this.gameState.currentBulletType)) {
+      this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
+    }
+  }
+
+  private unlockNextBulletType() {
+    const unlockedSet = new Set(this.unlockedBulletTypes);
+    const nextType = BULLET_UNLOCK_ORDER.find((type) => !unlockedSet.has(type));
+    if (!nextType) return null;
+    const nextUnlocked = this.normalizeUnlockedBulletTypes([...this.unlockedBulletTypes, nextType]);
+    this.unlockedBulletTypes = nextUnlocked;
+    this.saveUnlockedBulletTypes(nextUnlocked);
+    return nextType;
+  }
+
+  private showUnlockCelebration(type: BulletType) {
+    const toastX = GAME_CONFIG.WIDTH / 2;
+    const toastY = this.isMobileMode ? 140 : 120;
+    const message = `NEW TRIGGER UNLOCKED:\n${type.toUpperCase()}`;
+    const text = this.add.text(0, 0, message, {
+      fontSize: this.isMobileMode ? '18px' : '20px',
+      color: '#00ffd5',
+      fontFamily: 'monospace',
+      align: 'center',
+      lineSpacing: 6,
+    });
+    text.setOrigin(0.5);
+    const paddingX = this.isMobileMode ? 20 : 28;
+    const paddingY = this.isMobileMode ? 14 : 16;
+    const background = this.add.rectangle(
+      0,
+      0,
+      text.width + paddingX * 2,
+      text.height + paddingY * 2,
+      0x0a0a12,
+      0.92
+    );
+    background.setOrigin(0.5);
+    background.setStrokeStyle(2, GAME_CONFIG.BULLET_COLOR, 0.8);
+    const container = this.add.container(toastX, toastY, [background, text]);
+    container.setDepth(120);
+    container.setAlpha(0);
+    container.setScale(0.95);
+
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      scale: 1,
+      duration: 280,
+      ease: 'Sine.easeOut',
+    });
+    this.tweens.add({
+      targets: container,
+      alpha: 0,
+      scale: 0.98,
+      duration: 380,
+      delay: 1500,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        container.destroy(true);
+      },
+    });
+  }
+
+  private getTutorialObjectiveText(step: TutorialStep) {
+    const descriptionLine = step.description?.[step.description.length - 1];
+    if (descriptionLine) return descriptionLine;
+    return step.title.replace(/^Step\d+\s*/i, '');
+  }
+
+  private updateTutorialObjectiveHud() {
+    if (!this.tutorialObjectiveContainer || !this.tutorialObjectiveText || !this.tutorialObjectiveBackground) {
+      return;
+    }
+    if (!this.isTutorialMode || this.tutorialSteps.length === 0) {
+      this.tutorialObjectiveContainer.setVisible(false);
+      return;
+    }
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step) {
+      this.tutorialObjectiveContainer.setVisible(false);
+      return;
+    }
+    const objective = this.getTutorialObjectiveText(step);
+    this.tutorialObjectiveText.setText(`目的: ${objective}`);
+    const paddingX = this.isMobileMode ? 14 : 16;
+    const paddingY = this.isMobileMode ? 10 : 12;
+    this.tutorialObjectiveText.setPosition(-paddingX, paddingY);
+    this.tutorialObjectiveBackground.setSize(
+      this.tutorialObjectiveText.width + paddingX * 2,
+      this.tutorialObjectiveText.height + paddingY * 2
+    );
+    this.tutorialObjectiveContainer.setVisible(true);
+  }
+
   public setMobileMode(mobile: boolean) {
     this.isMobileMode = mobile;
   }
@@ -254,6 +436,8 @@ export class MainScene extends Phaser.Scene {
     this.isTutorialMode = false;
     this.tutorialOverlay = undefined;
     this.events.emit('tutorial-state-changed', this.isTutorialMode);
+    this.unlockedBulletTypes = this.loadUnlockedBulletTypes();
+    this.selectedBulletTypes = this.getDefaultSelectedBulletTypes();
     // Background
     this.cameras.main.setBackgroundColor(GAME_CONFIG.BACKGROUND_COLOR);
     
@@ -499,6 +683,31 @@ export class MainScene extends Phaser.Scene {
     this.tutorialFocusHighlight = this.add.graphics();
     this.tutorialFocusHighlight.setVisible(false);
     this.tutorialFocusHighlight.setDepth(88);
+
+    const objectiveX = GAME_CONFIG.WIDTH - (isMobile ? 16 : 24);
+    const objectiveY = isMobile ? 104 : 86;
+    const objectiveText = this.add.text(0, 0, '', {
+      fontSize: isMobile ? (isCompactLayout ? '12px' : '14px') : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      align: 'right',
+      wordWrap: { width: isMobile ? 240 : 280, useAdvancedWrap: true },
+    });
+    objectiveText.setOrigin(1, 0);
+    const objectiveBackground = this.add.rectangle(0, 0, 10, 10, 0x0a0a12, 0.85);
+    objectiveBackground.setOrigin(1, 0);
+    objectiveBackground.setStrokeStyle(1, GAME_CONFIG.BULLET_COLOR, 0.5);
+    this.tutorialObjectiveContainer = this.add.container(objectiveX, objectiveY, [
+      objectiveBackground,
+      objectiveText,
+    ]);
+    this.tutorialObjectiveContainer.setDepth(91);
+    this.tutorialObjectiveContainer.setScrollFactor(0);
+    objectiveBackground.setScrollFactor(0);
+    objectiveText.setScrollFactor(0);
+    this.tutorialObjectiveContainer.setVisible(false);
+    this.tutorialObjectiveText = objectiveText;
+    this.tutorialObjectiveBackground = objectiveBackground;
   }
 
   private showInstructions() {
@@ -946,6 +1155,12 @@ export class MainScene extends Phaser.Scene {
     this.instructionStartMode = 'boss';
     const { isCompactLayout, layoutCenterY, actionButtonWidth, actionButtonHeight } =
       this.getInstructionLayout();
+    const unlockedTypes = new Set(this.unlockedBulletTypes);
+    const requiredSelectionCount = Math.min(3, unlockedTypes.size);
+    this.selectedBulletTypes = this.selectedBulletTypes.filter((type) => unlockedTypes.has(type));
+    if (this.selectedBulletTypes.length === 0) {
+      this.selectedBulletTypes = this.getDefaultSelectedBulletTypes();
+    }
     const titleY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 170 : 190) : 230);
     const descriptionY = titleY + (this.isMobileMode ? 48 : 56);
     const tutorialButtonY = descriptionY + (this.isMobileMode ? 120 : 140);
@@ -1278,18 +1493,22 @@ export class MainScene extends Phaser.Scene {
 
     const updateWeaponButtons = () => {
       const statusText = this.isMobileMode && isCompactLayout
-        ? `${this.selectedBulletTypes.length}/3`
-        : 'トリガーを3つ選んでください';
+        ? `${this.selectedBulletTypes.length}/${requiredSelectionCount}`
+        : `トリガーを${requiredSelectionCount}つ選んでください`;
       weaponStatus.setText(statusText);
       weaponButtons.forEach(({ type, bg, label }) => {
-        const selected = this.selectedBulletTypes.includes(type);
+        const isUnlocked = unlockedTypes.has(type);
+        const selected = isUnlocked && this.selectedBulletTypes.includes(type);
         const strokeColor = selected ? GAME_CONFIG.BULLET_COLOR : 0x444444;
-        const textColor = selected ? '#00ffd5' : '#aaaaaa';
+        const textColor = selected ? '#00ffd5' : isUnlocked ? '#aaaaaa' : '#555555';
         bg.setStrokeStyle(3, strokeColor, selected ? 0.9 : 0.5);
+        bg.setAlpha(isUnlocked ? 1 : 0.35);
         label.setColor(textColor);
+        label.setAlpha(isUnlocked ? 1 : 0.45);
       });
-      startButton.setAlpha(this.selectedBulletTypes.length === 3 ? 1 : 0.45);
-      startText.setAlpha(this.selectedBulletTypes.length === 3 ? 1 : 0.45);
+      const hasRequiredSelection = this.selectedBulletTypes.length === requiredSelectionCount;
+      startButton.setAlpha(hasRequiredSelection ? 1 : 0.45);
+      startText.setAlpha(hasRequiredSelection ? 1 : 0.45);
     };
 
     const weaponLabelFontSize = this.isMobileMode ? (isCompactLayout ? '12px' : '13px') : '14px';
@@ -1309,22 +1528,26 @@ export class MainScene extends Phaser.Scene {
         fontFamily: 'monospace',
       });
       label.setOrigin(0.5);
+      const isUnlocked = unlockedTypes.has(type);
       const toggleSelection = () => {
+        if (!isUnlocked) return;
         if (this.selectedBulletTypes.includes(type)) {
           this.selectedBulletTypes = this.selectedBulletTypes.filter(item => item !== type);
-        } else if (this.selectedBulletTypes.length < 3) {
+        } else if (this.selectedBulletTypes.length < requiredSelectionCount) {
           this.selectedBulletTypes = [...this.selectedBulletTypes, type];
         }
         updateWeaponButtons();
       };
-      bg.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
-      label.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+      if (isUnlocked) {
+        bg.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+        label.setInteractive({ useHandCursor: true }).on('pointerdown', toggleSelection);
+      }
       weaponButtons.push({ type, bg, label });
       instructionElements.push(bg, label);
     });
 
     const handleStart = () => {
-      if (this.selectedBulletTypes.length !== 3) return;
+      if (this.selectedBulletTypes.length !== requiredSelectionCount) return;
       this.startBattle();
     };
     startButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleStart);
@@ -2494,8 +2717,7 @@ export class MainScene extends Phaser.Scene {
     this.gameStarted = true;
     this.battleStartTime = this.time.now;
     this.events.emit('battle-state-changed', this.gameStarted);
-    this.availableBulletTypes = [...this.selectedBulletTypes];
-    this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
+    this.setAvailableBulletTypes(this.getAvailableSingleModeBulletTypes());
     this.applyDifficultySettings();
     this.destroyInstructionsOverlay();
   }
@@ -2504,12 +2726,13 @@ export class MainScene extends Phaser.Scene {
     this.isTutorialMode = true;
     this.events.emit('tutorial-state-changed', this.isTutorialMode);
     this.difficulty = 'easy';
-    this.selectedBulletTypes = [...AVAILABLE_BULLET_TYPES];
-    this.availableBulletTypes = [...AVAILABLE_BULLET_TYPES];
+    const tutorialAllowedBulletTypes = this.getTutorialAllowedBulletTypes();
+    this.selectedBulletTypes = [...tutorialAllowedBulletTypes];
+    this.availableBulletTypes = [...tutorialAllowedBulletTypes];
     this.clearCombatEntities();
     this.resetState();
     this.resetTutorialProgress();
-    this.tutorialSteps = this.buildTutorialSteps();
+    this.tutorialSteps = this.filterTutorialSteps(this.buildTutorialSteps(), tutorialAllowedBulletTypes);
     this.tutorialStepIndex = 0;
     this.applyTutorialStep();
     this.gameState.currentBulletType = this.availableBulletTypes[0] ?? 'asteroid';
@@ -2731,6 +2954,7 @@ export class MainScene extends Phaser.Scene {
       this.tutorialHelpText.setText('');
       this.updateTutorialHelpHighlight();
       this.updateTutorialFocusHighlight();
+      this.updateTutorialObjectiveHud();
       return;
     }
     const step = this.tutorialSteps[this.tutorialStepIndex];
@@ -2767,6 +2991,7 @@ export class MainScene extends Phaser.Scene {
     this.tutorialHelpText.setText(textLines.join('\n'));
     this.updateTutorialHelpHighlight();
     this.updateTutorialFocusHighlight();
+    this.updateTutorialObjectiveHud();
   }
   
   private buildProgressBar(current: number, total: number): string {
@@ -3110,6 +3335,7 @@ focusTarget: 'player',
     this.setupTutorialEnemy(step);
     this.updateTutorialHelpText();
     this.updateTutorialViperButtonVisibility(step);
+    this.updateTutorialObjectiveHud();
   }
 
   private resetTutorialProgress() {
@@ -4596,6 +4822,12 @@ focusTarget: 'player',
       this.gameState.isGameOver = true;
       this.gameState.playerWon = true;
       this.showGameOver('ボス撃破\n\n勝利！');
+      if (!this.isTutorialMode) {
+        const unlockedType = this.unlockNextBulletType();
+        if (unlockedType) {
+          this.showUnlockCelebration(unlockedType);
+        }
+      }
     }
   }
 
