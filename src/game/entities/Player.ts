@@ -7,6 +7,7 @@ export class Player {
   private body: Phaser.GameObjects.Arc;
   private aimIndicator: Phaser.GameObjects.Line;
   private slowIndicator: Phaser.GameObjects.Arc;
+  private slowText: Phaser.GameObjects.Text;
   public x: number;
   public y: number;
   public angle: number = 0;
@@ -43,8 +44,18 @@ export class Player {
     this.slowIndicator.setAlpha(0.9);
     this.slowIndicator.setVisible(false);
 
+    this.slowText = scene.add.text(0, -GAME_CONFIG.PLAYER_RADIUS - 18, '', {
+      fontSize: '12px',
+      color: '#ff9f43',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    this.slowText.setOrigin(0.5, 1);
+    this.slowText.setVisible(false);
+
     // Container for player graphics
-    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator, this.slowIndicator]);
+    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator, this.slowIndicator, this.slowText]);
     
     // Setup keyboard input
     this.keys = {
@@ -63,6 +74,13 @@ export class Player {
     const isSlowed = now < this.slowUntil && this.slowStacks > 0;
     if (this.slowIndicator.visible !== isSlowed) {
       this.slowIndicator.setVisible(isSlowed);
+    }
+    const slowInfo = this.getSlowStatus(now);
+    if (slowInfo.active) {
+      this.slowText.setText(`SLOW x${slowInfo.stacks} ${slowInfo.remainingSeconds.toFixed(1)}s`);
+      this.slowText.setVisible(true);
+    } else {
+      this.slowText.setVisible(false);
     }
     const speedMultiplier = this.getSpeedMultiplier(now);
     const speed = GAME_CONFIG.PLAYER_SPEED * speedMultiplier * (delta / 1000);
@@ -138,6 +156,16 @@ export class Player {
     const stacks = this.getSlowStacks(currentTime);
     if (stacks === 0) return 1;
     return Math.pow(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER, stacks);
+  }
+
+  getSlowStatus(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    const remainingMs = Math.max(0, this.slowUntil - currentTime);
+    return {
+      active: stacks > 0 && remainingMs > 0,
+      stacks,
+      remainingSeconds: remainingMs / 1000,
+    };
   }
 
   destroy() {

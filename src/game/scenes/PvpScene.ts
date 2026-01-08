@@ -11,6 +11,7 @@ class PvpFighter {
   private body: Phaser.GameObjects.Arc;
   private aimIndicator: Phaser.GameObjects.Line;
   private slowIndicator: Phaser.GameObjects.Arc;
+  private slowText: Phaser.GameObjects.Text;
   public x: number;
   public y: number;
   public angle: number = 0;
@@ -36,7 +37,17 @@ class PvpFighter {
     this.slowIndicator.setAlpha(0.9);
     this.slowIndicator.setVisible(false);
 
-    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator, this.slowIndicator]);
+    this.slowText = scene.add.text(0, -GAME_CONFIG.PLAYER_RADIUS - 18, '', {
+      fontSize: '12px',
+      color: '#ff9f43',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    this.slowText.setOrigin(0.5, 1);
+    this.slowText.setVisible(false);
+
+    this.sprite = scene.add.container(x, y, [this.body, this.aimIndicator, this.slowIndicator, this.slowText]);
   }
 
   updateMovement(delta: number, moveX: number, moveY: number) {
@@ -47,6 +58,13 @@ class PvpFighter {
     const slowActive = now < this.slowUntil && this.slowStacks > 0;
     if (this.slowIndicator.visible !== slowActive) {
       this.slowIndicator.setVisible(slowActive);
+    }
+    if (slowActive) {
+      const remainingSeconds = Math.max(0, this.slowUntil - now) / 1000;
+      this.slowText.setText(`SLOW x${this.slowStacks} ${remainingSeconds.toFixed(1)}s`);
+      this.slowText.setVisible(true);
+    } else {
+      this.slowText.setVisible(false);
     }
     if (now < this.freezeUntil) {
       this.sprite.setPosition(this.x, this.y);
@@ -100,6 +118,16 @@ class PvpFighter {
     const stacks = this.getSlowStacks(currentTime);
     if (stacks === 0) return 1;
     return Math.pow(GAME_CONFIG.RED_BULLET_ENEMY_BULLET_SPEED_MULTIPLIER, stacks);
+  }
+
+  getSlowStatus(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    const remainingMs = Math.max(0, this.slowUntil - currentTime);
+    return {
+      active: stacks > 0 && remainingMs > 0,
+      stacks,
+      remainingSeconds: remainingMs / 1000,
+    };
   }
 
   private getSlowStacks(currentTime: number) {
@@ -609,8 +637,32 @@ export class PvpScene extends Phaser.Scene {
     }
     const p1Label = isMobile ? 'P1:' : 'P1 弾:';
     const p2Label = isMobile ? 'P2:' : 'P2 弾:';
-    this.player1BulletText.setText(`${p1Label} ${this.getBulletDisplayName(this.getBulletTypeForPlayer('p1'))}`);
-    this.player2BulletText.setText(`${p2Label} ${this.getBulletDisplayName(this.getBulletTypeForPlayer('p2'))}`);
+    const p1Current = this.getBulletTypeForPlayer('p1');
+    const p2Current = this.getBulletTypeForPlayer('p2');
+    const p1NextIndex = this.getNextBulletIndex(this.player1BulletIndex, 'p1');
+    const p2NextIndex = this.getNextBulletIndex(this.player2BulletIndex, 'p2');
+    const p1Next = this.playerBulletTypes.p1[p1NextIndex] ?? p1Current;
+    const p2Next = this.playerBulletTypes.p2[p2NextIndex] ?? p2Current;
+    const p1ShieldLabel = this.player1Shield?.active
+      ? this.player1Shield.type === 'wide'
+        ? `広域 ${Math.ceil(this.player1Shield.getStrength())}/${Math.ceil(this.player1Shield.getMaxStrength())}`
+        : `狭域 ${Math.ceil(this.player1Shield.getStrength())}/${Math.ceil(this.player1Shield.getMaxStrength())}`
+      : 'なし';
+    const p2ShieldLabel = this.player2Shield?.active
+      ? this.player2Shield.type === 'wide'
+        ? `広域 ${Math.ceil(this.player2Shield.getStrength())}/${Math.ceil(this.player2Shield.getMaxStrength())}`
+        : `狭域 ${Math.ceil(this.player2Shield.getStrength())}/${Math.ceil(this.player2Shield.getMaxStrength())}`
+      : 'なし';
+    const p1Slow = this.player1.getSlowStatus(this.time.now);
+    const p2Slow = this.player2.getSlowStatus(this.time.now);
+    const p1Status = p1Slow.active ? `SLOW x${p1Slow.stacks} ${p1Slow.remainingSeconds.toFixed(1)}s` : '-';
+    const p2Status = p2Slow.active ? `SLOW x${p2Slow.stacks} ${p2Slow.remainingSeconds.toFixed(1)}s` : '-';
+    this.player1BulletText.setText(
+      `${p1Label} ${this.getBulletDisplayName(p1Current)} / 次:${this.getBulletDisplayName(p1Next)} / 盾:${p1ShieldLabel} / 状態:${p1Status}`
+    );
+    this.player2BulletText.setText(
+      `${p2Label} ${this.getBulletDisplayName(p2Current)} / 次:${this.getBulletDisplayName(p2Next)} / 盾:${p2ShieldLabel} / 状態:${p2Status}`
+    );
     this.emitTrionStatus();
   }
 
@@ -1021,6 +1073,7 @@ export class PvpScene extends Phaser.Scene {
           this.triggerMeteoraExplosion(bullet, target, targetShield, targetId);
         } else {
           bullet.destroy();
+          this.showBlockIndicator(targetShield.x, targetShield.y, bullet.shieldDamage);
           targetShield.applyDamage(bullet.shieldDamage);
         }
         continue;
@@ -1044,6 +1097,7 @@ export class PvpScene extends Phaser.Scene {
     if (!area) return;
 
     if (targetShield?.active && this.circleHitsShield(area, targetShield)) {
+      this.showBlockIndicator(targetShield.x, targetShield.y, GAME_CONFIG.METEORA_SHIELD_DAMAGE);
       targetShield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
       return;
     }
@@ -1119,6 +1173,7 @@ export class PvpScene extends Phaser.Scene {
     const player2Shield = this.player2Shield;
 
     if (player1Shield?.active && this.circleHitsShield(area, player1Shield)) {
+      this.showBlockIndicator(player1Shield.x, player1Shield.y, GAME_CONFIG.METEORA_SHIELD_DAMAGE);
       player1Shield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
     } else {
       const player1Bounds = new Phaser.Geom.Circle(this.player1.x, this.player1.y, GAME_CONFIG.PLAYER_RADIUS);
@@ -1129,6 +1184,7 @@ export class PvpScene extends Phaser.Scene {
     }
 
     if (player2Shield?.active && this.circleHitsShield(area, player2Shield)) {
+      this.showBlockIndicator(player2Shield.x, player2Shield.y, GAME_CONFIG.METEORA_SHIELD_DAMAGE);
       player2Shield.applyDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE);
     } else {
       const player2Bounds = new Phaser.Geom.Circle(this.player2.x, this.player2.y, GAME_CONFIG.PLAYER_RADIUS);
@@ -1169,6 +1225,38 @@ export class PvpScene extends Phaser.Scene {
           this.damageTexts.splice(index, 1);
         }
         damageText.destroy();
+      }
+    });
+  }
+
+  private showBlockIndicator(x: number, y: number, damage: number) {
+    const offsetX = Phaser.Math.Between(-16, 16);
+    const offsetY = Phaser.Math.Between(-12, 12);
+    const blockText = this.add.text(x + offsetX, y + offsetY, `BLOCK -${Math.round(damage)}`, {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ffd166',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    blockText.setOrigin(0.5, 0.5);
+    blockText.setDepth(90);
+    this.damageTexts.push(blockText);
+
+    this.tweens.add({
+      targets: blockText,
+      y: blockText.y - 40,
+      alpha: 0,
+      scale: 1.1,
+      duration: 700,
+      ease: 'Power2',
+      onComplete: () => {
+        const index = this.damageTexts.indexOf(blockText);
+        if (index > -1) {
+          this.damageTexts.splice(index, 1);
+        }
+        blockText.destroy();
       }
     });
   }

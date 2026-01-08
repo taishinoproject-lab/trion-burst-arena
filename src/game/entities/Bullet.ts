@@ -3,7 +3,8 @@ import { GAME_CONFIG, BulletType } from '../constants';
 
 export class Bullet {
   private scene: Phaser.Scene;
-  public sprite: Phaser.GameObjects.Arc;
+  public sprite: Phaser.GameObjects.Shape;
+  private collisionRadius: number;
   public x: number;
   public y: number;
   public velocityX: number;
@@ -98,12 +99,37 @@ export class Bullet {
       color = isPlayerBullet ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_BULLET_COLOR;
     }
     
-    const radius = type === 'meteora' ? GAME_CONFIG.BULLET_RADIUS * 1.3 :
-                   type === 'hound' ? GAME_CONFIG.BULLET_RADIUS * 0.9 :
-                   type === 'red' ? GAME_CONFIG.BULLET_RADIUS * 1.4 :
-                   GAME_CONFIG.BULLET_RADIUS;
-    
-    this.sprite = scene.add.circle(x, y, radius, color);
+    const baseRadius = GAME_CONFIG.BULLET_RADIUS;
+    const radius = type === 'meteora' ? baseRadius * 1.3 :
+      type === 'hound' ? baseRadius * 0.95 :
+      type === 'red' ? baseRadius * 1.4 :
+      baseRadius;
+    this.collisionRadius = radius;
+
+    if (type === 'meteora') {
+      const size = radius * 1.4;
+      this.sprite = scene.add.polygon(
+        x,
+        y,
+        [0, -size, size, 0, 0, size, -size, 0],
+        color
+      );
+    } else if (type === 'hound') {
+      const size = radius * 1.4;
+      this.sprite = scene.add.triangle(
+        x,
+        y,
+        size, 0,
+        -size, -size * 0.8,
+        -size, size * 0.8,
+        color
+      );
+    } else if (type === 'viper') {
+      this.sprite = scene.add.rectangle(x, y, radius * 2.1, radius * 1.3, color);
+    } else {
+      this.sprite = scene.add.circle(x, y, radius, color);
+    }
+
     const strokeColor = type === 'red' ? GAME_CONFIG.RED_BULLET_STROKE_COLOR : 0xffffff;
     this.sprite.setStrokeStyle(1, strokeColor, 0.6);
     if (type === 'viper') {
@@ -207,6 +233,7 @@ export class Bullet {
     }
     
     this.sprite.setPosition(this.x, this.y);
+    this.sprite.setRotation(this.angle);
     
     // Check if out of bounds
     if (
@@ -373,6 +400,6 @@ export class Bullet {
   }
 
   getBounds(): Phaser.Geom.Circle {
-    return new Phaser.Geom.Circle(this.x, this.y, this.sprite.radius);
+    return new Phaser.Geom.Circle(this.x, this.y, this.collisionRadius);
   }
 }

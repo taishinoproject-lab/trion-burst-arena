@@ -181,6 +181,14 @@ export class Shield {
     }
   }
 
+  getStrength() {
+    return this.strength;
+  }
+
+  getMaxStrength() {
+    return this.maxStrength;
+  }
+
   destroy() {
     this.active = false;
     

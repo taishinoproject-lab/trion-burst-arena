@@ -21,6 +21,7 @@ export class Boss {
   private body: Phaser.GameObjects.Arc;
   private innerRing: Phaser.GameObjects.Arc;
   private slowIndicator: Phaser.GameObjects.Arc;
+  private slowText: Phaser.GameObjects.Text;
   public x: number;
   public y: number;
   
@@ -83,6 +84,17 @@ export class Boss {
     this.slowIndicator.setAlpha(0.9);
     this.slowIndicator.setVisible(false);
     this.sprite.add(this.slowIndicator);
+
+    this.slowText = scene.add.text(0, -this.config.radius - 18, '', {
+      fontSize: '12px',
+      color: '#ff9f43',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    this.slowText.setOrigin(0.5, 1);
+    this.slowText.setVisible(false);
+    this.sprite.add(this.slowText);
   }
 
   update(delta: number, playerX: number, playerY: number, currentTime: number) {
@@ -98,13 +110,7 @@ export class Boss {
     }
     
     // Move towards target
-    const isSlowed = currentTime < this.slowUntil && this.slowStacks > 0;
-    if (!isSlowed && this.slowStacks > 0) {
-      this.slowStacks = 0;
-    }
-    if (this.slowIndicator.visible !== isSlowed) {
-      this.slowIndicator.setVisible(isSlowed);
-    }
+    this.updateSlowVisuals(currentTime);
     const speed = this.config.speed * this.getSpeedMultiplier(currentTime) * (delta / 1000);
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
@@ -158,10 +164,27 @@ export class Boss {
     if (this.slowIndicator.visible !== isSlowed) {
       this.slowIndicator.setVisible(isSlowed);
     }
+    const slowInfo = this.getSlowStatus(currentTime);
+    if (slowInfo.active) {
+      this.slowText.setText(`SLOW x${slowInfo.stacks} ${slowInfo.remainingSeconds.toFixed(1)}s`);
+      this.slowText.setVisible(true);
+    } else {
+      this.slowText.setVisible(false);
+    }
   }
 
   getMovementSpeedMultiplier(currentTime: number) {
     return this.getSpeedMultiplier(currentTime);
+  }
+
+  getSlowStatus(currentTime: number) {
+    const stacks = this.getSlowStacks(currentTime);
+    const remainingMs = Math.max(0, this.slowUntil - currentTime);
+    return {
+      active: stacks > 0 && remainingMs > 0,
+      stacks,
+      remainingSeconds: remainingMs / 1000,
+    };
   }
 
   private pickNewTarget(playerX: number, playerY: number) {
