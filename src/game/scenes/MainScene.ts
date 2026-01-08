@@ -1779,6 +1779,12 @@ export class MainScene extends Phaser.Scene {
     this.instructionStartMode = 'boss';
     const { isCompactLayout, layoutCenterY, actionButtonWidth, actionButtonHeight } =
       this.getInstructionLayout();
+    const unlockedTypes = new Set(this.unlockedBulletTypes);
+    const requiredSelectionCount = Math.min(3, unlockedTypes.size);
+    this.selectedBulletTypes = this.selectedBulletTypes.filter((type) => unlockedTypes.has(type));
+    if (this.selectedBulletTypes.length === 0) {
+      this.selectedBulletTypes = this.getDefaultSelectedBulletTypes();
+    }
 
     const titleY = layoutCenterY - (this.isMobileMode ? (isCompactLayout ? 170 : 190) : 220);
     const title = this.add.text(GAME_CONFIG.WIDTH / 2, titleY, '- トリガー選択 -', {
