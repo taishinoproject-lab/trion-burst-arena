@@ -940,14 +940,21 @@ export class PvpScene extends Phaser.Scene {
 
   private tryDeployShield(player: 'p1' | 'p2', shieldType: ShieldType) {
     const shieldRef = player === 'p1' ? this.player1Shield : this.player2Shield;
-    if (shieldRef?.active) return;
 
     if (player === 'p1') {
       if (this.player1Trion < GAME_CONFIG.SHIELD_COST) return;
+      if (shieldRef?.active) {
+        shieldRef.destroy();
+        this.player1Shield = null;
+      }
       this.player1Trion -= GAME_CONFIG.SHIELD_COST;
       this.player1Shield = new Shield(this, this.player1.x, this.player1.y, this.player1.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
     } else {
       if (this.player2Trion < GAME_CONFIG.SHIELD_COST) return;
+      if (shieldRef?.active) {
+        shieldRef.destroy();
+        this.player2Shield = null;
+      }
       this.player2Trion -= GAME_CONFIG.SHIELD_COST;
       this.player2Shield = new Shield(this, this.player2.x, this.player2.y, this.player2.angle, shieldType, GAME_CONFIG.PLAYER_RADIUS);
     }
