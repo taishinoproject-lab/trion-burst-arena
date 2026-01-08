@@ -4,6 +4,19 @@ import { Player } from '../entities/Player';
 import { Boss, BossConfig } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
 import { Shield, ShieldType } from '../entities/Shield';
+import {
+  CHALLENGES,
+  DEFAULT_THEME_ID,
+  DEFAULT_TITLE_ID,
+  RetentionData,
+  ThemePreset,
+  TitlePreset,
+  THEME_PRESETS,
+  TITLE_PRESETS,
+  loadRetentionData,
+  resetRetentionData,
+  saveRetentionData,
+} from '../retention';
 
 const UNLOCKED_TRIGGER_STORAGE_KEY = 'tba_unlocked_triggers_v1';
 const UNLOCKED_TRIGGER_STORAGE_VERSION = 1;
@@ -197,6 +210,20 @@ export class MainScene extends Phaser.Scene {
     p2: ['asteroid', 'meteora', 'viper'],
   };
   private pvpAiEnabled = false;
+  private retentionData: RetentionData = loadRetentionData();
+  private runStats = {
+    startTimeMs: 0,
+    tookDamage: false,
+    usedTriggers: new Set<BulletType>(),
+    shieldBreakCount: 0,
+  };
+  private lastVictorySummary?: {
+    clearTimeMs: number;
+    bestTimeMs?: number;
+    isNewBest: boolean;
+    newlyCompletedChallenges: string[];
+  };
+  private playerTitleText?: Phaser.GameObjects.Text;
 
   private getBossMaxTrion() {
     return this.difficulty === 'hard' ? GAME_CONFIG.BOSS_TRION_MAX * 2 : GAME_CONFIG.BOSS_TRION_MAX;
@@ -216,6 +243,209 @@ export class MainScene extends Phaser.Scene {
         return 'ハウンド';
       default:
         return type;
+    }
+  }
+
+  private getTitlePresetById(id: string): TitlePreset | undefined {
+    return TITLE_PRESETS.find((preset) => preset.id === id);
+  }
+
+  private getThemePresetById(id: string): ThemePreset | undefined {
+    return THEME_PRESETS.find((preset) => preset.id === id);
+  }
+
+  private getSelectedTitleLabel() {
+    const selectedId = this.retentionData.cosmetics.selectedTitle ?? DEFAULT_TITLE_ID;
+    return this.getTitlePresetById(selectedId)?.label ?? '新人隊員';
+  }
+
+  private getSelectedThemePreset() {
+    const selectedId = this.retentionData.cosmetics.selectedTheme ?? DEFAULT_THEME_ID;
+    return this.getThemePresetById(selectedId) ?? THEME_PRESETS[0];
+  }
+
+  private getAccentColorNumber() {
+    return this.getSelectedThemePreset()?.colorNumber ?? GAME_CONFIG.BULLET_COLOR;
+  }
+
+  private getAccentColorHex() {
+    return this.getSelectedThemePreset()?.colorHex ?? GAME_CONFIG.BULLET_COLOR_HEX;
+  }
+
+  private formatTimeMs(timeMs: number) {
+    return `${(timeMs / 1000).toFixed(2)}s`;
+  }
+
+  private getBossTimeKey() {
+    switch (this.difficulty) {
+      case 'easy':
+        return 'boss_L0';
+      case 'middle':
+        return 'boss_L1';
+      case 'hard':
+        return 'boss_L2';
+      default:
+        return 'boss_L0';
+    }
+  }
+
+  private resetRunStats() {
+    this.runStats = {
+      startTimeMs: this.time.now,
+      tookDamage: false,
+      usedTriggers: new Set<BulletType>(this.selectedBulletTypes),
+      shieldBreakCount: 0,
+    };
+  }
+
+  private registerEnemyShieldBreak() {
+    if (this.isTutorialMode || !this.gameStarted) return;
+    this.runStats.shieldBreakCount += 1;
+  }
+
+  private showToast(message: string, options?: { color?: string; delayMs?: number; durationMs?: number }) {
+    const toastX = GAME_CONFIG.WIDTH / 2;
+    const toastY = this.isMobileMode ? 120 : 110;
+    const textColor = options?.color ?? this.getAccentColorHex();
+    const text = this.add.text(0, 0, message, {
+      fontSize: this.isMobileMode ? '16px' : '18px',
+      color: textColor,
+      fontFamily: 'monospace',
+      align: 'center',
+      lineSpacing: 4,
+    });
+    text.setOrigin(0.5);
+    const paddingX = this.isMobileMode ? 18 : 22;
+    const paddingY = this.isMobileMode ? 10 : 12;
+    const borderColor = Phaser.Display.Color.HexStringToColor(textColor).color;
+    const background = this.add.rectangle(
+      0,
+      0,
+      text.width + paddingX * 2,
+      text.height + paddingY * 2,
+      0x0a0a12,
+      0.9
+    );
+    background.setOrigin(0.5);
+    background.setStrokeStyle(2, borderColor, 0.7);
+    const container = this.add.container(toastX, toastY, [background, text]);
+    container.setDepth(120);
+    container.setAlpha(0);
+    container.setScale(0.96);
+
+    const delay = options?.delayMs ?? 0;
+    const duration = options?.durationMs ?? 1500;
+
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      scale: 1,
+      duration: 220,
+      delay,
+      ease: 'Sine.easeOut',
+    });
+    this.tweens.add({
+      targets: container,
+      alpha: 0,
+      scale: 0.98,
+      duration: 320,
+      delay: delay + duration,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        container.destroy(true);
+      },
+    });
+  }
+
+  private handleSinglePlayerVictory() {
+    const clearTimeMs = Math.max(0, this.time.now - this.runStats.startTimeMs);
+    const timeKey = this.getBossTimeKey();
+    const previousBest = this.retentionData.bestTimes[timeKey];
+    const isNewBest = typeof previousBest !== 'number' || clearTimeMs < previousBest;
+    if (isNewBest) {
+      this.retentionData.bestTimes[timeKey] = clearTimeMs;
+    }
+
+    const newlyCompletedChallenges: string[] = [];
+    const newlyUnlockedTitles: string[] = [];
+    const newlyUnlockedThemes: string[] = [];
+    const completionTime = Date.now();
+
+    CHALLENGES.forEach((challenge) => {
+      const current = this.retentionData.challenges[challenge.id] ?? { completed: false };
+      let completedNow = false;
+      if (challenge.id === 'CH_NO_DAMAGE_CLEAR') {
+        completedNow = !this.runStats.tookDamage;
+      } else if (challenge.id === 'CH_RED_FORBIDDEN_CLEAR') {
+        completedNow = !this.runStats.usedTriggers.has('red');
+      } else if (challenge.id === 'CH_SHIELD_BREAK_COUNT_3') {
+        completedNow = this.runStats.shieldBreakCount >= 3;
+        const bestValue = Math.max(current.bestValue ?? 0, this.runStats.shieldBreakCount);
+        current.bestValue = bestValue;
+      }
+      if (completedNow && !current.completed) {
+        current.completed = true;
+        current.completedAt = completionTime;
+        newlyCompletedChallenges.push(challenge.name);
+        if (challenge.rewardTitleId) {
+          if (!this.retentionData.cosmetics.unlockedTitles.includes(challenge.rewardTitleId)) {
+            this.retentionData.cosmetics.unlockedTitles.push(challenge.rewardTitleId);
+            newlyUnlockedTitles.push(challenge.rewardTitleId);
+          }
+        }
+        if (challenge.rewardThemeId) {
+          if (!this.retentionData.cosmetics.unlockedThemes.includes(challenge.rewardThemeId)) {
+            this.retentionData.cosmetics.unlockedThemes.push(challenge.rewardThemeId);
+            newlyUnlockedThemes.push(challenge.rewardThemeId);
+          }
+        }
+      }
+      this.retentionData.challenges[challenge.id] = current;
+    });
+
+    this.refreshRetentionSelections();
+    saveRetentionData(this.retentionData);
+
+    if (isNewBest) {
+      this.showToast(`NEW PB! ${this.formatTimeMs(clearTimeMs)}`);
+    }
+
+    newlyCompletedChallenges.forEach((challengeName, index) => {
+      this.showToast(`CHALLENGE COMPLETE:\n${challengeName}`, { delayMs: 200 + index * 220 });
+    });
+
+    newlyUnlockedTitles.forEach((titleId, index) => {
+      const titleLabel = this.getTitlePresetById(titleId)?.label ?? titleId;
+      this.showToast(`UNLOCKED: ${titleLabel}`, { delayMs: 400 + index * 220, color: '#ffd166' });
+    });
+
+    newlyUnlockedThemes.forEach((themeId, index) => {
+      const themeLabel = this.getThemePresetById(themeId)?.name ?? themeId;
+      this.showToast(`UNLOCKED THEME: ${themeLabel}`, { delayMs: 600 + index * 220, color: '#ffd166' });
+    });
+
+    this.lastVictorySummary = {
+      clearTimeMs,
+      bestTimeMs: this.retentionData.bestTimes[timeKey],
+      isNewBest,
+      newlyCompletedChallenges,
+    };
+  }
+
+  private refreshRetentionSelections() {
+    const titleIds = new Set(TITLE_PRESETS.map((preset) => preset.id));
+    const themeIds = new Set(THEME_PRESETS.map((preset) => preset.id));
+    const unlockedTitles = this.retentionData.cosmetics.unlockedTitles.filter((id) => titleIds.has(id));
+    const unlockedThemes = this.retentionData.cosmetics.unlockedThemes.filter((id) => themeIds.has(id));
+    this.retentionData.cosmetics.unlockedTitles =
+      unlockedTitles.length > 0 ? unlockedTitles : [DEFAULT_TITLE_ID];
+    this.retentionData.cosmetics.unlockedThemes =
+      unlockedThemes.length > 0 ? unlockedThemes : [DEFAULT_THEME_ID];
+    if (!this.retentionData.cosmetics.unlockedTitles.includes(this.retentionData.cosmetics.selectedTitle ?? '')) {
+      this.retentionData.cosmetics.selectedTitle = this.retentionData.cosmetics.unlockedTitles[0];
+    }
+    if (!this.retentionData.cosmetics.unlockedThemes.includes(this.retentionData.cosmetics.selectedTheme ?? '')) {
+      this.retentionData.cosmetics.selectedTheme = this.retentionData.cosmetics.unlockedThemes[0];
     }
   }
 
@@ -438,6 +668,8 @@ export class MainScene extends Phaser.Scene {
     this.events.emit('tutorial-state-changed', this.isTutorialMode);
     this.unlockedBulletTypes = this.loadUnlockedBulletTypes();
     this.selectedBulletTypes = this.getDefaultSelectedBulletTypes();
+    this.retentionData = loadRetentionData();
+    this.refreshRetentionSelections();
     // Background
     this.cameras.main.setBackgroundColor(GAME_CONFIG.BACKGROUND_COLOR);
     
@@ -530,6 +762,13 @@ export class MainScene extends Phaser.Scene {
       color: '#ffffff',
       fontFamily: 'monospace',
     });
+
+    this.playerTitleText = this.add.text(marginX, uiY + (isMobile ? 18 : 26), '', {
+      fontSize: isMobile ? '11px' : '12px',
+      color: this.getAccentColorHex(),
+      fontFamily: 'monospace',
+    });
+    this.playerTitleText.setText(`称号: ${this.getSelectedTitleLabel()}`);
     
     // Boss Trion UI (right side)
     const bossLabelX = GAME_CONFIG.WIDTH - marginX - barWidth;
@@ -1092,6 +1331,215 @@ export class MainScene extends Phaser.Scene {
 
     setupButtonHover(bossButton, bossButtonGlow, GAME_CONFIG.BULLET_COLOR);
     setupButtonHover(twoPlayerButton, twoPlayerButtonGlow, 0xffd166);
+
+    const statsWidth = this.isMobileMode ? Math.min(GAME_CONFIG.WIDTH * 0.82, 560) : 560;
+    const statsHeight = this.isMobileMode ? (isCompactLayout ? 200 : 220) : 200;
+    const statsY = secondButtonY + buttonHeight / 2 + (this.isMobileMode ? (isCompactLayout ? 90 : 110) : 120);
+    const statsBg = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      statsY,
+      statsWidth,
+      statsHeight,
+      0x0a0a12,
+      0.7
+    );
+    statsBg.setStrokeStyle(2, this.getAccentColorNumber(), 0.6);
+    instructionElements.push(statsBg);
+
+    const statsTitle = this.add.text(GAME_CONFIG.WIDTH / 2, statsY - statsHeight / 2 + 18, '▼ ステータス ▼', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '16px' : '18px') : '16px',
+      color: this.getAccentColorHex(),
+      fontFamily: 'monospace',
+    });
+    statsTitle.setOrigin(0.5, 0.5);
+    instructionElements.push(statsTitle);
+
+    const bestTimeLabels = [
+      { label: 'L0', key: 'boss_L0' },
+      { label: 'L1', key: 'boss_L1' },
+      { label: 'L2', key: 'boss_L2' },
+    ];
+    const bestTimeSegments = bestTimeLabels.map(({ label, key }) => {
+      const value = this.retentionData.bestTimes[key];
+      return `${label}: ${typeof value === 'number' ? this.formatTimeMs(value) : '--'}`;
+    });
+    const bestTimeText = this.isMobileMode ? bestTimeSegments.join('\n') : bestTimeSegments.join('  ');
+    const bestTimeLine = this.add.text(GAME_CONFIG.WIDTH / 2, statsTitle.y + (this.isMobileMode ? 24 : 26), bestTimeText, {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      align: 'center',
+    });
+    bestTimeLine.setOrigin(0.5, 0);
+    instructionElements.push(bestTimeLine);
+
+    const completedChallenges = CHALLENGES.filter(
+      (challenge) => this.retentionData.challenges[challenge.id]?.completed
+    ).length;
+    const challengeSummary = this.add.text(
+      GAME_CONFIG.WIDTH / 2,
+      bestTimeLine.getBounds().bottom + (this.isMobileMode ? 10 : 8),
+      `挑戦達成: ${completedChallenges}/${CHALLENGES.length}`,
+      {
+        fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '13px',
+        color: '#cccccc',
+        fontFamily: 'monospace',
+      }
+    );
+    challengeSummary.setOrigin(0.5, 0);
+    instructionElements.push(challengeSummary);
+
+    const titleRowY = challengeSummary.getBounds().bottom + (this.isMobileMode ? 16 : 14);
+    const themeRowY = titleRowY + (this.isMobileMode ? 36 : 32);
+    const selectorWidth = 26;
+    const selectorHeight = this.isMobileMode ? 22 : 20;
+    const selectorOffset = statsWidth / 2 - (this.isMobileMode ? 80 : 110);
+
+    const titleLabel = this.add.text(GAME_CONFIG.WIDTH / 2 - selectorOffset - 20, titleRowY, '称号', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '13px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    titleLabel.setOrigin(1, 0.5);
+    instructionElements.push(titleLabel);
+
+    const titleValue = this.add.text(GAME_CONFIG.WIDTH / 2, titleRowY, this.getSelectedTitleLabel(), {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '13px' : '15px') : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    titleValue.setOrigin(0.5, 0.5);
+    instructionElements.push(titleValue);
+
+    const themeLabel = this.add.text(GAME_CONFIG.WIDTH / 2 - selectorOffset - 20, themeRowY, 'テーマ', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '12px' : '14px') : '13px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    themeLabel.setOrigin(1, 0.5);
+    instructionElements.push(themeLabel);
+
+    const themeValue = this.add.text(GAME_CONFIG.WIDTH / 2, themeRowY, this.getSelectedThemePreset()?.name ?? '---', {
+      fontSize: this.isMobileMode ? (isCompactLayout ? '13px' : '15px') : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    themeValue.setOrigin(0.5, 0.5);
+    instructionElements.push(themeValue);
+
+    const themeSwatch = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2 + selectorOffset - 10,
+      themeRowY,
+      selectorHeight,
+      selectorHeight,
+      this.getAccentColorNumber(),
+      1
+    );
+    themeSwatch.setStrokeStyle(1, 0xffffff, 0.6);
+    themeSwatch.setOrigin(0.5);
+    instructionElements.push(themeSwatch);
+
+    const createSelector = (x: number, y: number, label: string) => {
+      const button = this.add.rectangle(x, y, selectorWidth, selectorHeight, 0x1a1a3a, 0.95);
+      button.setStrokeStyle(1, 0x4ad6ff, 0.8);
+      const text = this.add.text(x, y, label, {
+        fontSize: this.isMobileMode ? '16px' : '14px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      });
+      text.setOrigin(0.5);
+      instructionElements.push(button, text);
+      return { button, text };
+    };
+
+    const leftTitleSelector = createSelector(GAME_CONFIG.WIDTH / 2 - selectorOffset, titleRowY, '◀');
+    const rightTitleSelector = createSelector(GAME_CONFIG.WIDTH / 2 + selectorOffset, titleRowY, '▶');
+    const leftThemeSelector = createSelector(GAME_CONFIG.WIDTH / 2 - selectorOffset, themeRowY, '◀');
+    const rightThemeSelector = createSelector(GAME_CONFIG.WIDTH / 2 + selectorOffset, themeRowY, '▶');
+
+    const cycleSelection = (items: string[], current: string | undefined, direction: number) => {
+      if (items.length === 0) return current;
+      const index = Math.max(0, items.indexOf(current ?? items[0]));
+      const nextIndex = (index + direction + items.length) % items.length;
+      return items[nextIndex];
+    };
+
+    const updateTitleThemeDisplay = () => {
+      titleValue.setText(this.getSelectedTitleLabel());
+      const themePreset = this.getSelectedThemePreset();
+      themeValue.setText(themePreset?.name ?? '---');
+      themeSwatch.setFillStyle(themePreset?.colorNumber ?? GAME_CONFIG.BULLET_COLOR, 1);
+      statsBg.setStrokeStyle(2, themePreset?.colorNumber ?? GAME_CONFIG.BULLET_COLOR, 0.6);
+      statsTitle.setColor(themePreset?.colorHex ?? GAME_CONFIG.BULLET_COLOR_HEX);
+      if (this.isRenderableObject(this.playerTitleText)) {
+        this.playerTitleText.setText(`称号: ${this.getSelectedTitleLabel()}`);
+        this.playerTitleText.setColor(themePreset?.colorHex ?? GAME_CONFIG.BULLET_COLOR_HEX);
+      }
+    };
+
+    const handleTitleChange = (direction: number) => {
+      const next = cycleSelection(
+        this.retentionData.cosmetics.unlockedTitles,
+        this.retentionData.cosmetics.selectedTitle,
+        direction
+      );
+      if (!next) return;
+      this.retentionData.cosmetics.selectedTitle = next;
+      saveRetentionData(this.retentionData);
+      updateTitleThemeDisplay();
+    };
+
+    const handleThemeChange = (direction: number) => {
+      const next = cycleSelection(
+        this.retentionData.cosmetics.unlockedThemes,
+        this.retentionData.cosmetics.selectedTheme,
+        direction
+      );
+      if (!next) return;
+      this.retentionData.cosmetics.selectedTheme = next;
+      saveRetentionData(this.retentionData);
+      updateTitleThemeDisplay();
+    };
+
+    leftTitleSelector.button.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleTitleChange(-1));
+    leftTitleSelector.text.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleTitleChange(-1));
+    rightTitleSelector.button.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleTitleChange(1));
+    rightTitleSelector.text.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleTitleChange(1));
+    leftThemeSelector.button.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleThemeChange(-1));
+    leftThemeSelector.text.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleThemeChange(-1));
+    rightThemeSelector.button.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleThemeChange(1));
+    rightThemeSelector.text.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleThemeChange(1));
+
+    updateTitleThemeDisplay();
+
+    const resetButtonY = themeRowY + (this.isMobileMode ? 36 : 32);
+    const resetButtonWidth = this.isMobileMode ? 180 : 160;
+    const resetButtonHeight = this.isMobileMode ? 32 : 28;
+    const resetButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH / 2,
+      resetButtonY,
+      resetButtonWidth,
+      resetButtonHeight,
+      0x2a0f0f,
+      0.9
+    );
+    resetButton.setStrokeStyle(2, 0xff6b6b, 0.9);
+    const resetText = this.add.text(GAME_CONFIG.WIDTH / 2, resetButtonY, '進行データをリセット', {
+      fontSize: this.isMobileMode ? '12px' : '11px',
+      color: '#ff6b6b',
+      fontFamily: 'monospace',
+    });
+    resetText.setOrigin(0.5);
+    instructionElements.push(resetButton, resetText);
+
+    const handleReset = () => {
+      resetRetentionData();
+      this.retentionData = loadRetentionData();
+      this.refreshRetentionSelections();
+      this.showModeSelectInstructions();
+    };
+    resetButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleReset);
+    resetText.setInteractive({ useHandCursor: true }).on('pointerdown', handleReset);
 
     // Footer decoration - hide on very compact mobile
     const footerY = GAME_CONFIG.HEIGHT - (this.isMobileMode ? (isCompactLayout ? 30 : 40) : 50);
@@ -2717,6 +3165,8 @@ export class MainScene extends Phaser.Scene {
     this.gameStarted = true;
     this.battleStartTime = this.time.now;
     this.events.emit('battle-state-changed', this.gameStarted);
+    this.resetRunStats();
+    this.lastVictorySummary = undefined;
     this.setAvailableBulletTypes(this.getAvailableSingleModeBulletTypes());
     this.applyDifficultySettings();
     this.destroyInstructionsOverlay();
@@ -3742,6 +4192,9 @@ focusTarget: 'player',
     // Consume Trion
     this.gameState.playerTrion -= cost;
     this.lastFireTime = now;
+    if (!this.isTutorialMode && this.gameStarted) {
+      this.runStats.usedTriggers.add(bulletType);
+    }
     
     const aim = this.player.getAimDirection();
     const aimTarget = this.isMobileMode ? this.getClosestEnemyPosition() : null;
@@ -4436,8 +4889,12 @@ focusTarget: 'player',
         const boss = target.boss;
         if (boss.shieldActive && boss.shield && this.circleHitsShield(area, boss.shield)) {
           const shieldDamage = GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale;
+          const wasShieldActive = boss.shield.active && boss.shieldActive;
           this.showBlockIndicator(boss.shield.x, boss.shield.y, shieldDamage);
           boss.applyShieldDamage(shieldDamage);
+          if (wasShieldActive && !boss.shieldActive) {
+            this.registerEnemyShieldBreak();
+          }
           continue;
         }
 
@@ -4552,9 +5009,13 @@ focusTarget: 'player',
             if (bullet.type === 'meteora') {
               this.triggerMeteoraExplosion(bullet);
             } else {
+              const wasShieldActive = target.boss.shield.active && target.boss.shieldActive;
               bullet.destroy();
               this.showBlockIndicator(target.boss.shield.x, target.boss.shield.y, bullet.shieldDamage);
               target.boss.applyShieldDamage(bullet.shieldDamage);
+              if (wasShieldActive && !target.boss.shieldActive) {
+                this.registerEnemyShieldBreak();
+              }
             }
             break;
           }
@@ -4622,6 +5083,9 @@ focusTarget: 'player',
       const bulletRadius = bullet.getBounds().radius;
       if (dist < playerRadius + bulletRadius) {
         this.gameState.playerTrion -= bullet.trionDamage;
+        if (!this.isTutorialMode && this.gameStarted) {
+          this.runStats.tookDamage = true;
+        }
         this.showDamageNumber(this.player.x, this.player.y, bullet.trionDamage, true);
         if (bullet.type === 'red') {
           this.player.applySlow(
@@ -4659,6 +5123,8 @@ focusTarget: 'player',
     const barWidth = 250;
     const barHeight = 24;
     const uiY = 42;
+    const accentColor = this.getAccentColorNumber();
+    const accentHex = this.getAccentColorHex();
     
     // Player Trion Bar
     if (this.isRenderableObject(this.playerTrionBar)) {
@@ -4669,14 +5135,18 @@ focusTarget: 'player',
     
     const playerRatio = Math.max(0, this.gameState.playerTrion / GAME_CONFIG.PLAYER_TRION_MAX);
     if (this.isRenderableObject(this.playerTrionBar)) {
-      this.playerTrionBar.fillStyle(GAME_CONFIG.BULLET_COLOR, 1);
+      this.playerTrionBar.fillStyle(accentColor, 1);
       this.playerTrionBar.fillRect(20, uiY, barWidth * playerRatio, barHeight);
       
-      this.playerTrionBar.lineStyle(2, 0x00ffd5, 0.5);
+      this.playerTrionBar.lineStyle(2, accentColor, 0.5);
       this.playerTrionBar.strokeRect(20, uiY, barWidth, barHeight);
     }
     
     this.safeSetText(this.playerTrionText, `${Math.floor(this.gameState.playerTrion)}`);
+    if (this.isRenderableObject(this.playerTitleText)) {
+      this.playerTitleText.setText(`称号: ${this.getSelectedTitleLabel()}`);
+      this.playerTitleText.setColor(accentHex);
+    }
     
     // Boss Trion Bar
     if (this.isRenderableObject(this.bossTrionBar)) {
@@ -4821,6 +5291,9 @@ focusTarget: 'player',
     } else if (this.gameState.bossTrion <= 0 && this.extraEnemies.length === 0) {
       this.gameState.isGameOver = true;
       this.gameState.playerWon = true;
+      if (!this.isTutorialMode) {
+        this.handleSinglePlayerVictory();
+      }
       this.showGameOver('ボス撃破\n\n勝利！');
       if (!this.isTutorialMode) {
         const unlockedType = this.unlockNextBulletType();
@@ -4840,10 +5313,26 @@ focusTarget: 'player',
       : GAME_CONFIG.HEIGHT / 2;
     this.gameOverText.setPosition(GAME_CONFIG.WIDTH / 2, gameOverTextY);
     this.gameOverText.setVisible(true);
-    this.gameOverText.setColor(this.gameState.playerWon ? '#00ffd5' : '#ff6b6b');
+    this.gameOverText.setColor(this.gameState.playerWon ? this.getAccentColorHex() : '#ff6b6b');
+
+    const victoryDetails: string[] = [];
+    if (this.gameState.playerWon && this.lastVictorySummary) {
+      const clearLine = `CLEAR: ${this.formatTimeMs(this.lastVictorySummary.clearTimeMs)} | PB: ${this.formatTimeMs(
+        this.lastVictorySummary.bestTimeMs ?? this.lastVictorySummary.clearTimeMs
+      )}${this.lastVictorySummary.isNewBest ? ' (NEW PB!)' : ''}`;
+      victoryDetails.push(clearLine);
+      if (this.lastVictorySummary.newlyCompletedChallenges.length > 0) {
+        victoryDetails.push('達成:');
+        victoryDetails.push(...this.lastVictorySummary.newlyCompletedChallenges.map((name) => `・${name}`));
+      }
+    }
     
     // Add background
-    const backgroundHeight = this.isMobileMode ? (shouldShowAdvice ? 520 : 360) : (shouldShowAdvice ? 420 : 300);
+    const detailHeightOffset =
+      victoryDetails.length > 0 ? (this.isMobileMode ? 120 : 90) : 0;
+    const backgroundHeight = this.isMobileMode
+      ? (shouldShowAdvice ? 520 : 360) + detailHeightOffset
+      : (shouldShowAdvice ? 420 : 300) + detailHeightOffset;
     const backgroundWidth = this.isMobileMode ? 460 : 420;
     const bg = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
@@ -4853,13 +5342,15 @@ focusTarget: 'player',
       0x0a0a12,
       0.9
     );
-    bg.setStrokeStyle(2, this.gameState.playerWon ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_COLOR);
+    const accentColor = this.getAccentColorNumber();
+    bg.setStrokeStyle(2, this.gameState.playerWon ? accentColor : GAME_CONFIG.BOSS_COLOR);
     bg.setDepth(99);
     this.gameOverText.setDepth(100);
 
     const buttonWidth = this.isMobileMode ? 260 : 200;
     const buttonHeight = this.isMobileMode ? 90 : 55;
-    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? (shouldShowAdvice ? 220 : 140) : (shouldShowAdvice ? 170 : 120));
+    const buttonYOffset = victoryDetails.length > 0 ? (this.isMobileMode ? 90 : 70) : 0;
+    const buttonY = GAME_CONFIG.HEIGHT / 2 + (this.isMobileMode ? (shouldShowAdvice ? 220 : 140) : (shouldShowAdvice ? 170 : 120)) + buttonYOffset;
 
     const restartButton = this.add.rectangle(
       GAME_CONFIG.WIDTH / 2,
@@ -4869,7 +5360,7 @@ focusTarget: 'player',
       0x1a1a3a,
       0.95
     );
-    restartButton.setStrokeStyle(3, this.gameState.playerWon ? GAME_CONFIG.BULLET_COLOR : GAME_CONFIG.BOSS_COLOR, 0.9);
+    restartButton.setStrokeStyle(3, this.gameState.playerWon ? accentColor : GAME_CONFIG.BOSS_COLOR, 0.9);
     restartButton.setDepth(101);
 
     const restartText = this.add.text(GAME_CONFIG.WIDTH / 2, buttonY, 'リスタート', {
@@ -4893,6 +5384,23 @@ focusTarget: 'player',
       });
       adviceText.setOrigin(0.5);
       adviceText.setDepth(100);
+    }
+
+    if (victoryDetails.length > 0) {
+      const detailsText = this.add.text(
+        GAME_CONFIG.WIDTH / 2,
+        gameOverTextY + (this.isMobileMode ? 90 : 80),
+        victoryDetails.join('\n'),
+        {
+          fontSize: this.isMobileMode ? '18px' : '16px',
+          color: '#ffffff',
+          fontFamily: 'monospace',
+          align: 'center',
+          lineSpacing: 6,
+        }
+      );
+      detailsText.setOrigin(0.5, 0);
+      detailsText.setDepth(100);
     }
 
     const handleRestart = () => {
