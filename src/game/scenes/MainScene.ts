@@ -135,6 +135,9 @@ export class MainScene extends Phaser.Scene {
   private bossTrionText!: Phaser.GameObjects.Text;
   private bulletTypeText!: Phaser.GameObjects.Text;
   private delayedAsteroidText!: Phaser.GameObjects.Text;
+  private nextBulletText!: Phaser.GameObjects.Text;
+  private shieldStatusText!: Phaser.GameObjects.Text;
+  private statusEffectText!: Phaser.GameObjects.Text;
   private gameOverText!: Phaser.GameObjects.Text;
   private instructionsOverlay!: Phaser.GameObjects.Container;
   private instructionsContent?: Phaser.GameObjects.Container;
@@ -399,7 +402,7 @@ export class MainScene extends Phaser.Scene {
     const isCompactLayout = isMobile && this.scale.displaySize.height < 600;
     const bottomY = GAME_CONFIG.HEIGHT - (isMobile ? (isCompactLayout ? 40 : 52) : 40);
     const panelWidth = isMobile ? (isCompactLayout ? 290 : 330) : 360;
-    const panelHeight = isMobile ? (isCompactLayout ? 46 : 56) : 50;
+    const panelHeight = isMobile ? (isCompactLayout ? 58 : 70) : 64;
     
     // Background panel for bottom UI
     const panel = this.add.rectangle(
@@ -413,7 +416,7 @@ export class MainScene extends Phaser.Scene {
     panel.setStrokeStyle(1, GAME_CONFIG.BULLET_COLOR, 0.5);
     
     const bottomFontSize = isMobile ? (isCompactLayout ? '14px' : '16px') : '18px';
-    const bottomTextY = bottomY - (isMobile ? (isCompactLayout ? 8 : 10) : 10);
+    const bottomTextY = bottomY - (isMobile ? (isCompactLayout ? 12 : 14) : 14);
     this.bulletTypeText = this.add.text(
       GAME_CONFIG.WIDTH / 2 - (isMobile ? (isCompactLayout ? 110 : 125) : 140),
       bottomTextY,
@@ -435,6 +438,31 @@ export class MainScene extends Phaser.Scene {
         fontFamily: 'monospace',
       }
     );
+
+    const detailTextY = bottomY + (isMobile ? (isCompactLayout ? 6 : 8) : 8);
+    const detailFontSize = isMobile ? (isCompactLayout ? '11px' : '12px') : '12px';
+    const leftDetailX = GAME_CONFIG.WIDTH / 2 - (isMobile ? (isCompactLayout ? 110 : 125) : 140);
+    const rightDetailX = GAME_CONFIG.WIDTH / 2 + (isMobile ? (isCompactLayout ? 110 : 125) : 140);
+
+    this.nextBulletText = this.add.text(leftDetailX, detailTextY, '', {
+      fontSize: detailFontSize,
+      color: '#e0e7ff',
+      fontFamily: 'monospace',
+    });
+
+    this.shieldStatusText = this.add.text(GAME_CONFIG.WIDTH / 2, detailTextY, '', {
+      fontSize: detailFontSize,
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    this.shieldStatusText.setOrigin(0.5, 0);
+
+    this.statusEffectText = this.add.text(rightDetailX, detailTextY, '', {
+      fontSize: detailFontSize,
+      color: '#ff9f43',
+      fontFamily: 'monospace',
+    });
+    this.statusEffectText.setOrigin(1, 0);
     
     // Game over text (hidden initially)
     this.gameOverText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2, '', {
@@ -4181,7 +4209,9 @@ focusTarget: 'player',
       for (const target of this.getEnemyTargets()) {
         const boss = target.boss;
         if (boss.shieldActive && boss.shield && this.circleHitsShield(area, boss.shield)) {
-          boss.applyShieldDamage(GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale);
+          const shieldDamage = GAME_CONFIG.METEORA_SHIELD_DAMAGE * damageScale;
+          this.showBlockIndicator(boss.shield.x, boss.shield.y, shieldDamage);
+          boss.applyShieldDamage(shieldDamage);
           continue;
         }
 
@@ -4236,6 +4266,38 @@ focusTarget: 'player',
     });
   }
 
+  private showBlockIndicator(x: number, y: number, damage: number) {
+    const offsetX = Phaser.Math.Between(-16, 16);
+    const offsetY = Phaser.Math.Between(-12, 12);
+    const blockText = this.add.text(x + offsetX, y + offsetY, `BLOCK -${Math.round(damage)}`, {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ffd166',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    blockText.setOrigin(0.5, 0.5);
+    blockText.setDepth(90);
+    this.damageTexts.push(blockText);
+
+    this.tweens.add({
+      targets: blockText,
+      y: blockText.y - 40,
+      alpha: 0,
+      scale: 1.1,
+      duration: 700,
+      ease: 'Power2',
+      onComplete: () => {
+        const index = this.damageTexts.indexOf(blockText);
+        if (index > -1) {
+          this.damageTexts.splice(index, 1);
+        }
+        blockText.destroy();
+      }
+    });
+  }
+
   private triggerMeteoraExplosion(bullet: Bullet) {
     const explosionArea = bullet.explode();
     if (explosionArea) {
@@ -4265,6 +4327,7 @@ focusTarget: 'player',
               this.triggerMeteoraExplosion(bullet);
             } else {
               bullet.destroy();
+              this.showBlockIndicator(target.boss.shield.x, target.boss.shield.y, bullet.shieldDamage);
               target.boss.applyShieldDamage(bullet.shieldDamage);
             }
             break;
@@ -4319,6 +4382,7 @@ focusTarget: 'player',
           } else {
             bullet.destroy();
           }
+          this.showBlockIndicator(this.playerShield.x, this.playerShield.y, bullet.shieldDamage);
           this.playerShield.applyDamage(bullet.shieldDamage);
           if (wasActive && !this.playerShield.active) {
             this.registerTutorialShieldBreak(shieldType);
@@ -4438,6 +4502,29 @@ focusTarget: 'player',
         this.delayedAsteroidText.setColor(this.gameState.delayedAsteroidEnabled ? '#00ffd5' : '#666666');
       }
     }
+
+    const types = this.availableBulletTypes;
+    const currentIndex = types.indexOf(this.gameState.currentBulletType);
+    const nextType = types.length > 1 ? types[(currentIndex + 1) % types.length] : undefined;
+    const nextLabel = nextType ? this.getBulletDisplayName(nextType) : 'なし';
+    this.safeSetText(this.nextBulletText, `次: ${nextLabel}`);
+
+    const shield = this.playerShield?.active ? this.playerShield : null;
+    if (shield) {
+      const shieldTypeLabel = shield.type === 'wide' ? '広域' : '狭域';
+      this.safeSetText(
+        this.shieldStatusText,
+        `シールド: ${shieldTypeLabel} ${Math.ceil(shield.getStrength())}/${Math.ceil(shield.getMaxStrength())}`
+      );
+    } else {
+      this.safeSetText(this.shieldStatusText, 'シールド: なし');
+    }
+
+    const slowStatus = this.player.getSlowStatus(this.time.now);
+    const statusLabel = slowStatus.active
+      ? `状態: SLOW x${slowStatus.stacks} ${slowStatus.remainingSeconds.toFixed(1)}s`
+      : '状態: -';
+    this.safeSetText(this.statusEffectText, statusLabel);
     
     const enemyBarWidth = 160;
     const enemyBarHeight = 12;
