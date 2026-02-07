@@ -53,11 +53,13 @@ interface TutorialStep {
   title: string;
   description: string[];
   onEnter?: () => void;
+  onAdvance?: () => void;
   isCompleted: () => boolean;
   requiredBulletType?: BulletType;
   requiredHits?: number;
   requiredShieldType?: ShieldType;
   focusTarget?: 'trionMeter' | 'triggerDisplay' | 'player' | 'backButton' | 'viperSettings';
+  manualAdvance?: boolean;
   requiresSwitch?: boolean;
   requiresShieldBreak?: boolean;
   requiresDelayToggle?: boolean;
@@ -175,6 +177,8 @@ export class MainScene extends Phaser.Scene {
   private tutorialBackButtonTween?: Phaser.Tweens.Tween;
   private tutorialViperButton?: Phaser.GameObjects.Rectangle;
   private tutorialViperText?: Phaser.GameObjects.Text;
+  private tutorialNextButton?: Phaser.GameObjects.Rectangle;
+  private tutorialNextText?: Phaser.GameObjects.Text;
   private tutorialTapReady = false;
   private enemyBars: Phaser.GameObjects.Graphics[] = [];
   private enemyTexts: Phaser.GameObjects.Text[] = [];
@@ -701,7 +705,9 @@ export class MainScene extends Phaser.Scene {
       if (pointer.middleButtonDown()) {
         return;
       }
-      this.registerTutorialTap();
+      if (this.isTutorialMode && this.isPointerOverTutorialUi(pointer)) {
+        return;
+      }
       this.tryFireBullet();
     });
     
@@ -3364,13 +3370,46 @@ export class MainScene extends Phaser.Scene {
     viperButton.setVisible(false);
     viperText.setVisible(false);
 
+    const nextButtonWidth = this.isMobileMode ? 160 : 140;
+    const nextButtonHeight = this.isMobileMode ? 52 : 40;
+    const nextButton = this.add.rectangle(
+      GAME_CONFIG.WIDTH - (this.isMobileMode ? 110 : 100),
+      this.isMobileMode ? 240 : 210,
+      nextButtonWidth,
+      nextButtonHeight,
+      0x2d2a5a,
+      0.95
+    );
+    nextButton.setStrokeStyle(2, 0x2dff76, 0.9);
+    const nextText = this.add.text(nextButton.x, nextButton.y, '次へ', {
+      fontSize: this.isMobileMode ? '20px' : '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+    nextText.setOrigin(0.5);
+    const handleNext = () => {
+      this.handleTutorialNext();
+    };
+    nextButton.setInteractive({ useHandCursor: true }).on('pointerdown', handleNext);
+    nextText.setInteractive({ useHandCursor: true }).on('pointerdown', handleNext);
+
     this.tutorialBackButton = backButton;
     this.tutorialBackText = backText;
     this.tutorialViperButton = viperButton;
     this.tutorialViperText = viperText;
-    this.tutorialOverlay = this.add.container(0, 0, [backButton, backText, viperButton, viperText]);
+    this.tutorialNextButton = nextButton;
+    this.tutorialNextText = nextText;
+    this.tutorialOverlay = this.add.container(0, 0, [
+      backButton,
+      backText,
+      viperButton,
+      viperText,
+      nextButton,
+      nextText,
+    ]);
     this.tutorialOverlay.setDepth(100);
     this.updateTutorialViperButtonVisibility(this.tutorialSteps[this.tutorialStepIndex]);
+    this.updateTutorialNextButton(this.tutorialSteps[this.tutorialStepIndex]);
     this.updateTutorialFocusHighlight();
   }
 
@@ -3383,6 +3422,7 @@ export class MainScene extends Phaser.Scene {
     } else {
       this.updateTutorialHelpHighlight();
       this.updateTutorialFocusHighlight();
+      this.updateTutorialNextButton(this.tutorialSteps[this.tutorialStepIndex]);
     }
   }
 
@@ -3402,6 +3442,24 @@ export class MainScene extends Phaser.Scene {
       this.tutorialViperButton.disableInteractive();
       this.tutorialViperText.disableInteractive();
     }
+  }
+
+  private updateTutorialNextButton(step?: TutorialStep) {
+    if (!this.tutorialNextButton || !this.tutorialNextText) return;
+    const shouldShow = Boolean(step?.manualAdvance);
+    this.tutorialNextButton.setVisible(shouldShow);
+    this.tutorialNextText.setVisible(shouldShow);
+    if (!shouldShow || !this.tutorialHelpText) return;
+    const bounds = this.tutorialHelpText.getBounds();
+    const padding = this.isMobileMode ? 12 : 10;
+    const buttonX = bounds.right - this.tutorialNextButton.width / 2;
+    const buttonY = Phaser.Math.Clamp(
+      bounds.bottom + padding + this.tutorialNextButton.height / 2,
+      this.tutorialNextButton.height / 2 + padding,
+      GAME_CONFIG.HEIGHT - this.tutorialNextButton.height / 2 - padding
+    );
+    this.tutorialNextButton.setPosition(buttonX, buttonY);
+    this.tutorialNextText.setPosition(buttonX, buttonY);
   }
 
   private updateTutorialHelpText() {
@@ -3448,6 +3506,7 @@ export class MainScene extends Phaser.Scene {
     this.updateTutorialHelpHighlight();
     this.updateTutorialFocusHighlight();
     this.updateTutorialObjectiveHud();
+    this.updateTutorialNextButton(step);
   }
   
   private buildProgressBar(current: number, total: number): string {
@@ -3611,10 +3670,14 @@ export class MainScene extends Phaser.Scene {
           '撃つ/シールド/被弾で減る',
           '0で敗北、時間で少し回復',
           'トリガー = 装備中の弾の種類',
-          '画面をタップ/クリックで次へ',
+          '右の「次へ」で進もう',
         ],
+        onAdvance: () => {
+          this.tutorialProgress.introAcknowledged = true;
+        },
         isCompleted: () => this.tutorialProgress.introAcknowledged,
         focusTarget: 'trionMeter',
+        manualAdvance: true,
       },
       {
         title: 'Step2 移動',
@@ -3668,11 +3731,11 @@ focusTarget: 'player',
         description: [
           '低コスト・連射向き',
           `コスト${GAME_CONFIG.ASTEROID_COST} / 威力${GAME_CONFIG.ASTEROID_TRION_DAMAGE}`,
-          'アステロイドで10発当てよう',
+          'アステロイドで3発当てよう',
         ],
         requiredBulletType: 'asteroid',
-        requiredHits: 10,
-        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        requiredHits: 3,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 3,
         focusTarget: 'triggerDisplay',
       },
       {
@@ -3705,11 +3768,11 @@ focusTarget: 'player',
           'Eでメテオラに切替',
           '爆発で範囲攻撃・コスト高め・シールドを割りやすい',
           `コスト${GAME_CONFIG.METEORA_COST} / 威力${GAME_CONFIG.METEORA_TRION_DAMAGE}`,
-          'メテオラで10発当てよう',
+          'メテオラで2発当てよう',
         ],
         requiredBulletType: 'meteora',
-        requiredHits: 10,
-        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 10,
+        requiredHits: 2,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 2,
         focusTarget: 'triggerDisplay',
         requiresSwitch: true,
       },
@@ -3743,11 +3806,11 @@ focusTarget: 'player',
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
           'Eでレッドバレットに切替',
           '相手は左右にゆっくり動くのでスローを見てみよう',
-          'レッドバレットで5発当てよう',
+          'レッドバレットで2発当てよう',
         ],
         requiredBulletType: 'red',
-        requiredHits: 5,
-        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 5,
+        requiredHits: 2,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 2,
         focusTarget: 'triggerDisplay',
         requiresSwitch: true,
         enemyShieldType: 'wide',
@@ -3760,11 +3823,11 @@ focusTarget: 'player',
           `コスト${GAME_CONFIG.HOUND_COST} / 威力${GAME_CONFIG.HOUND_TRION_DAMAGE}`,
           'Eでハウンドに切替',
           '全面シールド相手に軌道を見てみよう',
-          'ハウンドで3発当てよう',
+          'ハウンドで2発当てよう',
         ],
         requiredBulletType: 'hound',
-        requiredHits: 3,
-        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 3,
+        requiredHits: 2,
+        isCompleted: () => this.tutorialProgress.requiredBulletHits >= 2,
         focusTarget: 'triggerDisplay',
         requiresSwitch: true,
         countShieldHits: true,
@@ -3845,19 +3908,33 @@ focusTarget: 'player',
     }
   }
 
-  private registerTutorialTap() {
+  private handleTutorialNext() {
     if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
     if (!this.tutorialTapReady) return;
-    if (this.tutorialStepIndex === 0) {
-      this.tutorialProgress.introAcknowledged = true;
+    const step = this.tutorialSteps[this.tutorialStepIndex];
+    if (!step?.manualAdvance) return;
+    step.onAdvance?.();
+    if (step.isCompleted()) {
+      this.advanceTutorialStep();
     }
-    if (this.tutorialStepIndex === this.tutorialSteps.length - 1) {
-      const step = this.tutorialSteps[this.tutorialStepIndex];
-      if (step?.focusTarget === 'backButton') {
-        return;
-      }
-      this.tutorialProgress.summaryAcknowledged = true;
-    }
+  }
+
+  private isPointerOverTutorialUi(pointer: Phaser.Input.Pointer) {
+    const isOver = (obj?: Phaser.GameObjects.GameObject) => {
+      if (!obj) return false;
+      if (!('getBounds' in obj)) return false;
+      const bounds = (obj as Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle }).getBounds();
+      return bounds.contains(pointer.x, pointer.y);
+    };
+
+    return (
+      isOver(this.tutorialBackButton) ||
+      isOver(this.tutorialBackText) ||
+      isOver(this.tutorialViperButton) ||
+      isOver(this.tutorialViperText) ||
+      isOver(this.tutorialNextButton) ||
+      isOver(this.tutorialNextText)
+    );
   }
 
   private advanceTutorialStep() {
@@ -5425,9 +5502,6 @@ focusTarget: 'player',
   public setMobileMove(x: number, y: number) {
     this.mobileInput.moveX = x;
     this.mobileInput.moveY = y;
-    if (x !== 0 || y !== 0) {
-      this.registerTutorialTap();
-    }
     // Update aim direction based on movement for mobile
     if (x !== 0 || y !== 0) {
       this.mobileInput.aimX = this.player.x + x * 200;
@@ -5437,14 +5511,10 @@ focusTarget: 'player',
 
   public setMobileAttack(attacking: boolean) {
     this.mobileInput.attacking = attacking;
-    if (attacking) {
-      this.registerTutorialTap();
-    }
   }
 
   public triggerCycleBullet() {
     if (this.gameState.isGameOver || !this.gameStarted) return;
-    this.registerTutorialTap();
     const types = this.availableBulletTypes;
     const currentIndex = types.indexOf(this.gameState.currentBulletType);
     if (types.length > 0) {
@@ -5455,7 +5525,6 @@ focusTarget: 'player',
 
   public triggerDelayToggle() {
     if (this.gameState.isGameOver || !this.gameStarted) return;
-    this.registerTutorialTap();
     if (this.gameState.currentBulletType === 'viper') {
       this.cycleViperMode();
     } else if (this.gameState.currentBulletType === 'asteroid') {
@@ -5465,7 +5534,6 @@ focusTarget: 'player',
 
   public triggerShield(wide: boolean = false) {
     if (this.gameState.isGameOver || !this.gameStarted) return;
-    this.registerTutorialTap();
     if (wide) {
       // Temporarily set shift key state for wide shield
       const originalShift = this.shiftKey?.isDown;
