@@ -194,6 +194,8 @@ export class MainScene extends Phaser.Scene {
   private tutorialEnemyMovement: 'none' | 'sideToSide' = 'none';
   private tutorialEnemyMovementTimer = 0;
   private tutorialEnemyBaseX = 0;
+  private tutorialShieldHitStreak = 0;
+  private readonly tutorialShieldHitHintThreshold = 3;
   private tutorialProgress = {
     introAcknowledged: false,
     moved: false,
@@ -3487,6 +3489,11 @@ export class MainScene extends Phaser.Scene {
       if (idx === step.description.length - 1) return `→ ${line}`;
       return `  ${line}`;
     });
+
+    const stallHint = this.getTutorialShieldStallHint(step);
+    if (stallHint) {
+      description.push(`ヒント: ${stallHint}`);
+    }
     
     if (step.requiredHits) {
       const filled = '●'.repeat(Math.min(this.tutorialProgress.requiredBulletHits, step.requiredHits));
@@ -3802,7 +3809,8 @@ focusTarget: 'player',
         description: [
           '低ダメージだがスロー付与',
           `移動速度${slowPercent}% / 敵弾速度${enemyBulletSlowPercent}%`,
-          `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続・2発当てると相手がフリーズ・シールド、弾透過`,
+          `最大${GAME_CONFIG.RED_BULLET_MAX_STACKS}スタックで継続・2発当てると相手がフリーズ`,
+          'レッドは盾越しに効果が入る（まず当ててみよう）',
           `コスト${GAME_CONFIG.RED_BULLET_COST} / 威力${GAME_CONFIG.RED_BULLET_TRION_DAMAGE}`,
           'Eでレッドバレットに切替',
           '相手は左右にゆっくり動くのでスローを見てみよう',
@@ -3813,6 +3821,7 @@ focusTarget: 'player',
         isCompleted: () => this.tutorialProgress.requiredBulletHits >= 2,
         focusTarget: 'triggerDisplay',
         requiresSwitch: true,
+        countShieldHits: true,
         enemyShieldType: 'wide',
         enemyMovement: 'sideToSide',
       },
@@ -3873,6 +3882,7 @@ focusTarget: 'player',
       viperModeHits: [false, false, false],
       summaryAcknowledged: false,
     };
+    this.tutorialShieldHitStreak = 0;
     this.stopTutorialShieldFire();
   }
 
@@ -3890,6 +3900,7 @@ focusTarget: 'player',
     this.tutorialProgress.viperSettingsOpened = false;
     this.tutorialProgress.viperModeHits = [false, false, false];
     this.tutorialProgress.summaryAcknowledged = false;
+    this.tutorialShieldHitStreak = 0;
     this.stopTutorialShieldFire();
   }
 
@@ -3973,11 +3984,15 @@ focusTarget: 'player',
     if (!this.isTutorialMode || this.tutorialSteps.length === 0) return;
     const step = this.tutorialSteps[this.tutorialStepIndex];
     if (!step?.requiredBulletType || !step.requiredHits) return;
-    if (hitShield && !step.countShieldHits) return;
     if (step.requiresSwitch && !this.tutorialProgress.switched) return;
     if (step.requiresDelayToggle && !this.gameState.delayedAsteroidEnabled) return;
     if (step.requiresViperSettings && !this.tutorialProgress.viperSettingsOpened) return;
     if (bulletType !== step.requiredBulletType) return;
+    if (hitShield && !step.countShieldHits) {
+      this.registerTutorialShieldHitStreak(step);
+      return;
+    }
+    this.tutorialShieldHitStreak = 0;
     if (step.requiresViperModeHits && bulletType === 'viper') {
       const modeIndex = Phaser.Math.Clamp(
         viperModeIndex ?? this.viperModeIndex,
@@ -3993,6 +4008,29 @@ focusTarget: 'player',
       );
     }
     this.updateTutorialHelpText();
+  }
+
+  private registerTutorialShieldHitStreak(step: TutorialStep) {
+    if (!step.enemyShieldType || step.countShieldHits) return;
+    this.tutorialShieldHitStreak = Math.min(
+      this.tutorialShieldHitHintThreshold,
+      this.tutorialShieldHitStreak + 1
+    );
+    if (this.tutorialShieldHitStreak === this.tutorialShieldHitHintThreshold) {
+      this.updateTutorialHelpText();
+    }
+  }
+
+  private getTutorialShieldStallHint(step: TutorialStep): string | null {
+    if (this.tutorialShieldHitStreak < this.tutorialShieldHitHintThreshold) return null;
+    if (!step.enemyShieldType || step.countShieldHits) return null;
+    if (step.requiredBulletType === 'viper') {
+      return '盾に当たっています。盾の外側（横）を狙う / 弾道を曲げて裏を取ろう';
+    }
+    if (step.requiredBulletType === 'red') {
+      return '盾に当ててもOK。レッドは盾越しに効果が入る（まず当ててみよう）';
+    }
+    return null;
   }
 
   private startTutorialShieldTrial(shield: Shield) {
